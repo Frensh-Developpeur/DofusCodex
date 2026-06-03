@@ -1,0 +1,689 @@
+// DofusDB API (https://api.dofusdb.fr) — données riches : donjons, monstres, quêtes.
+// API Feathers : pagination via $limit/$skip, recherche via slug, multi-ids via id[$in][].
+import { getJson, qs } from "./client";
+
+const BASE = "https://api.dofusdb.fr";
+
+type Localized = { fr: string; en?: string } & Record<string, string>;
+
+// Case-insensitive partial match on the french name. Uses the inline (?i) flag
+// rather than $options because the monsters service rejects $options (while
+// dungeons/quests accept both — (?i) works on all of them).
+function searchClause(search?: string): string {
+  const term = search?.trim();
+  if (!term) return "";
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return `&name.fr[$regex]=${encodeURIComponent("(?i)" + escaped)}`;
+}
+
+// Dungeon name filter: always excludes the "Expédition …" variants (which duplicate
+// the base dungeons), and optionally requires the search term — in a single regex
+// since both constrain name.fr. Lookaheads: forbid "expédition", require the term.
+function dungeonNameClause(search?: string): string {
+  const term = search?.trim();
+  const escaped = term ? term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "";
+  const pattern = `(?i)^(?!.*expédition)` + (escaped ? `(?=.*${escaped})` : "");
+  return `&name.fr[$regex]=${encodeURIComponent(pattern)}`;
+}
+
+export interface FeathersList<T> {
+  total: number;
+  limit: number;
+  skip: number;
+  data: T[];
+}
+
+export interface Dungeon {
+  id: number;
+  name: Localized;
+  slug: Localized;
+  optimalPlayerLevel: number;
+  monsters: number[];
+  mapIds: number[];
+  entranceMapId: number;
+  subarea: number;
+}
+
+export interface MonsterGrade {
+  grade: number;
+  level: number;
+  lifePoints: number;
+  actionPoints: number;
+  movementPoints: number;
+  earthResistance: number;
+  fireResistance: number;
+  waterResistance: number;
+  airResistance: number;
+  neutralResistance: number;
+}
+
+export interface MonsterDrop {
+  objectId: number;
+  percentDropForGrade1: number;
+  percentDropForGrade5?: number;
+  count: number;
+  hasCriteria?: boolean;
+}
+
+export interface Monster {
+  id: number;
+  name: Localized;
+  img: string;
+  isBoss?: boolean;
+  gfxId?: number;
+  grades: MonsterGrade[];
+  drops?: MonsterDrop[];
+  race?: number;
+}
+
+export interface ItemLite {
+  id: number;
+  name: Localized;
+  img: string;
+  level: number;
+}
+
+export interface Quest {
+  id: number;
+  name: Localized;
+  levelMin: number;
+  levelMax: number;
+  categoryId: number;
+  isDungeonQuest: boolean;
+  isPartyQuest: boolean;
+  repeatType: number;
+  stepIds: number[];
+  followable: boolean;
+}
+
+export interface QuestStep {
+  id: number;
+  name: Localized;
+  description?: Localized;
+  questId: number;
+  optimalLevel?: number;
+}
+
+// ---- Dungeons ----
+
+export interface DungeonQuery {
+  search?: string;
+  minLevel?: number;
+  maxLevel?: number;
+  limit?: number;
+  skip?: number;
+}
+
+export async function listDungeons(q: DungeonQuery, signal?: AbortSignal): Promise<FeathersList<Dungeon>> {
+  const params: Record<string, string | number | undefined> = {
+    lang: "fr",
+    $limit: q.limit ?? 50,
+    $skip: q.skip ?? 0,
+    // Secondary sort by id makes pagination stable (many dungeons share a level),
+    // otherwise the same dungeon can resurface on another page = visible duplicates.
+    "$sort[optimalPlayerLevel]": 1,
+    "$sort[id]": 1,
+    "optimalPlayerLevel[$gte]": q.minLevel,
+    "optimalPlayerLevel[$lte]": q.maxLevel,
+  };
+  let url = `${BASE}/dungeons${qs(params)}`;
+  url += dungeonNameClause(q.search);
+  return getJson<FeathersList<Dungeon>>(url, signal);
+}
+
+export async function getDungeon(id: number, signal?: AbortSignal): Promise<Dungeon | null> {
+  const data = await getJson<FeathersList<Dungeon>>(`${BASE}/dungeons${qs({ id, lang: "fr" })}`, signal);
+  return data.data[0] ?? null;
+}
+
+// ---- Monsters ----
+
+export async function getMonstersByIds(ids: number[], signal?: AbortSignal): Promise<Monster[]> {
+  if (!ids.length) return [];
+  const idParams = ids.map((i) => `id[$in][]=${i}`).join("&");
+  const url = `${BASE}/monsters?lang=fr&$limit=${ids.length}&${idParams}`;
+  const data = await getJson<FeathersList<Monster>>(url, signal);
+  // Keep original dungeon order.
+  const byId = new Map(data.data.map((m) => [m.id, m]));
+  return ids.map((i) => byId.get(i)).filter(Boolean) as Monster[];
+}
+
+// ---- Quests ----
+
+export interface QuestQuery {
+  search?: string;
+  minLevel?: number;
+  maxLevel?: number;
+  dungeonOnly?: boolean;
+  limit?: number;
+  skip?: number;
+}
+
+export async function listQuests(q: QuestQuery, signal?: AbortSignal): Promise<FeathersList<Quest>> {
+  const params: Record<string, string | number | boolean | undefined> = {
+    lang: "fr",
+    $limit: q.limit ?? 50,
+    $skip: q.skip ?? 0,
+    // Stable pagination: secondary sort by id avoids the same quest reappearing across pages.
+    "$sort[levelMin]": 1,
+    "$sort[id]": 1,
+    "levelMin[$gte]": q.minLevel,
+    "levelMin[$lte]": q.maxLevel,
+    isDungeonQuest: q.dungeonOnly ? true : undefined,
+  };
+  let url = `${BASE}/quests${qs(params as Record<string, string | number | undefined>)}`;
+  url += searchClause(q.search);
+  return getJson<FeathersList<Quest>>(url, signal);
+}
+
+export async function getQuestSteps(ids: number[], signal?: AbortSignal): Promise<QuestStep[]> {
+  if (!ids.length) return [];
+  const idParams = ids.map((i) => `id[$in][]=${i}`).join("&");
+  const url = `${BASE}/quest-steps?lang=fr&$limit=${ids.length}&${idParams}`;
+  const data = await getJson<FeathersList<QuestStep>>(url, signal);
+  const byId = new Map(data.data.map((s) => [s.id, s]));
+  return ids.map((i) => byId.get(i)).filter(Boolean) as QuestStep[];
+}
+
+interface QuestObjective {
+  need?: { generated?: { dungeons?: number[] } };
+}
+
+// Pour les quêtes de donjon : remonte le donjon ciblé par la quête.
+// Chemin : quête → stepIds → objectifs (need.generated.dungeons). Renvoie l'id du
+// donjon (== notre route /donjons/{id}) ou null. Les guides Ganymède n'encodent les
+// donjons que comme « blocs de quête » → c'est ainsi qu'on relie ex. « Donjon en
+// Mousse » (quête 896) à Château Ensablé (donjon 19).
+export async function resolveQuestDungeon(questId: number, signal?: AbortSignal): Promise<number | null> {
+  const q = await getJson<FeathersList<Quest>>(`${BASE}/quests${qs({ id: questId, lang: "fr" })}`, signal);
+  const quest = q.data[0];
+  if (!quest?.isDungeonQuest || !quest.stepIds?.length) return null;
+  const stepParams = quest.stepIds.map((s) => `stepId[$in][]=${s}`).join("&");
+  const url = `${BASE}/quest-objectives?$limit=50&${stepParams}`;
+  const objs = await getJson<FeathersList<QuestObjective>>(url, signal);
+  for (const o of objs.data) {
+    const dungeons = o.need?.generated?.dungeons;
+    if (dungeons?.length) return dungeons[0];
+  }
+  return null;
+}
+
+// Lightweight monster fetch for list thumbnails (id, name, boss flag, image).
+// img is built from gfxId because the virtual `img` field breaks under $select.
+export interface MonsterLite {
+  id: number;
+  name: Localized;
+  img: string;
+  isBoss: boolean;
+}
+
+export async function getMonstersLite(ids: number[], signal?: AbortSignal): Promise<MonsterLite[]> {
+  if (!ids.length) return [];
+  const slice = ids.slice(0, 50); // DofusDB caps $limit at 50
+  const idParams = slice.map((i) => `id[$in][]=${i}`).join("&");
+  const url = `${BASE}/monsters?lang=fr&$limit=50&$select[]=id&$select[]=name&$select[]=gfxId&$select[]=isBoss&${idParams}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; gfxId: number; isBoss?: boolean }>>(
+    url,
+    signal,
+  );
+  return data.data.map((m) => ({
+    id: m.id,
+    name: m.name,
+    isBoss: !!m.isBoss,
+    img: `${BASE}/img/monsters/${m.gfxId}.png`,
+  }));
+}
+
+// Boss heuristic: DofusDB lists the main boss last in the dungeon's monster order
+// (preserved by getMonstersByIds). Some dungeons flag several monsters as isBoss
+// (e.g. Donjon du Comte Harebourg lists every Frigost boss) → take the LAST flagged
+// one, not the first. Fallback: the last declared monster.
+export function pickBoss(monsters: Monster[]): Monster | null {
+  if (!monsters.length) return null;
+  for (let i = monsters.length - 1; i >= 0; i--) {
+    if (monsters[i].isBoss) return monsters[i];
+  }
+  return monsters[monsters.length - 1] ?? null;
+}
+
+// ---- Monsters (encyclopédie) ----
+
+export interface MonsterQuery {
+  search?: string;
+  bossOnly?: boolean;
+  limit?: number;
+  skip?: number;
+}
+
+export async function listMonsters(q: MonsterQuery, signal?: AbortSignal): Promise<FeathersList<Monster>> {
+  const params: Record<string, string | number | boolean | undefined> = {
+    lang: "fr",
+    $limit: q.limit ?? 48,
+    $skip: q.skip ?? 0,
+    $sort: "id",
+    isBoss: q.bossOnly ? true : undefined,
+  };
+  let url = `${BASE}/monsters${qs(params as Record<string, string | number | undefined>)}`;
+  url += searchClause(q.search);
+  return getJson<FeathersList<Monster>>(url, signal);
+}
+
+export async function getMonster(id: number, signal?: AbortSignal): Promise<Monster | null> {
+  const data = await getJson<FeathersList<Monster>>(`${BASE}/monsters${qs({ id, lang: "fr" })}`, signal);
+  return data.data[0] ?? null;
+}
+
+// Reverse drop: which monsters drop a given item (by Ankama object id).
+export async function monstersDroppingItem(
+  objectId: number,
+  limit = 24,
+  signal?: AbortSignal,
+): Promise<Monster[]> {
+  const url = `${BASE}/monsters?lang=fr&$limit=${limit}&$sort=id&drops.objectId=${objectId}&$select[]=name&$select[]=id&$select[]=img&$select[]=grades&$select[]=isBoss`;
+  const data = await getJson<FeathersList<Monster>>(url, signal);
+  return data.data;
+}
+
+// Which dungeons contain a given monster.
+export async function dungeonsWithMonster(monsterId: number, signal?: AbortSignal): Promise<Dungeon[]> {
+  const url = `${BASE}/dungeons?lang=fr&$limit=12&$sort=optimalPlayerLevel&monsters=${monsterId}`;
+  const data = await getJson<FeathersList<Dungeon>>(url, signal);
+  return data.data;
+}
+
+// ---- Items (light, for drop tables) ----
+
+export async function getItemsByIds(ids: number[], signal?: AbortSignal): Promise<ItemLite[]> {
+  if (!ids.length) return [];
+  const idParams = ids.map((i) => `id[$in][]=${i}`).join("&");
+  // NB: `img` is a virtual field derived from iconId; with $select it would resolve to
+  // ".../undefined.png", so we select iconId and build the URL ourselves.
+  const url = `${BASE}/items?lang=fr&$limit=${ids.length}&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level&${idParams}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number }>>(
+    url,
+    signal,
+  );
+  return data.data.map((it) => ({
+    id: it.id,
+    name: it.name,
+    level: it.level,
+    img: `${BASE}/img/items/${it.iconId}.png`,
+  }));
+}
+
+// ---- Havre-sacs (thèmes) ----
+export interface HavenbagTheme {
+  id: number;
+  name: Localized;
+  mapId: number;
+  img: string; // aperçu = rendu de la map (`/img/maps/0.25/{mapId}.jpg`), comme sur DofusDB
+}
+
+// Rendu de la map d'un havre-sac à l'échelle voulue (0.25 vignette, 0.5/1 en grand).
+export function havenbagMapImg(mapId: number, scale: "0.25" | "0.5" | "1" = "0.5"): string {
+  return `${BASE}/img/maps/${scale}/${mapId}.jpg`;
+}
+
+export async function listHavenbagThemes(signal?: AbortSignal): Promise<HavenbagTheme[]> {
+  // ~48 thèmes → un seul appel ($limit plafonné à 50 suffit).
+  const url = `${BASE}/havenbag-themes?lang=fr&$limit=50&$sort[id]=1&$select[]=id&$select[]=name&$select[]=mapId`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; mapId: number }>>(url, signal);
+  return data.data.map((t) => ({ id: t.id, name: t.name, mapId: t.mapId, img: havenbagMapImg(t.mapId, "0.25") }));
+}
+
+// Éléments de décor d'un thème (sol, meubles, ornements). Pas de nom, juste des sprites
+// (`/img/elements/{gfxId}.png`). On dédoublonne par gfxId et on pagine ($limit plafonné à 50).
+export async function getHavenbagFurnitures(themeId: number, signal?: AbortSignal): Promise<{ gfxId: number; img: string }[]> {
+  const seen = new Set<number>();
+  for (let skip = 0; skip < 300; skip += 50) {
+    const url = `${BASE}/havenbag-furnitures?themeId=${themeId}&$limit=50&$skip=${skip}&$sort[order]=1&$sort[id]=1&$select[]=gfxId`;
+    const data = await getJson<FeathersList<{ gfxId: number }>>(url, signal);
+    const rows = data.data ?? [];
+    for (const r of rows) if (r.gfxId) seen.add(r.gfxId);
+    if (rows.length < 50 || skip + 50 >= (data.total ?? 0)) break;
+  }
+  return [...seen].map((g) => ({ gfxId: g, img: `${BASE}/img/elements/${g}.png` }));
+}
+
+// ---- Items par catégorie (ressources, consommables…) ----
+// Un item a un `typeId` ; chaque type a un `superTypeId` (9 = ressource, 6 = consommable,
+// 12 = familier, 14 = divers…). On filtre donc les items par la liste des typeIds du superType.
+export interface ItemType {
+  id: number;
+  superTypeId: number;
+  name: Localized;
+}
+
+export async function listItemTypes(signal?: AbortSignal): Promise<ItemType[]> {
+  const url = `${BASE}/item-types?lang=fr&$limit=300&$select[]=id&$select[]=superTypeId&$select[]=name`;
+  const data = await getJson<FeathersList<ItemType>>(url, signal);
+  return data.data ?? [];
+}
+
+export interface BrowseItemsParams {
+  typeIds: number[];
+  search?: string;
+  skip?: number;
+  limit?: number;
+}
+
+export async function browseItems(p: BrowseItemsParams, signal?: AbortSignal): Promise<ItemLite[]> {
+  if (!p.typeIds.length) return [];
+  const limit = Math.min(p.limit ?? 48, 50); // $limit plafonné à 50
+  const parts = [
+    "lang=fr",
+    `$limit=${limit}`,
+    `$skip=${p.skip ?? 0}`,
+    "$sort[level]=-1",
+    "$sort[id]=1",
+    "$select[]=id",
+    "$select[]=name",
+    "$select[]=level",
+    "$select[]=iconId",
+    ...p.typeIds.map((id) => `typeId[$in][]=${id}`),
+  ];
+  const term = p.search?.trim();
+  if (term && term.length >= 2) parts.push(`name.fr[$regex]=(?i)${encodeURIComponent(term)}`);
+  const url = `${BASE}/items?${parts.join("&")}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; level: number; iconId: number }>>(url, signal);
+  return data.data.map((it) => ({
+    id: it.id,
+    name: it.name,
+    level: it.level,
+    img: `${BASE}/img/items/${it.iconId}.png`,
+  }));
+}
+
+// Item générique (DofusDB connaît tout : ressources, suiveurs, consommables, objets
+// de quête… contrairement à l'endpoint « equipment » de DofusDude qui renvoie 404).
+// Sert de repli quand un <item> d'un guide n'est pas un équipement.
+export interface DbItemEffect {
+  description?: Localized;
+}
+export interface DbItem {
+  id: number;
+  name: Localized;
+  level: number;
+  img: string;
+  description?: Localized;
+  type?: { name?: Localized };
+  effects?: DbItemEffect[];
+}
+
+export async function getDbItem(id: number, signal?: AbortSignal): Promise<DbItem | null> {
+  const data = await getJson<FeathersList<DbItem>>(`${BASE}/items${qs({ id, lang: "fr" })}`, signal);
+  const it = data.data[0];
+  if (!it) return null;
+  // `img` virtuel : présent sur l'objet complet (sans $select), on le garde tel quel.
+  return it;
+}
+
+// ---- Treasure hunt (chasse au trésor) ----
+
+// 0 = droite (Est), 2 = bas (Sud), 4 = gauche (Ouest), 6 = haut (Nord).
+export type HuntDirection = 0 | 2 | 4 | 6;
+
+export interface HuntPoi {
+  id: number;
+  name: Localized;
+}
+
+export interface HuntMap {
+  id: number;
+  posX: number;
+  posY: number;
+  pois: HuntPoi[];
+  distance: number; // nb de maps depuis le départ, sur l'axe de la direction
+}
+
+export async function treasureHunt(
+  x: number,
+  y: number,
+  direction: HuntDirection,
+  signal?: AbortSignal,
+): Promise<HuntMap[]> {
+  const url = `${BASE}/treasure-hunt?lang=fr&x=${x}&y=${y}&direction=${direction}`;
+  const data = await getJson<FeathersList<Omit<HuntMap, "distance">>>(url, signal);
+  const horizontal = direction === 0 || direction === 4;
+  return (data.data ?? [])
+    .map((m) => ({ ...m, distance: horizontal ? Math.abs(m.posX - x) : Math.abs(m.posY - y) }))
+    .filter((m) => m.distance > 0)
+    .sort((a, b) => a.distance - b.distance);
+}
+
+// Image de la map du jeu pour un mapId donné (échelles disponibles : 1 / 0.75 / 0.5 / 0.25).
+// L'id renvoyé par treasureHunt EST un mapId → image directe, pas d'appel supplémentaire.
+export type HuntMapScale = "1" | "0.75" | "0.5" | "0.25";
+export function huntMapImage(mapId: number, scale: HuntMapScale = "0.5"): string {
+  return `${BASE}/img/maps/${scale}/${mapId}.jpg`;
+}
+
+// mapId de la worldmap principale pour des coordonnées données (position de départ).
+// Plusieurs maps partagent les mêmes coords (intérieurs/sous-zones) → on garde celle
+// qui a la priorité sur la worldmap, sinon la première de la worldmap 1.
+export async function huntStartMapId(x: number, y: number, signal?: AbortSignal): Promise<number | null> {
+  const url =
+    `${BASE}/map-positions/?posX=${x}&posY=${y}&worldMap=1&$limit=20` +
+    `&$select[]=id&$select[]=hasPriorityOnWorldmap`;
+  const data = await getJson<FeathersList<{ id: number; hasPriorityOnWorldmap?: boolean }>>(url, signal);
+  const rows = data.data ?? [];
+  if (rows.length === 0) return null;
+  return (rows.find((m) => m.hasPriorityOnWorldmap) ?? rows[0]).id;
+}
+
+// ---- Classes (breeds) & sorts ----
+
+// Paliers de coût des caractéristiques : [[seuil, coût], …]. Ex Iop Force :
+// [[0,1],[100,2],[200,3],[300,4]] → 1 pt = 1 carac jusqu'à 100, puis 2 pts/carac, etc.
+export type StatTier = [number, number];
+
+export interface Breed {
+  id: number;
+  name: Localized;
+  img: string;
+  imgTransparent?: string;
+  complexity: number;
+  description?: Localized;
+  gameplayDescription?: Localized;
+  statsPointsForStrength: StatTier[];
+  statsPointsForIntelligence: StatTier[];
+  statsPointsForChance: StatTier[];
+  statsPointsForAgility: StatTier[];
+  statsPointsForVitality: StatTier[];
+  statsPointsForWisdom: StatTier[];
+}
+
+export async function listBreeds(signal?: AbortSignal): Promise<Breed[]> {
+  // Le nom de la classe est dans `shortName` (les breeds n'ont pas de champ `name`).
+  const url = `${BASE}/breeds?$limit=20&$sort=id`;
+  const data = await getJson<FeathersList<Breed & { shortName?: Localized }>>(url, signal);
+  return data.data
+    .filter((b) => b.id > 0 && b.shortName?.fr)
+    .map((b) => ({ ...b, name: b.shortName as Localized }));
+}
+
+// effectElement : 0 Neutre, 1 Terre, 2 Feu, 3 Eau, 4 Air, 5 meilleur élément.
+export interface SpellDamage {
+  element: number;
+  steal: boolean; // vol de vie
+  min: number;
+  max: number;
+  delayed: boolean; // effet différé/déclenché (glyphe, bombe, état type Téléfrag), pas le coup direct
+  delay: number; // nombre de tours avant déclenchement (0 = immédiat) → libellé « Dans N tour »
+  condition: string; // état requis (depuis targetMask, ex "E244") → effets conditionnels = lignes séparées (pas sommées)
+  conditionLabel: string; // nom lisible de l'état (résolu via spell-states, ex "Téléfrag", "Saoul") — "" si aucun
+}
+
+export interface SpellLevel {
+  grade: number;
+  minPlayerLevel: number;
+  apCost: number;
+  minRange: number;
+  range: number;
+  critProbability: number; // 0 = le sort ne peut pas faire de critique
+  damage: SpellDamage[];
+  criticalDamage: SpellDamage[];
+  chargeScaled: boolean; // dégâts qui montent par charge/état (effet 293) → fourchettes affichées « par charge »
+}
+
+export interface ClassSpell {
+  id: number;
+  name: Localized;
+  img: string;
+  levels: SpellLevel[];
+  variantId: number; // identifiant de la variante (regroupe sort de base + variante)
+  variantIndex: number; // 0 = sort de base, 1 = variante
+}
+
+const DMG_EFFECTS = new Set([96, 97, 98, 99, 100]); // dégâts directs
+const STEAL_EFFECTS = new Set([90, 91, 92, 93, 94, 95]); // vol de vie
+
+function decodeSpellDamage(effects: unknown): SpellDamage[] {
+  const out: SpellDamage[] = [];
+  if (!Array.isArray(effects)) return out;
+  for (const e of effects) {
+    if (!e || typeof e !== "object") continue;
+    const eff = e as Record<string, number>;
+    const isDmg = DMG_EFFECTS.has(eff.effectId);
+    const isSteal = STEAL_EFFECTS.has(eff.effectId);
+    if (!isDmg && !isSteal) continue;
+    const min = eff.diceNum ?? 0;
+    const max = eff.diceSide && eff.diceSide > min ? eff.diceSide : min;
+    if (min <= 0 && max <= 0) continue;
+    const element = typeof eff.effectElement === "number" && eff.effectElement >= 0 ? eff.effectElement : 0;
+    const delay = eff.delay ?? 0;
+    // Condition = états requis dans le targetMask (tokens contenant un chiffre, ex "*E244"),
+    // pour ne pas sommer des effets mutuellement exclusifs (mêmes dégâts sous conditions différentes).
+    const mask = String((e as Record<string, unknown>).targetMask ?? "");
+    const condition = mask
+      .split(",")
+      .filter((tok) => /\d/.test(tok))
+      .map((tok) => tok.replace(/^[*!]+/, ""))
+      .join("+");
+    out.push({ element, steal: isSteal, min, max, delayed: delay > 0, delay, condition, conditionLabel: "" });
+  }
+  return out;
+}
+
+// Les noms d'états DofusDB sont parfois enrobés d'un markup `{{spell,id,n::Nom}}`
+// (réf. au sort qui pose l'état) → on ne garde que le libellé final lisible.
+function cleanStateName(raw: string): string {
+  return raw.replace(/\{\{[^:}]*::([^}]+)\}\}/g, "$1").trim();
+}
+
+// Ids d'états numériques contenus dans une condition (ex "E244+f5907" → [244, 5907]).
+function stateIdsOf(condition: string): number[] {
+  if (!condition) return [];
+  return condition
+    .split("+")
+    .map((tok) => Number(tok.replace(/\D/g, "")))
+    .filter((n) => n > 0);
+}
+
+// Libellé lisible d'une condition à partir des noms d'états résolus.
+function labelForCondition(condition: string, names: Map<number, string>): string {
+  const ids = stateIdsOf(condition);
+  if (!ids.length) return "";
+  return ids.map((id) => names.get(id) ?? `État ${id}`).join(" + ");
+}
+
+// Récupère TOUS les sorts d'une classe via les spell-variants : chaque variante
+// embarque le sort de base + sa variante. On complète ensuite avec les spell-levels
+// (effets de dégâts par grade), récupérés par paquets de 50 ids.
+export async function getClassSpells(breedId: number, signal?: AbortSignal): Promise<ClassSpell[]> {
+  // 1. Variantes (chacune contient ses sorts complets : nom, image, niveaux).
+  const variants: Record<string, any>[] = [];
+  for (let skip = 0; ; skip += 50) {
+    const url = `${BASE}/spell-variants?breedId=${breedId}&$limit=50&$skip=${skip}&$sort[id]=1`;
+    const page = await getJson<FeathersList<Record<string, any>>>(url, signal);
+    variants.push(...(page.data ?? []));
+    if (!page.data?.length || skip + 50 >= page.total) break;
+  }
+
+  // 2. Aplatir les sorts et collecter tous les ids de niveaux.
+  interface RawSpell {
+    id: number;
+    name: Localized;
+    img: string;
+    levelIds: number[];
+    variantId: number;
+    variantIndex: number;
+  }
+  const raw: RawSpell[] = [];
+  const levelIds = new Set<number>();
+  for (const v of variants) {
+    const list: any[] = Array.isArray(v.spells) ? v.spells : [];
+    list.forEach((s, idx) => {
+      if (!s?.name?.fr) return;
+      const ids: number[] = Array.isArray(s.spellLevels) ? s.spellLevels : [];
+      raw.push({ id: s.id, name: s.name, img: s.img, levelIds: ids, variantId: v.id, variantIndex: idx });
+      ids.forEach((id) => levelIds.add(id));
+    });
+  }
+  if (!raw.length) return [];
+
+  // 3. Récupérer les niveaux (effets) par paquets de 50 ids.
+  const levelById = new Map<number, Record<string, any>>();
+  const ids = [...levelIds];
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const data = await getJson<FeathersList<Record<string, any>>>(
+      `${BASE}/spell-levels?$limit=50&${idParams}`,
+      signal,
+    );
+    for (const l of data.data ?? []) levelById.set(l.id, l);
+  }
+
+  // 4. Construire les sorts.
+  const spells: ClassSpell[] = raw.map((sr) => {
+    const levels: SpellLevel[] = sr.levelIds
+      .map((id) => levelById.get(id))
+      .filter((l): l is Record<string, any> => !!l)
+      .map((l) => ({
+        grade: l.grade ?? 1,
+        minPlayerLevel: l.minPlayerLevel ?? 1,
+        apCost: l.apCost ?? 0,
+        minRange: l.minRange ?? 0,
+        range: l.range ?? 0,
+        critProbability: l.criticalHitProbability ?? 0,
+        damage: decodeSpellDamage(l.effects),
+        criticalDamage: decodeSpellDamage(l.criticalEffect),
+        // Effet 293 = « +dégâts par charge/état » → les fourchettes de dégâts sont par charge.
+        chargeScaled: Array.isArray(l.effects) && l.effects.some((e: Record<string, number>) => e?.effectId === 293),
+      }))
+      .sort((a, b) => a.grade - b.grade);
+    return { id: sr.id, name: sr.name, img: sr.img, levels, variantId: sr.variantId, variantIndex: sr.variantIndex };
+  });
+
+  // 5. Résoudre les noms d'états référencés dans les conditions (pour des libellés
+  //    lisibles : « Téléfrag », « Saoul », « Feuillu »… au lieu de « sous condition »).
+  const stateIds = new Set<number>();
+  for (const sp of spells)
+    for (const lv of sp.levels)
+      for (const d of [...lv.damage, ...lv.criticalDamage]) stateIdsOf(d.condition).forEach((id) => stateIds.add(id));
+  if (stateIds.size) {
+    const stateNames = new Map<number, string>();
+    const sids = [...stateIds];
+    for (let i = 0; i < sids.length; i += 50) {
+      const chunk = sids.slice(i, i + 50);
+      const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+      try {
+        const data = await getJson<FeathersList<{ id: number; name?: Localized }>>(
+          `${BASE}/spell-states?lang=fr&$limit=50&${idParams}`,
+          signal,
+        );
+        for (const st of data.data ?? []) if (st.name?.fr) stateNames.set(st.id, cleanStateName(st.name.fr));
+      } catch {
+        // pas de noms d'états → on retombera sur un libellé générique
+      }
+    }
+    for (const sp of spells)
+      for (const lv of sp.levels)
+        for (const d of [...lv.damage, ...lv.criticalDamage]) d.conditionLabel = labelForCondition(d.condition, stateNames);
+  }
+
+  // Tri : par variante puis position dans la variante (base avant variante).
+  spells.sort((a, b) => a.variantId - b.variantId || a.variantIndex - b.variantIndex);
+  return spells;
+}

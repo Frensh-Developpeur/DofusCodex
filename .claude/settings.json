@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:www.dofuspourlesnoobs.com)"
+    ]
+  }
+}

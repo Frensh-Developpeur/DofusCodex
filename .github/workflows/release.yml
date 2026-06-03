@@ -1,0 +1,50 @@
+# Build + publication auto sur GitHub Releases (mac + windows) à chaque tag « vX.Y.Z ».
+#
+# Utilisation :
+#   1. Monte "version" dans package.json (ex. 0.2.0).
+#   2. git commit -am "v0.2.0" && git tag v0.2.0 && git push --follow-tags
+#   3. Le workflow build sur macOS ET Windows, puis publie une release GitHub (en brouillon)
+#      avec les installeurs + les manifestes (latest.yml / latest-mac.yml).
+#   4. Tu publies la release (bouton "Publish") → les apps installées se mettent à jour.
+#
+# Rien d'autre à configurer : GITHUB_TOKEN est fourni automatiquement par Actions.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # nécessaire pour créer/mettre à jour la release
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # vite build + electron-builder --publish always (cible = l'OS du runner).
+      # Les deux jobs publient dans la MÊME release (basée sur la version de package.json).
+      - name: Build & publish
+        env:
+          # Le code est dans un repo privé, les releases dans un repo PUBLIC séparé
+          # (DofusCodex-releases) → il faut un token personnel (PAT) ayant accès en écriture
+          # à ce repo public, ajouté ici en secret « GH_RELEASE_TOKEN » du repo privé.
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          # Pas de signature mac sans certificat Apple → on désactive la découverte auto
+          # (le build réussit ; l'auto-update mac nécessitera une signature).
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run release

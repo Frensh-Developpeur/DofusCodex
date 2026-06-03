@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>DofusCodex</title>
+    <style>
+      /* Splash de démarrage — affiché avant que React monte, puis retiré en fondu. */
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+        background:
+          radial-gradient(120% 90% at 50% 18%, rgba(124, 92, 255, 0.16), transparent 60%),
+          radial-gradient(90% 70% at 50% 100%, rgba(34, 211, 238, 0.1), transparent 55%),
+          #070912;
+        font-family: "Outfit", "Inter", system-ui, sans-serif;
+        transition: opacity 0.55s ease, visibility 0.55s ease;
+      }
+      #app-loader.app-loader--done {
+        opacity: 0;
+        visibility: hidden;
+      }
+      .al-emblem {
+        position: relative;
+        width: 108px;
+        height: 108px;
+        display: grid;
+        place-items: center;
+        animation: al-float 5s ease-in-out infinite;
+      }
+      /* Halo diffus derrière l'hexagone */
+      .al-emblem::before {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border-radius: 9999px;
+        background: radial-gradient(circle, rgba(124, 92, 255, 0.55), transparent 70%);
+        filter: blur(18px);
+        animation: al-pulse 2.6s ease-in-out infinite;
+      }
+      /* Anneau conique rotatif (violet -> cyan) */
+      .al-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 9999px;
+        background: conic-gradient(
+          from 0deg,
+          transparent 0deg,
+          rgba(124, 92, 255, 0) 40deg,
+          #7c5cff 150deg,
+          #22d3ee 270deg,
+          transparent 330deg
+        );
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+        mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+        animation: al-spin 1.15s linear infinite;
+      }
+      .al-hex {
+        position: relative;
+        width: 46px;
+        height: 46px;
+        color: #9d7bff;
+        filter: drop-shadow(0 0 10px rgba(124, 92, 255, 0.7));
+        animation: al-pulse 2.6s ease-in-out infinite;
+      }
+      .al-word {
+        font-weight: 800;
+        font-size: 28px;
+        letter-spacing: 0.02em;
+        color: #fff;
+      }
+      .al-word > span {
+        background: linear-gradient(90deg, #9d7bff, #7c5cff 45%, #22d3ee);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+      }
+      /* Barre de progression indéterminée façon "shimmer" */
+      .al-bar {
+        position: relative;
+        width: 168px;
+        height: 3px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.07);
+        overflow: hidden;
+      }
+      .al-bar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 40%;
+        border-radius: 9999px;
+        background: linear-gradient(90deg, transparent, #7c5cff, #22d3ee, transparent);
+        animation: al-slide 1.3s ease-in-out infinite;
+      }
+      .al-sub {
+        margin-top: -14px;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #5b6478;
+        font-family: "Inter", system-ui, sans-serif;
+      }
+      @keyframes al-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes al-pulse {
+        0%, 100% {
+          opacity: 0.65;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+        }
+      }
+      @keyframes al-float {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-7px);
+        }
+      }
+      @keyframes al-slide {
+        0% {
+          transform: translateX(-120%);
+        }
+        100% {
+          transform: translateX(320%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .al-emblem,
+        .al-ring,
+        .al-hex,
+        .al-emblem::before,
+        .al-bar::after {
+          animation-duration: 0.001s;
+          animation-iteration-count: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Splash : remplacé par l'app dès que React a monté -->
+    <div id="app-loader" role="status" aria-label="Chargement de DofusCodex">
+      <div class="al-emblem">
+        <div class="al-ring"></div>
+        <svg
+          class="al-hex"
+          viewBox="0 0 24 24"
+          fill="rgba(124,92,255,0.25)"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        </svg>
+      </div>
+      <div class="al-word">Dofus<span>Codex</span></div>
+      <div class="al-bar"></div>
+      <div class="al-sub">Chargement du codex…</div>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

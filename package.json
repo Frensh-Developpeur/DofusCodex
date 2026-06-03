@@ -48,6 +48,7 @@
   "build": {
     "appId": "com.dofuscodex.app",
     "productName": "DofusCodex",
+    "afterPack": "build/afterPack.cjs",
     "publish": [
       {
         "provider": "github",

@@ -529,6 +529,7 @@ export interface SpellLevel {
 export interface ClassSpell {
   id: number;
   name: Localized;
+  description: Localized;
   img: string;
   levels: SpellLevel[];
   variantId: number; // identifiant de la variante (regroupe sort de base + variante)
@@ -604,6 +605,7 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
   interface RawSpell {
     id: number;
     name: Localized;
+    description: Localized;
     img: string;
     levelIds: number[];
     variantId: number;
@@ -616,7 +618,15 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
     list.forEach((s, idx) => {
       if (!s?.name?.fr) return;
       const ids: number[] = Array.isArray(s.spellLevels) ? s.spellLevels : [];
-      raw.push({ id: s.id, name: s.name, img: s.img, levelIds: ids, variantId: v.id, variantIndex: idx });
+      raw.push({
+        id: s.id,
+        name: s.name,
+        description: s.description ?? { fr: "" },
+        img: s.img,
+        levelIds: ids,
+        variantId: v.id,
+        variantIndex: idx,
+      });
       ids.forEach((id) => levelIds.add(id));
     });
   }
@@ -653,7 +663,15 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
         chargeScaled: Array.isArray(l.effects) && l.effects.some((e: Record<string, number>) => e?.effectId === 293),
       }))
       .sort((a, b) => a.grade - b.grade);
-    return { id: sr.id, name: sr.name, img: sr.img, levels, variantId: sr.variantId, variantIndex: sr.variantIndex };
+    return {
+      id: sr.id,
+      name: sr.name,
+      description: sr.description,
+      img: sr.img,
+      levels,
+      variantId: sr.variantId,
+      variantIndex: sr.variantIndex,
+    };
   });
 
   // 5. Résoudre les noms d'états référencés dans les conditions (pour des libellés

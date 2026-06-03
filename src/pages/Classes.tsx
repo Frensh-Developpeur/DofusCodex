@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Zap } from "lucide-react";
+import { X, Sparkles, Zap, Crosshair, Star } from "lucide-react";
 import { listBreeds, getClassSpells, type Breed, type ClassSpell } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
 import { SectionHeader, Skeleton, ErrorState, EmptyState, Pill, fadeUp } from "../components/ui";
@@ -91,8 +91,24 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
     queryFn: ({ signal }) => getClassSpells(id, signal),
     staleTime: 1000 * 60 * 30,
   });
+  const [selId, setSelId] = useState<number | null>(null);
 
   const desc = breed?.gameplayDescription?.fr || breed?.description?.fr || "";
+  const allSpells = spells ?? [];
+
+  // Mêmes sorts que le Builder : groupés par variante (sort de base + sa variante empilés).
+  const spellColumns = useMemo(() => {
+    const groups = new Map<number, ClassSpell[]>();
+    for (const sp of allSpells) {
+      const arr = groups.get(sp.variantId) ?? [];
+      arr.push(sp);
+      groups.set(sp.variantId, arr);
+    }
+    return [...groups.values()].map((arr) => [...arr].sort((a, b) => a.variantIndex - b.variantIndex));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allSpells.map((s) => s.id).join(",")]);
+  const spellRows = Math.max(1, ...spellColumns.map((c) => c.length));
+  const sel = allSpells.find((s) => s.id === selId) ?? allSpells[0];
 
   return (
     <motion.div
@@ -108,7 +124,7 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
         exit={{ opacity: 0, scale: 0.96, y: 16 }}
         transition={{ type: "spring", stiffness: 260, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="glass flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl ring-1 ring-white/10"
+        className="glass flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl ring-1 ring-white/10"
       >
         <div className="relative flex items-center gap-4 border-b border-white/10 p-4">
           <img
@@ -135,18 +151,48 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
             <Sparkles className="h-3.5 w-3.5 text-glow-violet" /> Sorts
           </p>
           {spellsLoading ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-16" />
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 16 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-12" />
               ))}
             </div>
-          ) : !spells?.length ? (
+          ) : !allSpells.length ? (
             <p className="text-sm text-slate-500">Sorts indisponibles pour cette classe.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {spells.filter((s) => s.variantIndex === 0).map((s) => (
-                <SpellRow key={s.id} spell={s} />
-              ))}
+            <div className="flex flex-col gap-4 lg:flex-row">
+              {/* Grille d'icônes : sort de base en haut, sa variante juste en dessous. */}
+              <div className="flex flex-wrap content-start gap-1.5 rounded-2xl bg-void-900/50 p-2 ring-1 ring-white/10 lg:w-[260px] lg:shrink-0">
+                {spellColumns.map((col, i) => (
+                  <div key={i} className="flex flex-col gap-1.5">
+                    {Array.from({ length: spellRows }).map((_, row) => {
+                      const sp = col[row];
+                      if (!sp) return <div key={row} className="h-12 w-12 shrink-0" aria-hidden />;
+                      return (
+                        <button
+                          key={sp.id}
+                          onClick={() => setSelId(sp.id)}
+                          title={sp.name.fr}
+                          className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
+                            sel?.id === sp.id
+                              ? "shadow-[0_0_18px_-4px_rgba(124,92,255,0.7)] ring-2 ring-glow-violet"
+                              : "ring-1 ring-white/10 hover:ring-glow-violet/40"
+                          }`}
+                        >
+                          <img
+                            src={sp.img}
+                            alt={sp.name.fr}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                            onError={(e) => (e.currentTarget.style.opacity = "0.3")}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              {/* Détail du sort sélectionné : description + caractéristiques. */}
+              <div className="min-w-0 flex-1">{sel && <SpellDetail spell={sel} />}</div>
             </div>
           )}
         </div>
@@ -155,24 +201,59 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
   );
 }
 
-function SpellRow({ spell }: { spell: ClassSpell }) {
+function SpellDetail({ spell }: { spell: ClassSpell }) {
   const lvl = spell.levels[spell.levels.length - 1];
+  const isVariant = spell.variantIndex === 1;
+  const range = lvl ? (lvl.minRange === lvl.range ? `${lvl.range}` : `${lvl.minRange}-${lvl.range}`) : "—";
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2.5">
-      <img src={spell.img} alt={spell.name.fr} loading="lazy" className="h-10 w-10 shrink-0 rounded-lg object-contain" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-white">{spell.name.fr}</p>
-        {lvl && (
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Pill tone="purple">
-              <Zap className="h-3 w-3" /> {lvl.apCost} PA
-            </Pill>
-            <Pill tone="slate">
-              PO {lvl.minRange === lvl.range ? lvl.range : `${lvl.minRange}-${lvl.range}`}
-            </Pill>
+    <motion.div
+      key={spell.id}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+    >
+      <div className="flex items-start gap-3">
+        <img
+          src={spell.img}
+          alt={spell.name.fr}
+          className="h-14 w-14 shrink-0 rounded-lg bg-void-700/60 object-cover ring-1 ring-white/10"
+          onError={(e) => (e.currentTarget.style.opacity = "0.3")}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-display text-lg font-bold text-white">{spell.name.fr}</h3>
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                isVariant ? "bg-glow-violet/20 text-glow-violet" : "bg-white/10 text-slate-300"
+              }`}
+            >
+              {isVariant ? "Variante" : "Base"}
+            </span>
           </div>
-        )}
+          {lvl && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <Pill tone="cyan">
+                <Zap className="h-3 w-3" /> {lvl.apCost} PA
+              </Pill>
+              <Pill tone="purple">
+                <Crosshair className="h-3 w-3" /> {range} PO
+              </Pill>
+              {lvl.critProbability > 0 && (
+                <Pill tone="gold">
+                  <Star className="h-3 w-3" /> {lvl.critProbability}%
+                </Pill>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {spell.description.fr ? (
+        <p className="mt-4 text-sm leading-6 text-slate-300">{spell.description.fr}</p>
+      ) : (
+        <p className="mt-4 text-sm italic text-slate-500">Pas de description.</p>
+      )}
+    </motion.div>
   );
 }

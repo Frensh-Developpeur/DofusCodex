@@ -51,7 +51,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "VOTRE_USER_GITHUB",
+        "owner": "Frensh-Developpeur",
         "repo": "DofusCodex-releases"
       }
     ],

@@ -5,9 +5,11 @@ import { Hexagon } from "lucide-react";
 // on Windows the native overlay buttons sit at the right.
 export default function TitleBar() {
   const [platform, setPlatform] = useState<string>("");
+  const [version, setVersion] = useState<string>("");
 
   useEffect(() => {
     window.dofusCodex?.getPlatform().then(setPlatform).catch(() => {});
+    window.dofusCodex?.getAppVersion?.().then(setVersion).catch(() => {});
   }, []);
 
   const isMac = platform === "darwin";
@@ -25,6 +27,11 @@ export default function TitleBar() {
         <span className="ml-2 rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
           Dofus 3
         </span>
+        {version && (
+          <span className="rounded bg-glow-purple/15 px-1.5 py-0.5 text-[10px] font-semibold text-glow-violet">
+            v{version}
+          </span>
+        )}
       </div>
     </div>
   );

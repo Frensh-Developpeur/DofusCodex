@@ -21,14 +21,16 @@ import {
   Boxes,
   Tent,
   Trophy,
+  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import clsx from "clsx";
+import { useState } from "react";
 
 type Item = { to: string; label: string; icon: typeof Swords; end?: boolean };
 
-const GROUPS: { title?: string; items: Item[] }[] = [
+const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   {
     items: [{ to: "/", label: "Accueil", icon: LayoutDashboard, end: true }],
   },
@@ -41,6 +43,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
   },
   {
     title: "Encyclopédie",
+    collapsible: true,
     items: [
       { to: "/classes", label: "Classes", icon: Users },
       { to: "/monstres", label: "Monstres", icon: Skull },
@@ -72,6 +75,18 @@ export default function Sidebar() {
   const location = useLocation();
   const lastGuide = useStore((s) => s.recentGuides[0]);
   const collapsed = useStore((s) => s.sidebarCollapsed);
+  // Groupes repliables (ex. Encyclopédie) : repliés par défaut au lancement, mais ouverts
+  // d'emblée si l'onglet courant est dedans (pour voir la page active). État de session.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const g of GROUPS) {
+      if (g.collapsible && g.title) {
+        init[g.title] = g.items.some((it) => it.to !== "/" && location.pathname.startsWith(it.to));
+      }
+    }
+    return init;
+  });
+  const toggleGroup = (title: string) => setOpenGroups((s) => ({ ...s, [title]: !s[title] }));
   // Quitter le Skinator avec le moteur ouvert → on intercepte pour proposer un choix.
   const engineOpen = useEngineOpen();
   const guardLeave = location.pathname === "/skinator" && engineOpen;
@@ -96,17 +111,31 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-2.5 overflow-y-auto overflow-x-hidden px-3 pb-3">
-        {GROUPS.map((group, gi) => (
+        {GROUPS.map((group, gi) => {
+          // En mode icônes (sidebar réduite) on affiche tout ; sinon on respecte le repli du groupe.
+          const isCollapsibleHeader = !!group.collapsible && !!group.title && !collapsed;
+          const groupOpen = !isCollapsibleHeader || (group.title ? openGroups[group.title] : true);
+          return (
           <div key={gi} className="flex flex-col gap-0.5">
             {group.title &&
               (collapsed ? (
                 gi > 0 && <div className="mx-auto my-1.5 h-px w-6 bg-white/10" />
+              ) : isCollapsibleHeader ? (
+                <button
+                  onClick={() => toggleGroup(group.title!)}
+                  className="no-drag flex items-center justify-between rounded-lg px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:text-slate-400"
+                  aria-expanded={groupOpen}
+                >
+                  <span>{group.title}</span>
+                  <ChevronDown className={clsx("h-3.5 w-3.5 transition-transform", groupOpen ? "rotate-180" : "")} />
+                </button>
               ) : (
                 <span className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   {group.title}
                 </span>
               ))}
-            {group.items.map((item) => {
+            {groupOpen &&
+              group.items.map((item) => {
               const isGuides = item.to === "/guides";
               const to = isGuides && lastGuide ? `/guides/${lastGuide}` : item.to;
               const forceActive = isGuides && location.pathname.startsWith("/guides");
@@ -155,7 +184,8 @@ export default function Sidebar() {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="mt-auto p-3">

@@ -80,11 +80,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "shortcutName": "DofusCodex",
-      "uninstallDisplayName": "DofusCodex ${version}",
-      "deleteAppDataOnUninstall": false,
-      "artifactName": "DofusCodex-Setup-${version}.${ext}"
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("dofusCodex", {
   getPlatform: () => ipcRenderer.invoke("app:platform"),
+  getAppVersion: () => ipcRenderer.invoke("app:version"),
   renderSkin: (payload) => ipcRenderer.invoke("skin:render", payload),
   getDofusRoomSpells: (character) => ipcRenderer.invoke("dofusroom:spells", character),
   // ---- Mises à jour ----

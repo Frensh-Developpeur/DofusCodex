@@ -10,6 +10,7 @@ interface UpdateEvent {
 interface Window {
   dofusCodex?: {
     getPlatform: () => Promise<NodeJS.Platform>;
+    getAppVersion?: () => Promise<string>;
     renderSkin?: (payload: unknown) => Promise<string | null>;
     getDofusRoomSpells?: (character: string) => Promise<unknown | null>;
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;

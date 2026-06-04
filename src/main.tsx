@@ -4,6 +4,7 @@ import { HashRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import ConnectionGate from "./components/ConnectionGate";
+import UpdateFinishSplash from "./components/UpdateFinishSplash";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <ConnectionGate>
           <App />
         </ConnectionGate>
+        {/* Splash « mise à jour terminée » — au-dessus de tout, même pendant le test réseau. */}
+        <UpdateFinishSplash />
       </HashRouter>
     </QueryClientProvider>
   </React.StrictMode>,

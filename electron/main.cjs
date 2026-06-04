@@ -107,6 +107,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:platform", () => process.platform);
+  ipcMain.handle("app:version", () => app.getVersion());
 
   // Maj : Windows installe en SILENCE puis relance (true, true) → pas de wizard sur la maj,
   // alors que la 1ʳᵉ install (lancement manuel du .exe) garde l'assistant complet.

@@ -92,9 +92,6 @@ function PhaseCard({ phase, index }: { phase: BossPhase; index: number }) {
             <h4 className="font-display font-bold text-white">{phase.title}</h4>
             {phase.hp && <span className="text-xs text-slate-500">{phase.hp} PV</span>}
           </div>
-          <Pill tone={meta.tone} className="mt-1">
-            <ShieldAlert className="h-3 w-3" /> {meta.label}
-          </Pill>
         </div>
         <ChevronDown className={`h-5 w-5 text-slate-500 transition ${open ? "rotate-180" : ""}`} />
       </button>

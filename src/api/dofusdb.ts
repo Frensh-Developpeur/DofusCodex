@@ -705,3 +705,246 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
   spells.sort((a, b) => a.variantId - b.variantId || a.variantIndex - b.variantIndex);
   return spells;
 }
+
+// ── Succès (achievements) ────────────────────────────────────────────────────
+// Arborescence façon DofusDB : 16 catégories racines (parentId 0) + sous-catégories.
+// Chaque catégorie porte la liste des `achievementIds` qu'elle contient.
+export interface AchievementCategory {
+  id: number;
+  parentId: number;
+  order: number;
+  name: Localized;
+  achievementIds: number[];
+}
+
+export async function listAchievementCategories(signal?: AbortSignal): Promise<AchievementCategory[]> {
+  const out: AchievementCategory[] = [];
+  let skip = 0;
+  // 124 catégories → pagination $limit 50.
+  for (;;) {
+    const data = await getJson<FeathersList<AchievementCategory>>(
+      `${BASE}/achievement-categories?lang=fr&$limit=50&$skip=${skip}&$sort[id]=1`,
+      signal,
+    );
+    out.push(...data.data);
+    skip += 50;
+    if (skip >= data.total) break;
+  }
+  return out.map((c) => ({
+    id: c.id,
+    parentId: c.parentId,
+    order: c.order,
+    name: c.name,
+    achievementIds: c.achievementIds ?? [],
+  }));
+}
+
+export interface Achievement {
+  id: number;
+  name: Localized;
+  description: string; // résolue (markup [challenge,N] remplacé par le nom)
+  points: number;
+  level: number;
+  img: string; // construit depuis iconId (le champ `img` virtuel casse sous $select)
+  conditions: string[]; // lignes lisibles (challenge, niveau requis…)
+  rewards: AchievementRewards;
+  monsters: { id: number; name: string }[]; // monstres/boss référencés (liens donjon/monstre)
+}
+
+export interface AchievementRewardItem {
+  id: number; // id DofusDB de l'item (pour ouvrir l'ItemModal)
+  name: string;
+  img: string;
+  quantity: number;
+}
+export interface AchievementRewards {
+  items: AchievementRewardItem[];
+  titles: string[];
+  ornaments: string[];
+  xp: number; // montant calculé (formules officielles, joueur niveau 200)
+  kamas: number;
+}
+
+// Formules de récompense Ankama (reprises du calcul DofusDB), pour un joueur niveau 200.
+//  • Kamas : ⌊(L² + 20·L − 20) · ratio⌋
+//  • XP    : base ⌊pl·(100+2·pl)²/20 · 1,05 · ratio⌋ ; si le joueur (200) dépasse le niveau
+//    du succès, mélange 70/30 entre le palier du succès et min(200 ; 1,5·niveau).
+const XP_DURATION = 1.05;
+function kamasReward(level: number, ratio: number): number {
+  if (ratio <= 0) return 0;
+  return Math.floor((level * level + 20 * level - 20) * ratio);
+}
+function xpReward(level: number, ratio: number): number {
+  if (ratio <= 0) return 0;
+  const pl = 200; // joueur niveau max (DofusDB passe -1 → 200)
+  const t = level;
+  const r = XP_DURATION;
+  if (pl > t) {
+    const i = Math.min(pl, 1.5 * t);
+    const o = (t * (100 + 2 * t) ** 2) / 20 * r * ratio;
+    const s = (i * (100 + 2 * i) ** 2) / 20 * r * ratio;
+    return Math.floor(0.7 * s + 0.3 * o);
+  }
+  return Math.floor((pl * (100 + 2 * pl) ** 2) / 20 * r * ratio);
+}
+
+// Nettoie un libellé genré Ankama (« {m}Conquérant,{f}Conquérante » → « Conquérant »).
+function cleanGendered(s: string): string {
+  const m = s.match(/\{m\}([^,{}]+)/);
+  if (m) return m[1].trim();
+  return s.replace(/\{[mf]\}/g, "").trim();
+}
+function locFr(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v && typeof v === "object" && "fr" in (v as Record<string, unknown>))
+    return String((v as Record<string, unknown>).fr ?? "");
+  return "";
+}
+
+type RawObjective = { readableCriterion?: unknown; name?: Localized };
+type RawRewardItem = { id?: number; name?: Localized; iconId?: number };
+type RawReward = {
+  experienceRatio?: number;
+  kamasRatio?: number;
+  items?: RawRewardItem[];
+  itemsQuantityReward?: number[];
+  titles?: { name?: unknown }[];
+  ornaments?: { name?: unknown }[];
+};
+type RawAchievement = {
+  id: number;
+  name: Localized;
+  description?: Localized;
+  points?: number;
+  level?: number;
+  order?: number;
+  iconId?: number;
+  objectives?: RawObjective[];
+  rewards?: RawReward[];
+};
+
+// Construit les lignes de conditions depuis readableCriterion (liste de groupes ;
+// chaque groupe = liste de segments string|{name}) et collecte une table id→nom
+// (challenge/monstre…) pour résoudre le markup de la description.
+function parseObjectives(objs: RawObjective[] | undefined, tokenNames: Map<number, string>): string[] {
+  const lines: string[] = [];
+  for (const o of objs ?? []) {
+    if (!o) continue;
+    const rc = o.readableCriterion;
+    if (Array.isArray(rc) && rc.length) {
+      for (const group of rc as unknown[]) {
+        const parts = Array.isArray(group) ? group : [group];
+        let line = "";
+        for (const p of parts as unknown[]) {
+          if (typeof p === "string") line += p;
+          else if (p && typeof p === "object") {
+            const obj = p as { id?: number; name?: unknown };
+            const nm = locFr(obj.name);
+            line += nm;
+            if (typeof obj.id === "number" && nm) tokenNames.set(obj.id, nm);
+          }
+        }
+        line = line.trim();
+        if (line) lines.push(line);
+      }
+    } else if (o.name?.fr) {
+      lines.push(o.name.fr);
+    }
+  }
+  return lines;
+}
+
+// Extrait les monstres/boss référencés par les objectifs (refs MonsterData → id ;
+// ChallengeData → targetMonsterId = le boss). Le nom vient de la ref, sinon de l'objectif.
+function parseMonsters(objs: RawObjective[] | undefined): { id: number; name: string }[] {
+  const out: { id: number; name: string }[] = [];
+  const seen = new Set<number>();
+  const add = (id: number | undefined, name: string) => {
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, name });
+  };
+  for (const o of objs ?? []) {
+    if (!o) continue;
+    const objName = o.name?.fr ?? "";
+    const walk = (x: unknown) => {
+      if (Array.isArray(x)) {
+        x.forEach(walk);
+      } else if (x && typeof x === "object") {
+        const ref = x as { className?: string; id?: number; targetMonsterId?: number; name?: unknown };
+        if (ref.className === "MonsterData") add(ref.id, locFr(ref.name) || objName);
+        else if (ref.className === "ChallengeData" && ref.targetMonsterId) add(ref.targetMonsterId, objName);
+      }
+    };
+    walk(o.readableCriterion);
+  }
+  return out;
+}
+
+function resolveDescription(desc: string, tokenNames: Map<number, string>): string {
+  return desc
+    .replace(/\[[a-zA-Z]+,(\d+)\]/g, (_m, id) => tokenNames.get(Number(id)) ?? "")
+    .replace(/\s+([.,;:])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function parseRewards(rewards: RawReward[] | undefined, level: number): AchievementRewards {
+  const out: AchievementRewards = { items: [], titles: [], ornaments: [], xp: 0, kamas: 0 };
+  for (const r of rewards ?? []) {
+    if (!r) continue;
+    out.xp += xpReward(level, r.experienceRatio ?? 0);
+    out.kamas += kamasReward(level, r.kamasRatio ?? 0);
+    const qty = r.itemsQuantityReward ?? [];
+    (r.items ?? []).forEach((it, idx) => {
+      out.items.push({
+        id: it.id ?? 0,
+        name: locFr(it.name),
+        img: `${BASE}/img/items/${it.iconId ?? 0}.png`,
+        quantity: qty[idx] ?? 1,
+      });
+    });
+    for (const t of r.titles ?? []) {
+      const nm = cleanGendered(locFr(t.name));
+      if (nm) out.titles.push(nm);
+    }
+    for (const o of r.ornaments ?? []) {
+      const nm = cleanGendered(locFr(o.name));
+      if (nm) out.ornaments.push(nm);
+    }
+  }
+  return out;
+}
+
+// Récupère des succès par ids (multi-ids via id[$in][], plafonné à 50 → chunks),
+// en conservant l'ordre des ids fournis. Inclut conditions + récompenses (embarquées).
+export async function getAchievementsByIds(ids: number[], signal?: AbortSignal): Promise<Achievement[]> {
+  const out: (Achievement & { _order: number })[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const data = await getJson<FeathersList<RawAchievement>>(
+      `${BASE}/achievements?lang=fr&$limit=50&${idParams}`,
+      signal,
+    );
+    for (const a of data.data ?? []) {
+      const tokenNames = new Map<number, string>();
+      const conditions = parseObjectives(a.objectives, tokenNames);
+      out.push({
+        id: a.id,
+        name: a.name,
+        description: resolveDescription(a.description?.fr ?? "", tokenNames),
+        points: a.points ?? 0,
+        level: a.level ?? 0,
+        img: `${BASE}/img/achievements/${a.iconId ?? 0}.png`,
+        conditions,
+        rewards: parseRewards(a.rewards, a.level ?? 0),
+        monsters: parseMonsters(a.objectives),
+        _order: a.order ?? 0,
+      });
+    }
+  }
+  // Même ordre que DofusDB : tri par `order` (regroupe par donjon/thème), puis id.
+  out.sort((a, b) => a._order - b._order || a.id - b.id);
+  return out.map(({ _order, ...a }) => a);
+}

@@ -20,6 +20,7 @@ import {
   Users,
   Boxes,
   Tent,
+  Trophy,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -47,6 +48,7 @@ const GROUPS: { title?: string; items: Item[] }[] = [
       { to: "/panoplies", label: "Panoplies", icon: Layers3 },
       { to: "/objets", label: "Objets & Ressources", icon: Boxes },
       { to: "/havre-sac", label: "Havre-Sacs", icon: Tent },
+      { to: "/succes", label: "Succès", icon: Trophy },
     ],
   },
   {

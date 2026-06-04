@@ -26,6 +26,7 @@ import Sets from "./pages/Sets";
 import Classes from "./pages/Classes";
 import Resources from "./pages/Resources";
 import Havenbags from "./pages/Havenbags";
+import Achievements from "./pages/Achievements";
 
 function Page({ children }: { children: React.ReactNode }) {
   return (
@@ -104,6 +105,7 @@ export default function App() {
                 <Route path="/classes" element={<Page><Classes /></Page>} />
                 <Route path="/objets" element={<Page><Resources /></Page>} />
                 <Route path="/havre-sac" element={<Page><Havenbags /></Page>} />
+                <Route path="/succes" element={<Page><Achievements /></Page>} />
                 <Route path="/guides" element={<Page><Guides /></Page>} />
                 <Route path="/guides/:id" element={<Page><GuideDetail /></Page>} />
                 <Route path="/almanax" element={<Page><Almanax /></Page>} />

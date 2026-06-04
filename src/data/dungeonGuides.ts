@@ -63,8 +63,8 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
       { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Un Mulou dans la Bergerie", strategy: "Les ennemis ne doivent recevoir aucun soin." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -103,8 +103,8 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
       { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Dorée, mi fa sol", strategy: "Les invocations ennemies ne doivent subir aucun dégât." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -143,9 +143,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
       { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Bécotam", strategy: "N'infliger des dégâts qu'en ligne directe avec la cible." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
-      { name: "Rats… au sens propre ou au figuré", strategy: "Combattre à 4 persos min. avec au moins un Rapiat, Rapine, Ougicle ou Hulkrap." },
+      { name: "Rats... au sens propre ou au figuré", strategy: "Combattre à 4 persos min. avec au moins un Rapiat, Rapine, Ougicle ou Hulkrap." },
     ],
   },
 
@@ -183,9 +183,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set Bwork", "Ressources de craft niveau 50", "Familier"],
     achievements: [
       { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
-      { name: "Premier", strategy: "Éliminer la Bworkette avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Bworkette doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Tombés sous le charme", strategy: "N'achever les ennemis qu'avec des combattants en état insoignable." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
       { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
     ],
   },
@@ -226,8 +226,8 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
       { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Mené à la cawotte", strategy: "Quand une Cawotte Woyale est présente, seul le Wa Wabbit doit subir des dégâts." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -267,8 +267,8 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Duel", strategy: "Un seul allié doit attaquer chaque ennemi durant tout le combat." },
       { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Touche pas à mon blop", strategy: "Les invocations ennemies ne doivent subir aucun dégât." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -304,6 +304,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Koulosse et Boufcoul faibles Eau/Feu ; Bouftous des Cavernes faibles Terre/Air.",
     ],
     rewards: ["Set Koulosse", "Pierres précieuses", "Ressources THL intermédiaire"],
+    achievements: [
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "À la cool", strategy: "Aucun allié ne doit être transformé en Boufcool." },
+    ],
   },
 
   // Antre du Dragon Cochon — Dragon Cochon
@@ -349,6 +355,10 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set du Dragon Cochon", "Ressources rares", "Familier"],
     achievements: [
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Faut pas pousser les cochons dans la confiture d'orties", strategy: "Les alliés ne doivent subir aucun dégât de poussée." },
     ],
   },
@@ -388,9 +398,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set du Chafer", "Os & ressources de Chafer", "Familier"],
     achievements: [
       { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
-      { name: "Premier", strategy: "Achever le Chafer Rônin avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Chafer Rōnin doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Désillusion", strategy: "Aucune illusion du Rônin ne doit être présente au début de son tour." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
       { name: "Revenus d'outre-tombe", strategy: "Combattre à 4 persos min. avec un Kockis, Kubitus, Kalkanéus, Hectaupe ou Hichète." },
     ],
   },
@@ -430,10 +440,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set des Forgerons", "Ressources de forge", "Familier"],
     achievements: [
       { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
-      { name: "Premier", strategy: "Achever le Coffre des Forgerons avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Coffre des Forgerons doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Ouverture facile", strategy: "N'achever les ennemis que lorsque le boss a moins de 50% PV, et finir le boss en dernier." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
-      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
     ],
   },
 
@@ -473,8 +482,8 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
       { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Enlisement larvaire", strategy: "N'infliger des dégâts à la Shin Larve que sous l'effet de son sort Enlisement." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -511,6 +520,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le succès « Garde emplumée » impose de ne pas subir de dégâts tant que les totems Tofu sont là.",
     ],
     rewards: ["Set du Minotoror", "Clés & ressources THL", "Familier"],
+    achievements: [
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Garde emplumée", strategy: "Le Minotoror ne doit pas subir de dommages si au moins un de ses tofus est présent sur le terrain." },
+    ],
   },
 
   // Antre de Crocabulia — Crocabulia
@@ -546,6 +561,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne perdez pas de tours sur les coquilles de dégâts : inutiles à détruire.",
     ],
     rewards: ["Set de Crocabulia", "Ressources rares", "Familier"],
+    achievements: [
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "En cassant des œufs", strategy: "Les coquilles invoquées doivent être achevées avant le début de leur troisième tour et aucun allié ne doit subir de dommages causés par leur explosion." },
+    ],
   },
 
   // Laboratoire du Tynril — les 4 Tynrils
@@ -582,6 +603,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tapez toujours dans la faibleur élémentaire propre à chaque Tynril.",
     ],
     rewards: ["Set du Tynril", "Ressources d'alchimie THL", "Familier"],
+    achievements: [
+      { name: "Intouchable", strategy: "Les combattants alliés ne doivent pas perdre de points de vie." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Prendre racine", strategy: "Les ennemis ne doivent ni être déplacés, ni subir de tentative de retrait PM par les alliés." },
+    ],
   },
 
   // Antre du Korriandre — Korriandre
@@ -618,6 +645,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Pour le succès, terminez vos tours à 3 cases ou plus les uns des autres.",
     ],
     rewards: ["Set du Korriandre", "Ressources THL", "Familier"],
+    achievements: [
+      { name: "Mystique", strategy: "Les combattants alliés ne doivent infliger que des dégâts et soins de sorts durant leurs tours de jeu." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 15 tours." },
+      { name: "Pas dans mes pattes", strategy: "Les combattants alliés doivent terminer leur tour à plus de 3 cases d'un allié." },
+    ],
   },
 
   // Grotte du Bworker — Bworker
@@ -653,6 +686,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le succès dépend du placement, pas du DPS pur.",
     ],
     rewards: ["Set du Bworker", "Ressources rares", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 15 tours." },
+      { name: "Baston équitable", strategy: "Les ennemis ne doivent subir ni retrait PM, ni retrait PA, ni retrait PO, ni tentative de déplacement." },
+    ],
   },
 
   // Cavernes du Kolosso — Kolosso
@@ -696,6 +735,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tapez Terre (sa faiblesse).",
     ],
     rewards: ["Set du Kolosso", "Pierres précieuses THL", "Familier"],
+    achievements: [
+      { name: "Dernier", strategy: "Blérom doit être achevé en dernier." },
+      { name: "Premier", strategy: "Professeur Xa doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Alliés passés au futur", strategy: "Les alliés ne doivent pas recevoir de soin." },
+    ],
   },
 
   // Transporteur de Sylargh — Sylargh
@@ -733,6 +778,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Duo possible sous 40 tours avec une classe retrait de PM.",
     ],
     rewards: ["Set de Sylargh", "Ressources THL", "Familier"],
+    achievements: [
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Barbare", strategy: "Les personnages alliés doivent achever les ennemis avec une arme." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Brikolère", strategy: "Les ennemis dans l'état Zombi ne doivent pas être achevés à 5 cases ou moins d'un allié ou d'un autre ennemi." },
+      { name: "Les z'autres", strategy: "Combattre à 4 persos min. avec au moins un Haku, Manitou Zoth, Karotz, Grouillot ou Phong Huss." },
+    ],
   },
 
   // Laboratoire de Nileza — Nileza
@@ -769,6 +821,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Bonne mobilité et contrôle de placement indispensables.",
     ],
     rewards: ["Set de Nileza", "Ressources THL", "Familier"],
+    achievements: [
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Dernier", strategy: "Nileza doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Alchi-pludent", strategy: "Aucun allié ne doit entrer dans l'état Pacifiste." },
+      { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
+    ],
   },
 
   // Donjon du Comte Harebourg — Comte Harebourg
@@ -815,11 +874,11 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set d'Harebourg (Glacomponents)", "Ressources THL rares", "Succès prestigieux"],
     achievements: [
-      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
       { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
       { name: "L'échec n'est pas une option", strategy: "Les ennemis ne doivent subir aucun dégât au corps-à-corps." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 40 tours." },
-      { name: "Score 200", strategy: "Réussir le combat avec des modificateurs d'idoles totalisant 200 points." },
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
     ],
   },
 
@@ -857,6 +916,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne tapez pas en Terre : adaptez vos sorts.",
     ],
     rewards: ["Set du Roi Nidas", "Ressources THL", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Roi Nidas doit être achevé en premier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Rats... au sens propre ou au figuré", strategy: "Combattre à 4 persos min. avec au moins un Rapiat, Rapine, Ougicle ou Hulkrap." },
+      { name: "Pingrerie", strategy: "Lorsqu'un allié occasionne des dommages, il doit se situer en ligne ou en diagonale de sa cible." },
+    ],
   },
 
   // Brasserie du roi Dazak — Dazak Martegel
@@ -893,6 +959,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez la Nimpatience des sbires en priorité, surtout Tanklume.",
     ],
     rewards: ["Set de Dazak", "Ressources THL rares", "Succès"],
+    achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
+      { name: "Premier", strategy: "Dazak Martegel doit être achevé en premier." },
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Manque de nimpatience", strategy: "Les ennemis ne doivent être achevés que lorsqu'ils se trouvent dans l'état Nimpatience III." },
+    ],
   },
 
   // Crypte de Kardorim — Kardorim
@@ -929,9 +1002,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set de Kardorim", "Ossements & ressources", "Familier"],
     achievements: [
       { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
-      { name: "Premier", strategy: "Achever Kardorim avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Kardorim doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Lâche mes côtes", strategy: "Kardorim ne doit jamais finir son tour au corps-à-corps ; les Kardoribs ne doivent ni être touchés ni poussés." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -968,6 +1041,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez l'espace de l'arène en tuant vite les invocations.",
     ],
     rewards: ["Set de Kankreblath", "Ressources", "Familier"],
+    achievements: [
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+      { name: "Dernier", strategy: "Kankreblath doit être achevé en dernier." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "La ligne interdite", strategy: "Les alliés (hors invocations statiques) ne doivent terminer leur tour ni en ligne d'un ennemi, ni en ligne d'un autre allié." },
+    ],
   },
 
   // Akadémie des Gobs — Directeur Grunob
@@ -1003,6 +1083,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne laissez pas les Gobs se regrouper (bonus de dégâts cumulatif).",
     ],
     rewards: ["Set des Gobs", "Ressources", "Familier"],
+    achievements: [
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Premier", strategy: "Directeur Grunob doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Dirige mais mal rédige", strategy: "À partir du tour 2, les combattants ennemis doivent commencer leur tour sur une cellule adjacente à celle d'un allié ou d'un ennemi." },
+    ],
   },
 
   // Grotte Hesque — Corailleur Magistral
@@ -1038,6 +1125,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le boss perd sa mobilité quand il se buffe : c'est votre fenêtre de tir.",
     ],
     rewards: ["Set du Corailleur", "Ressources marines", "Familier"],
+    achievements: [
+      { name: "Les z'autres", strategy: "Combattre à 4 persos min. avec au moins un Haku, Manitou Zoth, Karotz, Grouillot ou Phong Huss." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Collé-serré", strategy: "À partir du tour global 2, les combattants alliés doivent commencer leur tour au contact du Corailleur Magistral. Le challenge échoue si le Corailleur Magistral n'est pas achevé en dernier." },
+    ],
   },
 
   // Nid du Kwakwa — Kwakwa
@@ -1074,10 +1168,11 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set du Kwakwa", "Plumes & ressources", "Familier"],
     achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
       { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
-      { name: "Mains propres", strategy: "Ne vaincre les ennemis qu'avec des dégâts indirects (poison, invocations, glyphes, poussée, pièges)." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Kwakwa ? Kwapoussée !", strategy: "Les ennemis ne doivent subir aucun dégât de poussée." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -1114,6 +1209,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gardez un peu de soin pour les multiples Kipik.",
     ],
     rewards: ["Set de Nowel", "Ressources d'événement", "Familier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Ça pique le Kipik", strategy: "À la fin du tour du Sapik, il ne doit pas y avoir plus d'un Kipik." },
+    ],
   },
 
   // Grange du Tournesol Affamé — Tournesol Affamé
@@ -1147,6 +1249,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     tips: ["Bursté-le au tour 1 si possible.", "Tapez Eau."],
     rewards: ["Set du Tournesol", "Graines & ressources", "Familier"],
     achievements: [
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Premier", strategy: "Tournesol Affamé doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Mauvaise graine", strategy: "Achever chaque invocation du Tournesol Affamé avant le début de son 2e tour de jeu." },
     ],
   },
@@ -1182,6 +1287,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Concentrez les zones sur les Pichons.", "Gardez vos distances pour éviter le poison."],
     rewards: ["Set du Château Ensablé", "Ressources", "Familier"],
+    achievements: [
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Passer l'éponge", strategy: "À partir du tour 2, Mob l'éponge doit être poussé ou attiré au moins une fois à chaque tour global." },
+    ],
   },
 
   // Maison Fantôme — Boostache
@@ -1214,6 +1325,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Ignorez les zombies, focus le boss.", "Tapez Air."],
     rewards: ["Set de la Maison Fantôme", "Ressources d'Halouine", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Dernier", strategy: "Boostache doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Empêtrement d'esprit entêtant", strategy: "Aucun Ashi-magari ne doit être achevé pendant toute la durée du combat." },
+    ],
   },
 
   // Refuge sylvestre — Rakoopeur
@@ -1246,6 +1364,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Variez les éléments pour empiler la faiblesse prismatique.", "Évitez l'allié bouclié."],
     rewards: ["Set du Refuge sylvestre", "Ressources sylvestres", "Familier"],
+    achievements: [
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
+      { name: "Dernier", strategy: "Rakoopeur doit être achevé en dernier." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Vigilance forestière", strategy: "Les alliés ne doivent pas cumuler plus de deux faiblesses élémentaires différentes au début de leur tour." },
+    ],
   },
 
   // Gelaxième Dimension — Gelées Royales (Bleuet, Citron, Fraise, Menthe)
@@ -1279,6 +1404,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Un coup dans la mauvaise couleur = peu d'effet : respectez les éléments.", "Exploitez la poussée."],
     rewards: ["Set de la Gelée Royale", "Ressources d'alchimie", "Familier"],
+    achievements: [
+      { name: "Duel", strategy: "Un seul allié doit attaquer chaque ennemi durant tout le combat." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Privé de dessert", strategy: "Les invocations ennemies ne doivent subir aucun dommage." },
+    ],
   },
 
   // Village Kanniboul — Kanniboul Ebil
@@ -1313,9 +1444,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set Kanniboul", "Ressources", "Familier"],
     achievements: [
       { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
-      { name: "Premier", strategy: "Achever Kanniboul Ebil avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Kanniboul Ebil doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Rituel de survie", strategy: "Quand un ennemi subit des dégâts, il doit être adjacent à au moins une entité." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -1349,6 +1480,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Tapez Terre.", "Profitez des glyphes Chocomatose pour vos pics de dégâts."],
     rewards: ["Set des Waddicts", "Ressources de forge", "Familier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Fou de choco", strategy: "Tous les combattants alliés doivent entrer dans l'état Chocomatose au moins une fois au cours du combat." },
+    ],
   },
 
   // Pitons Rocheux des Craqueleurs — Craqueleur Légendaire
@@ -1382,6 +1520,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Les dégâts Neutre donnent un bouclier de 3000 (2 tours).", "Empêchez les 20 PA absolument."],
     rewards: ["Set du Craqueleur", "Pierres précieuses", "Familier"],
+    achievements: [
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Premier", strategy: "Craqueleur Légendaire doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "De véritables craqu'", strategy: "Aucun combattant ennemi ne doit subir de dommages lorsque des invocations ennemies sont en vie." },
+    ],
   },
 
   // Laboratoire de Brumen Tinctorias — Nelween
@@ -1408,6 +1552,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Pour le succès : restez à 3+ cases des alliés en infligeant des dégâts.",
     ],
     rewards: ["Set de Brumen", "Ressources d'alchimie", "Familier"],
+    achievements: [
+      { name: "Dernier", strategy: "Nelween doit être achevé en dernier." },
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Laboratoire de curiosité", strategy: "Les combattants alliés ne doivent avoir aucun allié situé à 3 cases ou moins d'eux lorsqu'ils infligent des dommages à un ennemi." },
+      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
+    ],
   },
 
   // Épreuve de Draegnerys — Draegnerys
@@ -1440,6 +1591,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Tapez Feu.", "Gérez le flux constant de Dragoeufs."],
     rewards: ["Set de Draegnerys", "Œufs & ressources", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Sortir de sa coquille", strategy: "Les ennemis ne doivent être achevés que lorsqu'au moins l'un d'eux se trouve dans l'état Intrépide (évolution maximale)." },
+    ],
   },
 
   // Terrier du Wa Wabbit — Wa Wobot
@@ -1472,6 +1630,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Apportez de la poussée (Libération à défaut).", "Maîtrisez les rebonds entre Buffers."],
     rewards: ["Set du Wabbit", "Ressources", "Familier"],
+    achievements: [
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "À fond les boulons", strategy: "Les alliés ne doivent pas recevoir de dommages de poussée." },
+    ],
   },
 
   // Cimetière des Mastodontes — Mantiscore
@@ -1504,6 +1668,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Abusez du téléport pour rester à distance.", "Ne le bloquez pas sans case libre."],
     rewards: ["Set du Mastodonte", "Ossements anciens", "Familier"],
+    achievements: [
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "À portée de dard", strategy: "Le Mantiscore ne doit pas recevoir de dommages à distance." },
+    ],
   },
 
   // Domaine Ancestral — Abraknyde Ancestral
@@ -1537,6 +1707,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     tips: ["Tapez Feu ou Agilité (ses seuls points faibles).", "Gérez le poison de PA."],
     rewards: ["Set Ancestral", "Bois & ressources", "Familier"],
     achievements: [
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Premier", strategy: "Abraknyde Ancestral doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Distance respectueuse", strategy: "N'avoir aucun ennemi à 3 PO ou moins de soi quand on inflige des dégâts." },
     ],
   },
@@ -1571,6 +1744,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Les servantes > la Reine en danger.", "Évitez Terre/Air."],
     rewards: ["Set de la Reine Nyée", "Soie & ressources", "Familier"],
+    achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
+      { name: "Premier", strategy: "Reine Nyée doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "On ne peut la Nyée", strategy: "Lorsque la Reine Nyée invoque un Oeuf de Trégénaire, celui-ci doit être achevé avant le début de son prochain tour." },
+    ],
   },
 
   // Bateau du Chouque — Le Chouque
@@ -1603,6 +1783,12 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Appliquez Pesanteur pour bloquer les échanges.", "Gardez >50% PV."],
     rewards: ["Set du Chouque", "Butin de pirate", "Familier"],
+    achievements: [
+      { name: "Dernier", strategy: "Le Chouque doit être achevé en dernier." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Saute-pirate", strategy: "Lorsque le Chouque échange de place avec un de ses alliés, ce dernier doit être achevé en moins de deux tours." },
+    ],
   },
 
   // Chapiteau des Magik Riktus — Choudini
@@ -1635,6 +1821,13 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     tips: ["Restez mobile pour gérer les échanges.", "Variez les éléments contre les sbires."],
     rewards: ["Set des Magik Riktus", "Ressources", "Familier"],
+    achievements: [
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Chacun son tour de magie", strategy: "Lorsqu'un ennemi déplace un allié, cet ennemi doit être lui-même déplacé par un allié avant le début de son prochain tour." },
+    ],
   },
 
   // Cale de l'Arche d'Otomaï — Gourlo le Terrible
@@ -1672,6 +1865,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set d'Otomaï", "Ressources de l'Arche", "Familier"],
     achievements: [
+      { name: "Premier", strategy: "Gourlo le Terrible doit être achevé en premier." },
+      { name: "Econome", strategy: "Les combattants alliés ne doivent utiliser qu'une seule fois la même action durant toute la durée du combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Tonneaux truands", strategy: "Tous les ennemis doivent subir au moins une fois l'effet d'un tonneau de pirate." },
     ],
   },
@@ -1711,6 +1907,10 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set du Meulou", "Laine de Meulou", "Familier Meulou"],
     achievements: [
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
+      { name: "Premier", strategy: "Meulou doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Meulou y es-tu ?", strategy: "Un même allié ne doit pas infliger plus de 3 attaques par tour à un ennemi." },
     ],
   },
@@ -1752,9 +1952,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     achievements: [
       { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
       { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
-      { name: "Dernier", strategy: "Achever Halouine en dernier." },
+      { name: "Dernier", strategy: "Halouine doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Rester planté là", strategy: "Les alliés ne doivent jamais être déplacés." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -1793,8 +1993,10 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set de Dramak", "Ressources du Théâtre", "Familier"],
     achievements: [
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Spectacle de marionnettes", strategy: "Achever les marionnettes dans leur ordre d'invocation (Blanche > Bleue > Rouge > Verte > Grise)." },
-      { name: "Mains Propres", strategy: "N'éliminer le Maître des Pantins qu'avec des effets de début de tour (poisons, glyphes)." },
     ],
   },
 
@@ -1833,7 +2035,11 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set Malléfisk", "Ressources de la Fabrique", "Familier"],
     achievements: [
-      { name: "Échapper au fisk", strategy: "Éliminer Malléfisk en dernier (battre les 5 vagues de monstres avant le boss)." },
+      { name: "Rats... au sens propre ou au figuré", strategy: "Combattre à 4 persos min. avec au moins un Rapiat, Rapine, Ougicle ou Hulkrap." },
+      { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 30 tours." },
+      { name: "Échapper au fisk", strategy: "Tuer Malléfisk en dernier." },
     ],
   },
 
@@ -1872,6 +2078,10 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set de Moon", "Bois de Moon", "Familier"],
     achievements: [
+      { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Animal totem", strategy: "Les totems de Darkli Moon ne doivent jamais perdre de PV." },
     ],
   },
@@ -1911,10 +2121,10 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
     rewards: ["Set du Kharnozor", "Ressources du Repaire", "Familier"],
     achievements: [
-      { name: "Dernier", strategy: "Achever le Kharnozor en dernier." },
+      { name: "Dernier", strategy: "Kharnozor doit être achevé en dernier." },
       { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Les yeux aussi gros que le ventre", strategy: "Chaque ennemi doit avoir au moins un allié en ligne de vue au début de son tour." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -1954,9 +2164,9 @@ const GUIDES: Record<number, DungeonGuide> = {
     rewards: ["Set du Maître Corbac", "Ressources de la Bibliothèque", "Familier Corbac"],
     achievements: [
       { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
-      { name: "Premier", strategy: "Achever Maître Corbac avant tous les autres ennemis." },
+      { name: "Premier", strategy: "Maître Corbac doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
       { name: "Maître Corbac sur un arbre perché", strategy: "Terminer son tour à 5 PO ou moins d'un ennemi." },
-      { name: "Duo", strategy: "Vaincre tous les monstres à 2 personnages max et en moins de 20 tours." },
     ],
   },
 
@@ -1994,6 +2204,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Évitez le corps-à-corps face à Infantophagie.",
     ],
     rewards: ["Set de Nowel", "Ressources de Nowel", "Familier saisonnier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Premier", strategy: "Papa Nowel doit être achevé en premier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Un Nowel presque parfait", strategy: "Les alliés doivent achever le Demi Papa Nowel sans occasionner de dommages au Papa Nowel une fois qu'il entre dans l'état Séparé. Le challenge échoue si le Papa Nowel est achevé avant d'entrer dans cet état." },
+    ],
   },
 
   // Goulet du Rasboul — Silf le Rasboul Majeur
@@ -2030,6 +2247,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez les PA du boss : c'est le cœur de la stratégie.",
     ],
     rewards: ["Set du Rasboul", "Ressources du Goulet", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Silf le Rasboul Majeur doit être achevé en premier." },
+      { name: "Temps qui court", strategy: "Vaincre Silf le Rasboul Majeur dans son donjon. Les personnages ne doivent pas retirer de PA aux adversaires." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Ras le boule", strategy: "Il ne doit jamais y avoir plus de 2 Rasbouls mineurs sur le terrain au début du tour de Silf le Rasboul Majeur." },
+    ],
   },
 
   // Garde-manger du Rat Blanc — Rat Blanc
@@ -2066,6 +2289,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le corps-à-corps fait des dégâts modérés, la distance reste gérable.",
     ],
     rewards: ["Set du Rat Blanc", "Ressources du Garde-manger", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Rat Blanc doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "La taille du rat", strategy: "Chaque ennemi doit subir des dégâts au moins une fois entre chacun de ses tours." },
+    ],
   },
 
   // Sousouricière du Rat Noir — Rat Noir
@@ -2102,6 +2331,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le vol de vie remplace avantageusement les soins directs.",
     ],
     rewards: ["Set du Rat Noir", "Ressources de la Sousouricière", "Familier"],
+    achievements: [
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Rat-trapage", strategy: "Le Rat Noir ne doit pas subir de dommages avant que tous les autres ennemis soient achevés." },
+      { name: "Rats... au sens propre ou au figuré", strategy: "Combattre à 4 persos min. avec au moins un Rapiat, Rapine, Ougicle ou Hulkrap." },
+    ],
   },
 
   // Miausolée du Pounicheur — Le Pounicheur
@@ -2138,6 +2374,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tuez les vagues d'adds vite (5 vagues) pour éviter le surnombre.",
     ],
     rewards: ["Set du Pounicheur", "Ressources du Miausolée", "Familier"],
+    achievements: [
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 30 tours." },
+      { name: "Sac à pupuces", strategy: "Chaque pupuce invoquée par le Pounicheur ne doit pas changer d'état plus d'une fois par tour global." },
+    ],
   },
 
   // Bambusaie de Damadrya — Damadrya
@@ -2174,6 +2416,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Burst : tuer vite limite tous les effets de zone.",
     ],
     rewards: ["Set de Damadrya", "Ressources de la Bambusaie", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Damadrya doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "On lui pèlera le bourgeon", strategy: "Un allié ne doit pas subir plus d'une fois l'explosion d'un Bourgeon de Damadrya." },
+    ],
   },
 
   // Repaire de Skeunk — Skeunk
@@ -2210,6 +2458,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez l'ordre de mort des Sadida pour neutraliser leurs effets.",
     ],
     rewards: ["Set de Skeunk", "Ressources du Repaire", "Familier"],
+    achievements: [
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 26 tours." },
+      { name: "Les fans et les enfants d'abord", strategy: "Les poupées doivent être achevées dans l'ordre défini. Au début du combat, l'une d'elles est choisie, puis détermine la prochaine à sa mort. Toutes les poupées doivent être achevées avant que Skeunk ne puisse subir de dégâts." },
+    ],
   },
 
   // Antre du Blop Multicolore Royal — Blop Multicolore Royal
@@ -2246,6 +2500,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Coordonnez les éléments pour abattre les variantes une à une.",
     ],
     rewards: ["Set du Blop Royal", "Ressources de l'Antre", "Familier Blop"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duel", strategy: "Un seul allié doit attaquer chaque ennemi durant tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Touche pas à mes blops", strategy: "Toutes les attaques doivent être concentrées sur le Blop Multicolore Royal jusqu'à ce qu'il meure." },
+    ],
   },
 
   // Tofulailler Royal — Tofu Royal
@@ -2282,6 +2542,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Sans blocage, le combat s'éternise : priorité au contrôle.",
     ],
     rewards: ["Set du Tofu Royal", "Plume du Tofu Royal", "Familier"],
+    achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
+      { name: "Dernier", strategy: "Tofu Royal doit être achevé en dernier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Poursuite royale", strategy: "Chaque combattant ennemi doit jouer au moins un tour de jeu sans utiliser de PM avant d'être achevé." },
+    ],
   },
 
   // Serre du Royalmouth — Royalmouth
@@ -2318,6 +2585,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Lichemouth tape Feu : taper Feu reste pertinent.",
     ],
     rewards: ["Set du Royalmouth", "Ressources de la Serre", "Familier"],
+    achievements: [
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Premier", strategy: "Royalmouth doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Parcimonie royale", strategy: "Durant son tour de jeu, si un allié déplace un ennemi, il ne doit plus occasionner de dommages à cet ennemi pendant le reste de son tour." },
+    ],
   },
 
   // Volière de la Haute Truche — Haute Truche
@@ -2354,6 +2627,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez les positions sur l'ensemble des salles.",
     ],
     rewards: ["Set de la Haute Truche", "Plume de Truche", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Haute Truche doit être achevé en premier." },
+      { name: "Barbare", strategy: "Les personnages alliés doivent achever les ennemis avec une arme." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Truchement", strategy: "Les ennemis doivent être déplacés avant de subir des dommages. Un ennemi déplacé est considéré comme tel jusqu'au début de son prochain tour." },
+    ],
   },
 
   // Ring du Capitaine Ekarlatte — Capitaine Ekarlatte
@@ -2390,6 +2669,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gardez du PM pour compenser les poussées des Tromblions.",
     ],
     rewards: ["Set du Capitaine Ekarlatte", "Ressources du Ring", "Familier"],
+    achievements: [
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 30 tours." },
+    ],
   },
 
   // Caverne d'El Piko — El Piko
@@ -2426,6 +2711,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Adaptez votre élément à l'État Tactique du tour.",
     ],
     rewards: ["Set d'El Piko", "Ressources de la Caverne", "Familier"],
+    achievements: [
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duel", strategy: "Un seul allié doit attaquer chaque ennemi durant tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Guerilla", strategy: "Les alliés ne doivent pas infliger de dommages à un autre allié par le biais du sort Guerillero." },
+    ],
   },
 
   // Croquanterie — Croqueleur
@@ -2462,6 +2753,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ordre des éléments : Feu → Air → Eau → Terre/Neutre.",
     ],
     rewards: ["Set de la Croquanterie", "Ressources", "Familier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "J'accours, les croquants !", strategy: "Les combattants ennemis ne doivent subir aucune tentative de dommages à distance." },
+    ],
   },
 
   // Vallée de la Dame des eaux — Nagate
@@ -2498,6 +2796,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le combat est un puzzle de placement avant tout.",
     ],
     rewards: ["Set de la Dame des eaux", "Ressources de la Vallée", "Familier"],
+    achievements: [
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Le jeu de la Dame", strategy: "Les Bombombres ne doivent subir aucun dommage." },
+    ],
   },
 
   // Atelier du Tanukouï San — Tanukouï San
@@ -2534,6 +2839,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Anticipez les changements de glyphes à chaque phase.",
     ],
     rewards: ["Set du Tanukouï San", "Ressources de l'Atelier", "Familier"],
+    achievements: [
+      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Se faire des kouïs en or", strategy: "Un ennemi ne doit pas être déplacé plus d'une fois entre chacun de ses tours." },
+    ],
   },
 
   // Clairière du Chêne Mou — Chêne Mou
@@ -2570,6 +2882,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Éloignez les persos à faibles PV en début de combat.",
     ],
     rewards: ["Set du Chêne Mou", "Ressources de la Clairière", "Familier"],
+    achievements: [
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Premier", strategy: "Chêne Mou doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Enchaînemou", strategy: "Les alliés (hors invocations statiques) doivent terminer leur tour en ligne d'un ennemi." },
+    ],
   },
 
   // Excavation du Mansot Royal — Mansot Royal
@@ -2606,6 +2924,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le soigneur de la fenêtre de vulnérabilité est la pièce maîtresse.",
     ],
     rewards: ["Set du Mansot Royal", "Ressources de l'Excavation", "Familier"],
+    achievements: [
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
+      { name: "Dernier", strategy: "Mansot Royal doit être achevé en dernier." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Privilège royal", strategy: "Chaque début de tour, le Mansot Royal désigne un combattant allié. Seul le combattant désigné peut recevoir des soins." },
+    ],
   },
 
   // Dojo du Vent — Hanshi & Shihan
@@ -2642,6 +2967,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Adaptez vos sorts à la réduction active (CC vs distance).",
     ],
     rewards: ["Set du Dojo du Vent", "Ressources", "Familier"],
+    achievements: [
+      { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Dernier", strategy: "Hanshi doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Vents contraires", strategy: "Les ennemis qui maitrisent le souffle du Wukin ne doivent subir que des dommages en mêlée et les ennemis qui maitrisent le souffle du Wukang ne doivent subir que des dommages à distance." },
+    ],
   },
 
   // Fabrique de foux d'artifice — Founoroshi
@@ -2678,6 +3010,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gardez de la mobilité pour enchaîner les extinctions.",
     ],
     rewards: ["Set de Founoroshi", "Ressources de la Fabrique", "Familier"],
+    achievements: [
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Raviver la flamme", strategy: "Aucun feu ne doit se rallumer, une fois éteint." },
+    ],
   },
 
   // Repaire de Sphincter Cell — Sphincter Cell
@@ -2714,6 +3052,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Synchronisez vos dégâts avec la fenêtre de 2 tours.",
     ],
     rewards: ["Set de Sphincter Cell", "Ressources du Repaire", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Dernier", strategy: "Sphincter Cell doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Pizwa quatre couleurs", strategy: "Aucun allié ne doit subir les effets du sort Kawabunga." },
+    ],
   },
 
   // Épave du Grolandais violent — Ben le Ripate
@@ -2750,6 +3094,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tapez Feu, son élément principal.",
     ],
     rewards: ["Set du Grolandais", "Ressources de l'Épave", "Familier"],
+    achievements: [
+      { name: "Revenus d'outre-tombe", strategy: "Combattre à 4 persos min. avec un Kockis, Kubitus, Kalkanéus, Hectaupe ou Hichète." },
+      { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Hamrack'n roll", strategy: "Les alliés ne doivent pas subir de dommages provenant d'un Hamrack." },
+    ],
   },
 
   // Galerie du Phossile — Phossile
@@ -2786,6 +3137,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gérez le placement sur les 5 vagues d'ennemis.",
     ],
     rewards: ["Set du Phossile", "Ressources de la Galerie", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 30 tours." },
+      { name: "Diagonale du vide", strategy: "Les alliés (hors invocations statiques) ne doivent pas terminer leur tour en étant placés en diagonale d'un ennemi ou d'un allié." },
+    ],
   },
 
   // Tertre du long sommeil — Hell Mina
@@ -2822,6 +3179,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tankable tant qu'invulnérable : prenez votre temps.",
     ],
     rewards: ["Set de Hell Mina", "Ressources du Tertre", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Dernier", strategy: "Hell Mina doit être achevé en dernier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Hellémentaire", strategy: "Les alliés doivent obligatoirement occasionner des dommages à Hell Mina correspondant à l'état élémentaire qu'elle attribue à chaque tour." },
+    ],
   },
 
   // Canopée du Kimbo — Kimbo
@@ -2858,6 +3222,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Une simple erreur de placement est fatale : anticipez le tour du Disciple.",
     ],
     rewards: ["Set du Kimbo", "Ressources de la Canopée", "Familier"],
+    achievements: [
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Premier", strategy: "Kimbo doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 8 tours." },
+      { name: "Une paire d'impairs", strategy: "Chaque combattant ennemi doit être sous les effets d'un des glyphes du Disciple du Kimbo avant de recevoir des dégâts." },
+    ],
   },
 
   // Salle du Minotot — Minotot
@@ -2894,6 +3264,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Restez à distance pour éviter le vol de PA de Mythos.",
     ],
     rewards: ["Set du Minotot", "Corne de Minotot", "Familier"],
+    achievements: [
+      { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Premier", strategy: "Minotot doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Tofu-phobie", strategy: "Aucun combattant allié ne doit subir l'effet du sort Destinos." },
+    ],
   },
 
   // Hypogée de l'Obsidiantre — Obsidiantre
@@ -2930,6 +3306,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Succès : évitez toute attraction/poussée.",
     ],
     rewards: ["Set de l'Obsidiantre", "Ressources de l'Hypogée", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Obsidiantre doit être achevé en premier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "À son hypogée", strategy: "Les ennemis ne doivent être ni attirés, ni poussés." },
+    ],
   },
 
   // Grotte de Kanigroula — Kanigroula
@@ -2966,6 +3348,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Sa mort renforce les survivants : ne la tuez pas trop tôt.",
     ],
     rewards: ["Set de Kanigroula", "Ressources de la Grotte", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Kanigroula doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Crocs à crocs", strategy: "Les combattants ennemis ne doivent subir aucune tentative de dommages à distance." },
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+    ],
   },
 
   // Plateau de Ush — Ush Galesh
@@ -3002,6 +3391,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Anticipez les transferts de CC entre les deux boss.",
     ],
     rewards: ["Set de Ush", "Ressources du Plateau", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Ush Galesh doit être achevé en premier." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 30 tours." },
+      { name: "Duel et pique", strategy: "Les alliés ne doivent pas attaquer plusieurs fois dans le même tour un même ennemi." },
+    ],
   },
 
   // Tombe du Shogun Tofugawa — Shogun Tofugawa
@@ -3038,6 +3433,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Burst fort pour finir dans les 2 tours de vulnérabilité.",
     ],
     rewards: ["Set du Shogun Tofugawa", "Ressources de la Tombe", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Shogun Tofugawa doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Une lanterne dans la nuit", strategy: "Aucun ennemi ne doit subir les effets du sort Lanterne des Spiritueurs à l'exception du Shogun Tofugawa." },
+      { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
+    ],
   },
 
   // Tanière Givrefoux — Tengu Givrefoux
@@ -3074,6 +3476,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Une arme à distance est nécessaire pour endommager le Yomi en sécurité.",
     ],
     rewards: ["Set Givrefoux", "Ressources de la Tanière", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Tengu Givrefoux doit être achevé en premier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 15 tours." },
+      { name: "Autonomie givrée", strategy: "Les alliés (hors invocations statiques) doivent terminer leur tour à plus de 4 cases de tous les autres alliés." },
+    ],
   },
 
   // Horologium de XLII — XLII
@@ -3110,6 +3518,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Calez vos burst sur les heures à fort multiplicateur.",
     ],
     rewards: ["Set de XLII", "Ressources de l'Horologium", "Familier"],
+    achievements: [
+      { name: "Barbare", strategy: "Les personnages alliés doivent achever les ennemis avec une arme." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 80 tours." },
+      { name: "C'est très vague !", strategy: "Tous les ennemis d'une vague doivent être achevés avant l'arrivée d'une nouvelle vague." },
+    ],
   },
 
   // Boyau du Père Ver — Père Ver
@@ -3146,6 +3560,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne ciblez pas les monstres en partage de dégâts actif (dégâts gaspillés).",
     ],
     rewards: ["Set du Père Ver", "Ressources du Boyau", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Père Ver doit être achevé en premier." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "On ne touche pas", strategy: "Les combattants alliés doivent terminer leur tour en diagonale d'un ennemi." },
+    ],
   },
 
   // Demeure des Esprits — Koumiho
@@ -3182,6 +3602,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Coordonnez le burst sur les deux flammes simultanément.",
     ],
     rewards: ["Set de Koumiho", "Ressources de la Demeure", "Familier"],
+    achievements: [
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Premier", strategy: "Koumiho doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "La lumière ne fut jamais", strategy: "Aucun allié ne doit utiliser le sort Lanterne des Spiritueurs." },
+      { name: "Revenus d'outre-tombe", strategy: "Combattre à 4 persos min. avec un Kockis, Kubitus, Kalkanéus, Hectaupe ou Hichète." },
+    ],
   },
 
   // Poste de contrôle du Supervizœuf — Supervizœuf
@@ -3218,6 +3645,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Restez hors des zones d'explosion.",
     ],
     rewards: ["Set du Supervizœuf", "Ressources du Poste", "Familier"],
+    achievements: [
+      { name: "Conquérant", strategy: "Lorsqu'un combattant allié tue un ou plusieurs ennemis, il doit finir son tour sur la case qu'occupait l'un de ce ou ces ennemis." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 60 tours." },
+      { name: "Bombzerman", strategy: "Le Supervizœuf ne doit plus être invulnérable à l'arrivée de la deuxième vague." },
+    ],
   },
 
   // Temple du Grand Ougah — Grand Ougah
@@ -3254,6 +3687,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Composition corps-à-corps ou gros burst pour raccourcir le combat.",
     ],
     rewards: ["Set du Grand Ougah", "Ressources du Temple", "Familier"],
+    achievements: [
+      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Dernier", strategy: "Ougah doit être achevé en dernier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 15 tours." },
+      { name: "Mycologie", strategy: "Les combattants alliés ne doivent pas terminer leur tour en ligne ou en diagonale d'un ennemi." },
+    ],
   },
 
   // Antre du Kralamoure Géant — Kralamoure Géant
@@ -3290,6 +3730,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "La coordination du placement et du timing fait tout.",
     ],
     rewards: ["Set du Kralamoure Géant", "Encre de Kralamoure", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Un projet tentaculaire", strategy: "Les combattants ne doivent pas terminer leur tour en ligne d'un allié." },
+    ],
   },
 
   // Maison du Papa Nowel — Père Fwetar
@@ -3326,6 +3773,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Éliminez les Poutch Ingball boostés avant leur relance.",
     ],
     rewards: ["Set du Père Fwetar", "Ressources de Nowel", "Familier saisonnier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Sale gosse !", strategy: "Les alliés doivent achever au moins une marionnette du Père Fwetar avant d'achever ce dernier." },
+    ],
   },
 
   // Cave du Toxoliath — Toxoliath
@@ -3362,6 +3816,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Une purge (Eniripsa) facilite énormément la gestion des poisons.",
     ],
     rewards: ["Set du Toxoliath", "Ressources de la Cave", "Familier"],
+    achievements: [
+      { name: "Circulez !", strategy: "Ne tenter aucun retrait de PM sur les ennemis durant tout le combat." },
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 80 tours." },
+      { name: "Relation toxique", strategy: "Tuer Toxoliath en dernier." },
+    ],
   },
 
   // Antichambre des Gloursons — Glourséleste
@@ -3398,6 +3858,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tuez le boss en 1-2 tours si possible : les combats longs deviennent ingérables.",
     ],
     rewards: ["Set du Glourséleste", "Ressources de l'Antichambre", "Familier Glourson"],
+    achievements: [
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
+      { name: "Premier", strategy: "Glourséleste doit être achevé en premier." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Complaisance gloursonne", strategy: "Les ennemis ne doivent subir aucune tentative de retrait de PM, de PA, de PO, ou de déplacement par les alliés." },
+    ],
   },
 
   // Donjon de la mine de Sakaï — Grolloum
@@ -3434,6 +3901,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne retirez jamais ses PM (8000 de résistance).",
     ],
     rewards: ["Set du Grolloum", "Ressources de la Mine", "Familier"],
+    achievements: [
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 28 tours." },
+      { name: "On voulait l'autre", strategy: "Les ennemis dans l'état Zombi ne doivent pas être déplacés par les alliés." },
+    ],
   },
 
   // Pyramide d'Ombre — Ombre
@@ -3470,6 +3944,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "C'est un puzzle de positionnement, pas un check de DPS.",
     ],
     rewards: ["Set de l'Ombre", "Ressources de la Pyramide", "Familier"],
+    achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
+      { name: "Premier", strategy: "Ombre doit être achevé en premier." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 26 tours." },
+      { name: "Jeux d'ombres", strategy: "Les combattants ennemis ne doivent subir aucune tentative de dommages à distance." },
+    ],
   },
 
   // Camp du Comte Razof — Comte Razof
@@ -3506,6 +3987,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Un perso à ~150 tacle bloque Razof et protège les alliés.",
     ],
     rewards: ["Set du Comte Razof", "Ressources du Camp", "Familier"],
+    achievements: [
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Premier", strategy: "Comte Razof doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Nos amies les bêtes", strategy: "Aucune invocation alliée ne doit être achevée par un ennemi." },
+    ],
   },
 
   // Bastion des Marteaux-Aigris — Barbéryl Clochecuivre
@@ -3542,6 +4029,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Téléportation de 6 cases tous les 2 tours : Pesanteur indispensable.",
     ],
     rewards: ["Set des Marteaux-Aigris", "Ressources du Bastion", "Familier"],
+    achievements: [
+      { name: "Les z'autres", strategy: "Combattre à 4 persos min. avec au moins un Haku, Manitou Zoth, Karotz, Grouillot ou Phong Huss." },
+      { name: "Dernier", strategy: "Barbéryl Clochecuivre doit être achevé en dernier." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 20 tours." },
+      { name: "Antioxydant", strategy: "Aucun ennemi ne doit entrer dans l'état Nimpatience V." },
+    ],
   },
 
   // Salons privés de Klime — Klime
@@ -3578,6 +4072,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tuez les sbires d'abord : Empaillé → Grodruche → Cuirboule.",
     ],
     rewards: ["Set de Klime", "Ressources des Salons", "Familier"],
+    achievements: [
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Dur à cuir", strategy: "Aucun allié ne doit entrer dans l'état Pacifiste." },
+      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
+    ],
   },
 
   // Aquadôme de Merkator — Merkator
@@ -3614,6 +4115,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Un Féca neutralise Mer Veille grâce à ses protections.",
     ],
     rewards: ["Set de Merkator", "Ressources de l'Aquadôme", "Familier"],
+    achievements: [
+      { name: "Dernier", strategy: "Merkator doit être achevé en dernier." },
+      { name: "Mystique", strategy: "Les combattants alliés ne doivent infliger que des dégâts et soins de sorts durant leurs tours de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Voyez, il y a du monde", strategy: "Chaque combattant allié doit commencer ou terminer son tour en ligne d'un ennemi." },
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+    ],
   },
 
   // Trône de la Cour Sombre — Reine des Voleurs
@@ -3650,6 +4158,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Gardez le boss à distance (Cra/Enutrof) pour éviter le corps-à-corps et la malédiction.",
     ],
     rewards: ["Set de la Reine des Voleurs", "Ressources de la Cour Sombre", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Reine des Voleurs doit être achevé en premier." },
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "La vie est une chausse-trappe", strategy: "Les alliés ne doivent pas être soignés par le biais des Bonbombes bleues." },
+      { name: "Les crados", strategy: "Combattre à 4 persos min. avec au moins un Grüt, Gobeuf, Turyé ou Piggy Paupe." },
+    ],
   },
 
   // Ventre de la Baleine — Protozorreur
@@ -3686,6 +4201,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Un Enutrof avec initiative est idéal pour caler les glyphes et retirer des PM.",
     ],
     rewards: ["Set du Protozorreur", "Ressources du Ventre", "Familier"],
+    achievements: [
+      { name: "Barbare", strategy: "Les personnages alliés doivent achever les ennemis avec une arme." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Qui dit boum ?", strategy: "La Malamibe doit toujours être achevée avant le début de son prochain tour." },
+    ],
   },
 
   // Œil de Vortex — Œil de Vortex
@@ -3722,6 +4243,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Jouez à 3, 4 ou 6 pour des cycles d'Auroraire prévisibles.",
     ],
     rewards: ["Set de l'Œil de Vortex", "Ressources du Vortex", "Familier"],
+    achievements: [
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Heure de la mort", strategy: "Tous les ennemis doivent être achevés à la même heure." },
+    ],
   },
 
   // Vaisseau du Capitaine Meno — Capitaine Meno
@@ -3758,6 +4285,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Retrait PM (Cra, Enutrof, Sadida) pour gérer le placement des monstres.",
     ],
     rewards: ["Set du Capitaine Meno", "Ressources du Vaisseau", "Familier"],
+    achievements: [
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+      { name: "Blitzkrieg", strategy: "Achever chaque ennemi attaqué avant le début de son tour." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Parfum de mutinerie", strategy: "Les combattants alliés doivent terminer leur tour en ligne d'un combattant allié." },
+    ],
   },
 
   // Temple de Koutoulou — Larve de Koutoulou
@@ -3794,6 +4328,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Ne finissez jamais votre tour en ligne de vue du boss.",
     ],
     rewards: ["Set de Koutoulou", "Ressources du Temple", "Familier"],
+    achievements: [
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Chaises musicales", strategy: "Après son premier tour, un ennemi doit échanger de place avec un allié au moins une fois entre chacun de ses tours." },
+      { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
+    ],
   },
 
   // Palais de Dantinéa — Dantinéa
@@ -3830,6 +4371,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Focus le Tryde avant les autres adds (empilement de puissance).",
     ],
     rewards: ["Set de Dantinéa", "Ressources du Palais", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Dernier", strategy: "Dantinéa doit être achevé en dernier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Chasse aux coquillages", strategy: "Un Grokillage ne doit subir des dommages que de la part du combattant auquel il est lié." },
+    ],
   },
 
   // Chambre de Tal Kasha — Tal Kasha
@@ -3866,6 +4414,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le placement chirurgical prime sur le DPS.",
     ],
     rewards: ["Set de Tal Kasha", "Ressources de la Chambre", "Familier"],
+    achievements: [
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Système pyramidal", strategy: "Un ennemi ne doit pas être ressuscité plus de deux fois." },
+    ],
   },
 
   // Manoir des Katrepat — Anerice la Shushess
@@ -3902,6 +4456,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tenez Anerice à distance pour éviter les transformations en phase de sbires.",
     ],
     rewards: ["Set d'Anerice", "Ressources du Manoir", "Familier"],
+    achievements: [
+      { name: "Les héros", strategy: "Combattre à 4 persos min. avec au moins un Krosmoglob, Korbax, Masse ou Chevalier d'Astrub." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Premier", strategy: "Anerice la Shushess doit être achevé en premier." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Qu'est-ce qu'elle a ma goule ?", strategy: "Chaque combattant allié doit être goulifié au moins une fois au cours du combat." },
+    ],
   },
 
   // Belvédère d'Ilyzaelle — Ilyzaelle
@@ -3938,6 +4499,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Minimisez le stuff critique : elle a 250 de résistance aux coups critiques.",
     ],
     rewards: ["Set d'Ilyzaelle", "Ressources du Belvédère", "Familier"],
+    achievements: [
+      { name: "Bandits du Magik Riktus", strategy: "Combattre à 4 persos min. avec au moins un Riktus fine-lame, Riktus archer, Riktus baroudeur ou Riktus ensorceleuse." },
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Aux portes d'Externam", strategy: "Ilyzaelle doit être achevée avant l'apparition de la troisième vague de monstres." },
+    ],
   },
 
   // Tour de Bethel — Bethel Akarna
@@ -3974,6 +4542,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Un tank Pandawa bloque Bethel et évite les poussées dans les pièges de bordure.",
     ],
     rewards: ["Set de Bethel Akarna", "Ressources de la Tour", "Familier"],
+    achievements: [
+      { name: "Revenus d'outre-tombe", strategy: "Combattre à 4 persos min. avec un Kockis, Kubitus, Kalkanéus, Hectaupe ou Hichète." },
+      { name: "Mystique", strategy: "Les combattants alliés ne doivent infliger que des dégâts et soins de sorts durant leurs tours de jeu." },
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "La mort sait attendre", strategy: "Aucun ennemi ne doit entrer dans l'état Nécronyx avant la mort de Bethel." },
+    ],
   },
 
   // Tour de Solar — Solar
@@ -4010,6 +4585,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Un glyphe de bordure inflige dégâts et débuffs selon l'état de Solar.",
     ],
     rewards: ["Set de Solar", "Ressources de la Tour", "Familier"],
+    achievements: [
+      { name: "Revenus d'outre-tombe", strategy: "Combattre à 4 persos min. avec un Kockis, Kubitus, Kalkanéus, Hectaupe ou Hichète." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "La mort sait attendre", strategy: "Aucun ennemi (à l'exception de Solar) ne doit entrer dans l'état Necronyx avant la mort de Solar." },
+    ],
   },
 
   // Temple du dieu Kao — Prêtresse de Kao
@@ -4046,6 +4628,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Combat mécanique : la gestion des Éclats prime sur les stats.",
     ],
     rewards: ["Set du dieu Kao", "Ressources du Temple", "Familier"],
+    achievements: [
+      { name: "Chrono", strategy: "Vaincre tous les monstres en moins de 9 tours." },
+      { name: "Premier", strategy: "Prêtresse de Kao doit être achevé en premier." },
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Charier la chocolaterie", strategy: "Aucun Éclats du Kao ne doit être sur le terrain lorsqu'un combattant ennemi est achevé." },
+    ],
   },
 
   // Sanctuaire de Torkélonia — Torkélonia
@@ -4082,6 +4671,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tuez l'Alashasss en premier (soigneur).",
     ],
     rewards: ["Set de Torkélonia", "Ressources du Sanctuaire", "Familier"],
+    achievements: [
+      { name: "Chevaliers tourmentés", strategy: "Combattre à 4 persos min. avec au moins un Flamme, Goutte, Nuage, Feuille ou Ténèbre." },
+      { name: "Dernier", strategy: "Torkélonia doit être achevé en dernier." },
+      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Lunatique", strategy: "Chaque ennemi doit être achevé soit durant la phase de Nouvelle Lune, soit durant la phase de Pleine Lune. La Lunorbe ne doit jamais être utilisée pour accélérer le rythme du cycle lunaire." },
+    ],
   },
 
   // Arbre de Mort — Corruption
@@ -4118,6 +4714,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Retirez l'aura sur les sbires avant de focus Corruption.",
     ],
     rewards: ["Set de l'Eliocalypse", "Ressources de l'Arbre", "Familier"],
+    achievements: [
+      { name: "Collant", strategy: "Finir son tour sur une case adjacente à un autre allié." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Immunité collective", strategy: "Seuls les alliés sans aucune maladie peuvent occasionner des dommages aux ennemis." },
+    ],
   },
 
   // Fers de la Tyrannie — Servitude
@@ -4154,6 +4756,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Les protections du Féca contournent totalement le renvoi de dégâts.",
     ],
     rewards: ["Set de l'Eliocalypse", "Ressources des Fers", "Familier"],
+    achievements: [
+      { name: "Focus", strategy: "Lorsqu'un ennemi est attaqué par un allié, il doit être achevé avant qu'un autre ennemi ne soit attaqué." },
+      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Bain de foule", strategy: "Les alliés ne doivent pas achever les Armécréantes invoquées." },
+    ],
   },
 
   // Sentence de la Balance — Misère
@@ -4190,6 +4798,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Tuez tous les sbires d'abord et restez derrière des obstacles en phase 1.",
     ],
     rewards: ["Set de l'Eliocalypse", "Ressources de la Sentence", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Abjecte opulence", strategy: "Misère doit être achevée en premier, elle doit également rentrer dans l'état Collecte au moins une fois par tour." },
+    ],
   },
 
   // Trône de Sang — Guerre
@@ -4226,6 +4840,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Le perso en état Bravoure maximise les dégâts (cible unique de Guerre).",
     ],
     rewards: ["Set de l'Eliocalypse", "Ressources du Trône", "Familier"],
+    achievements: [
+      { name: "Zombie", strategy: "Utiliser exactement 1 PM par tour de jeu." },
+      { name: "Misanthrope", strategy: "Ne jamais finir son tour sur une case adjacente à un allié." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Arsenal total", strategy: "Aucune arme de Guerre ne doit être achevée ou déplacée par un allié." },
+    ],
   },
 
   // Tempête de l'Eliocalypse — les 4 Cavaliers
@@ -4298,6 +4918,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Synchronisez les seuils pour maximiser l'aide de la Reine.",
     ],
     rewards: ["Set d'Orukam", "Ressources de la Mémoire", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Régence d'encre", strategy: "L'invocation \"Reine Amirukam\" doit être achevée par un allié avant que le Roi Imagami ne sorte de sa phase Lotus." },
+    ],
   },
 
   // Souvenir d'Imagiro — Reine Amirukam
@@ -4334,6 +4960,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Restez à distance et hors des glyphes pour éviter les stacks de poison.",
     ],
     rewards: ["Set d'Imagiro", "Ressources du Souvenir", "Familier"],
+    achievements: [
+      { name: "Les pandaliens", strategy: "Combattre à 4 persos min. avec au moins un Mirh, Rekto Topi, Traçon ou Logram." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Régence de papier", strategy: "L'invocation \"Roi Imagami\" doit être achevée par un allié avant que la Reine Amirukam ne sorte de sa phase Lotus." },
+    ],
   },
 
   // Rituel de Kabahal — Kabahal
@@ -4370,6 +5003,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Focus Kabahal dès le tour 1 : les combats longs sont punis par les invasions.",
     ],
     rewards: ["Set de Kabahal", "Ressources du Rituel", "Familier"],
+    achievements: [
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Mains propres", strategy: "Achever les ennemis sans leur infliger de dégâts directs." },
+      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
+      { name: "Gros Bras", strategy: "Les ennemis doivent être achevés uniquement à l'aide des bras démoniaques." },
+    ],
   },
 
   // Breuil du Vénérable — Vénérable Endormi
@@ -4406,6 +5045,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Évitez de toucher les monstres à moins de 3 cases du boss pour ne pas le réveiller.",
     ],
     rewards: ["Set du Vénérable", "Ressources du Breuil", "Familier"],
+    achievements: [
+      { name: "Premier", strategy: "Vénérable Endormi doit être achevé en premier." },
+      { name: "Hardi", strategy: "Finir son tour sur une case adjacente à un ennemi." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Ça ronfle fort", strategy: "Tuer Vénérable Endormi en dernier." },
+    ],
   },
 
   // Autel de la Déchireuse — La Déchireuse
@@ -4442,6 +5087,12 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Restez derrière des obstacles pour couper sa ligne de vue et éviter la téléportation.",
     ],
     rewards: ["Set de la Déchireuse", "Ressources de l'Autel", "Familier"],
+    achievements: [
+      { name: "Nomade", strategy: "Utiliser tous ses PM à chaque tour, tout le combat." },
+      { name: "En ligne de mire", strategy: "Les combattants alliés doivent terminer leurs tours en ligne de vue d'au moins un ennemi." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Autelière", strategy: "Aucun ennemi autre que la Déchireuse ne doit subir les effets de l'Autel de la Chasse" },
+    ],
   },
 
   // Défi du Chalœil — Chalœil
@@ -4478,6 +5129,13 @@ const GUIDES: Record<number, DungeonGuide> = {
       "Éliminez tôt les Cavaliers Chanceux (gros dégâts de poussée une fois buffés).",
     ],
     rewards: ["Set du Chalœil", "Ressources du Défi", "Familier Ecaflip"],
+    achievements: [
+      { name: "Liberté", strategy: "Ne pas tenter de retirer de PM ou de PO aux adversaires pendant toute la durée du combat." },
+      { name: "Prudent", strategy: "Ne jamais finir son tour sur une case adjacente à un ennemi." },
+      { name: "Trio", strategy: "Vaincre tous les monstres avec 3 personnages maximum et en moins de 80 tours." },
+      { name: "Les bons comptes font les bons ennemis", strategy: "Les combattants alliés doivent toujours terminer leur tour sur une cellule correspondant au numéro de leur cellule de début de combat." },
+      { name: "Compagnons, quel est votre métier ?", strategy: "Combattre à 4 persos min. avec un Kloug, Klûme, Grizou ou Laikteur." },
+    ],
   },
 };
 

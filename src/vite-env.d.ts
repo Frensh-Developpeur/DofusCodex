@@ -16,6 +16,7 @@ interface Window {
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
+    checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;
   };
 }
 

@@ -14,4 +14,5 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   },
   installUpdate: () => ipcRenderer.invoke("update:install"), // Windows : redémarre + installe
   openReleases: () => ipcRenderer.invoke("update:open"), // Mac : ouvre la page de téléchargement
+  checkUpdate: () => ipcRenderer.invoke("update:check"), // vérification manuelle (page Paramètres)
 });

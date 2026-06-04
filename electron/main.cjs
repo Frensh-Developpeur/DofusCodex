@@ -114,6 +114,19 @@ app.whenReady().then(() => {
   ipcMain.handle("update:install", () => autoUpdater?.quitAndInstall(false, true));
   ipcMain.handle("update:open", () => shell.openExternal(RELEASES_URL));
 
+  // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
+  // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.
+  ipcMain.handle("update:check", async () => {
+    if (!autoUpdater) return { ok: false, reason: app.isPackaged ? "unavailable" : "dev", current: app.getVersion() };
+    try {
+      lastCheckAt = Date.now(); // compte comme une vérification (évite un double check au focus)
+      const r = await autoUpdater.checkForUpdates();
+      return { ok: true, current: app.getVersion(), latest: r?.updateInfo?.version || null };
+    } catch (e) {
+      return { ok: false, reason: e?.message || "error", current: app.getVersion() };
+    }
+  });
+
   // Rendu du personnage équipé via le renderer de DofusRoom (Barbofus/Ankama).
   // Fait depuis le process principal : l'endpoint exige un en-tête `Referer` dofusroom.com
   // (sinon 403) que `fetch`/undici interdit de poser → on utilise le module `https`.
@@ -234,6 +247,19 @@ function sendUpdate(payload) {
   }
 }
 
+// Vérifie sans relancer deux checks coup sur coup (le focus peut spammer).
+let lastCheckAt = 0;
+const MIN_CHECK_GAP = 1000 * 60 * 10; // 10 min mini entre deux vérifications
+let updateFound = false; // une fois la maj détectée, inutile de re-vérifier
+
+function checkForUpdatesThrottled() {
+  if (!autoUpdater || updateFound) return;
+  const now = Date.now();
+  if (now - lastCheckAt < MIN_CHECK_GAP) return;
+  lastCheckAt = now;
+  autoUpdater.checkForUpdates().catch((e) => console.log("[updater] check échoué:", e?.message));
+}
+
 function initAutoUpdater() {
   if (!app.isPackaged) return;
   try {
@@ -245,13 +271,24 @@ function initAutoUpdater() {
     autoUpdater.autoDownload = !IS_MAC; // mac : juste détecter, pas télécharger
     autoUpdater.on("error", (e) => console.log("[updater] error:", e?.message));
     autoUpdater.on("update-not-available", () => console.log("[updater] à jour"));
-    autoUpdater.on("update-available", (i) => sendUpdate({ state: "available", version: i?.version }));
+    autoUpdater.on("update-available", (i) => {
+      updateFound = true; // stoppe les vérifications périodiques/focus
+      sendUpdate({ state: "available", version: i?.version });
+    });
     autoUpdater.on("download-progress", (p) =>
       sendUpdate({ state: "downloading", percent: Math.round(p?.percent ?? 0) }),
     );
     autoUpdater.on("update-downloaded", (i) => sendUpdate({ state: "downloaded", version: i?.version }));
-    autoUpdater.checkForUpdates();
-    setInterval(() => autoUpdater.checkForUpdates(), 1000 * 60 * 60 * 6);
+
+    // 1) Au démarrage. 2) Toutes les 30 min tant que l'app reste ouverte.
+    // 3) Au retour de focus sur la fenêtre (throttlé) → détection quasi immédiate après
+    //    une release, sans attendre le tick périodique ni un redémarrage de l'app.
+    lastCheckAt = Date.now();
+    autoUpdater.checkForUpdates().catch((e) => console.log("[updater] check échoué:", e?.message));
+    setInterval(checkForUpdatesThrottled, 1000 * 60 * 30);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.on("focus", checkForUpdatesThrottled);
+    }
   } catch (e) {
     console.log("[updater] indisponible:", e?.message);
   }

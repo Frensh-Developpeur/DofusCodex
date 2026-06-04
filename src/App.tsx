@@ -27,6 +27,7 @@ import Classes from "./pages/Classes";
 import Resources from "./pages/Resources";
 import Havenbags from "./pages/Havenbags";
 import Achievements from "./pages/Achievements";
+import Settings from "./pages/Settings";
 
 function Page({ children }: { children: React.ReactNode }) {
   return (
@@ -109,6 +110,7 @@ export default function App() {
                 <Route path="/guides" element={<Page><Guides /></Page>} />
                 <Route path="/guides/:id" element={<Page><GuideDetail /></Page>} />
                 <Route path="/almanax" element={<Page><Almanax /></Page>} />
+                <Route path="/parametres" element={<Page><Settings /></Page>} />
               </Routes>
             </AnimatePresence>
             </ErrorBoundary>

@@ -2,8 +2,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useStore, actions } from "../store/store";
 import { skinatorEngine, useEngineOpen } from "../store/skinatorEngine";
-import ClearCacheButton from "./ClearCacheButton";
-import DataBackup from "./DataBackup";
 import {
   LayoutDashboard,
   Swords,
@@ -13,7 +11,6 @@ import {
   CalendarDays,
   Skull,
   Compass,
-  Github,
   Palette,
   Images,
   Layers3,
@@ -21,6 +18,7 @@ import {
   Boxes,
   Tent,
   Trophy,
+  Settings,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
@@ -191,24 +189,43 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto p-3">
-        {!collapsed && (
-          <div className="glass rounded-xl p-3 text-xs text-slate-400">
-            <p className="font-semibold text-slate-300">Données live</p>
-            <p className="mt-1 leading-relaxed">
-              Propulsé par <span className="text-glow-violet">DofusDude</span> &{" "}
-              <span className="text-glow-cyan">DofusDB</span>.
-            </p>
-            <a
-              href="https://github.com/dofusdude"
-              className="no-drag mt-2 inline-flex items-center gap-1.5 text-slate-500 transition hover:text-slate-300"
-            >
-              <Github className="h-3.5 w-3.5" /> API open-source
-            </a>
-            <DataBackup />
-          </div>
-        )}
-        <ClearCacheButton collapsed={collapsed} />
+      <div className="mt-auto border-t border-white/5 p-3">
+        <NavLink
+          to="/parametres"
+          title={collapsed ? "Paramètres" : undefined}
+          onClick={(e) => {
+            if (guardLeave) {
+              e.preventDefault();
+              skinatorEngine.requestLeave("/parametres");
+            }
+          }}
+          className={({ isActive }) =>
+            clsx(
+              "no-drag group relative flex items-center rounded-xl text-sm font-medium transition-colors",
+              collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+              isActive ? "text-white" : "text-slate-400 hover:text-slate-200",
+            )
+          }
+        >
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <motion.span
+                  layoutId="nav-active"
+                  className="absolute inset-0 rounded-xl border border-glow-purple/30 bg-gradient-to-r from-glow-purple/20 to-glow-cyan/10 shadow-glow"
+                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                />
+              )}
+              <Settings
+                className={clsx(
+                  "relative h-[18px] w-[18px] shrink-0 transition-colors",
+                  isActive ? "text-glow-violet" : "text-slate-500 group-hover:text-slate-300",
+                )}
+              />
+              {!collapsed && <span className="relative truncate">Paramètres</span>}
+            </>
+          )}
+        </NavLink>
       </div>
     </aside>
   );

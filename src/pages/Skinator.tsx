@@ -653,12 +653,19 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
     // (page d'erreur, hôte injoignable…). On découvre le webview au pire après ce délai.
     const safety = window.setTimeout(() => setWebviewReady(true), 12000);
 
-    const onReady = () => {
+    const onReady = async () => {
       window.clearTimeout(safety);
-      setWebviewReady(true);
       syncWebviewShadowFrame(webview);
       normalizeBarbofusViewport(webview);
-      applyBarbofusFocus(webview);
+      // Masquer le chrome Barbofus + boutons Partager/Copier URL AVANT de retirer le loader :
+      // sinon ces boutons « flashent » visibles le temps que l'injection JS s'applique. On
+      // attend donc l'injection (avec un garde-fou court), puis on découvre le moteur.
+      try {
+        await Promise.race([applyBarbofusFocus(webview), wait(2500)]);
+      } catch {
+        /* injection indispo : on découvre quand même pour ne pas bloquer */
+      }
+      setWebviewReady(true);
       const resettle = () => {
         syncWebviewShadowFrame(webview);
         applyBarbofusFocus(webview);
@@ -1138,7 +1145,11 @@ function syncWebviewShadowFrame(webview: BarbofusWebviewElement) {
   iframe.style.border = "0";
 }
 
-function applyBarbofusFocus(webview: BarbofusWebviewElement) {
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function applyBarbofusFocus(webview: BarbofusWebviewElement): Promise<unknown> {
   try {
     webview.setZoomFactor?.(1);
   } catch {
@@ -1172,13 +1183,16 @@ function applyBarbofusFocus(webview: BarbofusWebviewElement) {
     #header,
     nav,
     body > h1,
-    footer {
+    footer,
+    /* Partage Barbofus inutilisable embarqué : masqué dès l'injection CSS (avant tout flash).
+       Le bouton « Partager » a un id stable ; « Copier URL »/« S'enregistrer » sont gérés en JS. */
+    #btnShare {
       display: none !important;
     }
   `;
 
-  webview.insertCSS(css).catch(() => {});
-  webview.executeJavaScript(`
+  const cssDone = webview.insertCSS(css).catch(() => {});
+  const jsDone = webview.executeJavaScript(`
     (() => {
       const form = document.querySelector('#skinator-form');
       if (form && !document.body.dataset.dofusCodexCompact) {
@@ -1238,6 +1252,9 @@ function applyBarbofusFocus(webview: BarbofusWebviewElement) {
       return true;
     })();
   `).catch(() => {});
+
+  // Résout quand le masque (CSS + JS) est appliqué → onReady peut retirer le loader sans flash.
+  return Promise.all([cssDone, jsDone]);
 }
 
 function SkinPreview({

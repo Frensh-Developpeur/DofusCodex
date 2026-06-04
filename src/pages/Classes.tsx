@@ -1,10 +1,29 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Zap, Crosshair, Star } from "lucide-react";
+import { X, Sparkles, Zap, Crosshair, Star, Loader2 } from "lucide-react";
 import { listBreeds, getClassSpells, type Breed, type ClassSpell } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
+import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
 import { SectionHeader, Skeleton, ErrorState, EmptyState, Pill, fadeUp } from "../components/ui";
+
+const RENDER_AVAILABLE = typeof window !== "undefined" && !!window.dofusCodex?.renderSkin;
+const DIFFICULTY_LABEL = ["", "Facile", "Intermédiaire", "Difficile"];
+
+// Rendu du personnage de la classe (PNG transparent, look par défaut) via DofusRoom — même
+// moteur que le Skinator. Mis en cache « pour toujours » et partagé entre la carte et la modal
+// (même queryKey) → la modal réutilise le rendu déjà calculé pour la carte.
+function useClassRender(id: number) {
+  const payload = useMemo(() => buildSkinPayload(id, {}, "m", 1), [id]);
+  return useQuery({
+    queryKey: ["class-render", payload ? skinKey(payload) : `none-${id}`],
+    queryFn: () => renderSkin(payload!),
+    enabled: RENDER_AVAILABLE && !!payload,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60,
+    retry: 1,
+  });
+}
 
 export default function Classes() {
   const [openId, setOpenId] = useState<number | null>(null);
@@ -23,9 +42,9 @@ export default function Classes() {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-48" />
+            <Skeleton key={i} className="aspect-[3/4]" />
           ))}
         </div>
       ) : isError ? (
@@ -37,31 +56,10 @@ export default function Classes() {
           initial="hidden"
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.03 } } }}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
         >
           {breeds.map((b, i) => (
-            <motion.button
-              key={b.id}
-              variants={fadeUp}
-              custom={i % 16}
-              whileHover={{ y: -4 }}
-              onClick={() => setOpenId(b.id)}
-              className="glass glass-hover no-drag group relative flex flex-col items-center overflow-hidden rounded-2xl p-4 text-center"
-            >
-              <div className="relative mb-2 h-24 w-24">
-                <div className="absolute inset-0 rounded-full bg-glow-purple/20 opacity-0 blur-2xl transition group-hover:opacity-100" />
-                <img
-                  src={classIllus(b.id) ?? b.img}
-                  alt={b.name.fr}
-                  loading="lazy"
-                  className="relative h-24 w-24 object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)]"
-                />
-              </div>
-              <p className="font-display text-sm font-bold text-white">{b.name.fr}</p>
-              <span className="mt-1">
-                <ComplexityDots value={b.complexity} />
-              </span>
-            </motion.button>
+            <ClassCard key={b.id} breed={b} index={i} onOpen={() => setOpenId(b.id)} />
           ))}
         </motion.div>
       )}
@@ -71,13 +69,85 @@ export default function Classes() {
   );
 }
 
-function ComplexityDots({ value }: { value: number }) {
-  // complexity DofusDB : 1 (facile) → 3 (difficile)
+function ClassCard({ breed, index, onOpen }: { breed: Breed; index: number; onOpen: () => void }) {
+  const { data: render, isFetching } = useClassRender(breed.id);
+  const banner = classIllus(breed.id); // repli (artwork bannière) si le rendu live échoue
+  const loading = RENDER_AVAILABLE && isFetching && !render;
+
+  return (
+    <motion.button
+      variants={fadeUp}
+      custom={index % 16}
+      whileHover={{ y: -6 }}
+      onClick={onOpen}
+      className="glass no-drag group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-2xl text-left ring-1 ring-white/10 transition hover:ring-glow-purple/40"
+    >
+      {/* Fond : grille discrète + halo qui s'allume au survol. */}
+      <div className="absolute inset-0 bg-grid-faint bg-[length:26px_26px] opacity-25" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(124,92,255,0.16),transparent_62%)] opacity-70 transition group-hover:opacity-100" />
+
+      {/* Personnage : rendu live transparent, sinon artwork de classe recadré, sinon symbole. */}
+      <div className="absolute inset-x-0 top-0 bottom-12 flex items-center justify-center">
+        {render ? (
+          <motion.img
+            initial={{ opacity: 0, scale: 0.94, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            src={render}
+            alt={breed.name.fr}
+            className="h-[88%] w-auto max-w-[92%] object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.6)] transition duration-300 group-hover:scale-[1.05]"
+          />
+        ) : loading ? (
+          <div className="flex flex-col items-center gap-2 text-slate-500">
+            <Loader2 className="h-6 w-6 animate-spin text-glow-violet" />
+            <span className="text-[11px] font-medium">Rendu…</span>
+          </div>
+        ) : banner ? (
+          <img
+            src={banner}
+            alt={breed.name.fr}
+            loading="lazy"
+            className="h-full w-full object-cover object-top opacity-90 transition duration-300 group-hover:scale-[1.04]"
+          />
+        ) : (
+          <img src={breed.img} alt={breed.name.fr} loading="lazy" className="h-20 w-20 object-contain opacity-80" />
+        )}
+      </div>
+
+      {/* Voile bas pour la lisibilité du nom. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-void-900 via-void-900/80 to-transparent" />
+
+      <div className="relative z-10 px-3 pb-3">
+        <div className="flex items-center gap-2">
+          <img src={breed.img} alt="" className="h-6 w-6 shrink-0 object-contain opacity-90" />
+          <p className="truncate font-display text-base font-bold text-white">{breed.name.fr}</p>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2.5">
+          <StarRating value={breed.complexity} />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            {DIFFICULTY_LABEL[Math.max(1, Math.min(3, breed.complexity || 1))]}
+          </span>
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+// Difficulté en étoiles (1 → 3). Étoiles pleines dorées, vides grisées.
+function StarRating({ value, size = 14 }: { value: number; size?: number }) {
   const n = Math.max(1, Math.min(3, value || 1));
   return (
     <span className="inline-flex items-center gap-0.5" title={`Difficulté ${n}/3`}>
       {[1, 2, 3].map((d) => (
-        <span key={d} className={`h-1.5 w-1.5 rounded-full ${d <= n ? "bg-glow-violet" : "bg-white/15"}`} />
+        <Star
+          key={d}
+          style={{ width: size, height: size }}
+          className={
+            d <= n
+              ? "fill-glow-gold text-glow-gold drop-shadow-[0_0_4px_rgba(245,182,76,0.5)]"
+              : "fill-white/5 text-white/20"
+          }
+        />
       ))}
     </span>
   );
@@ -86,6 +156,7 @@ function ComplexityDots({ value }: { value: number }) {
 function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
   const { data: breeds } = useQuery({ queryKey: ["breeds"], queryFn: ({ signal }) => listBreeds(signal), staleTime: Infinity });
   const breed: Breed | undefined = breeds?.find((b) => b.id === id);
+  const { data: render } = useClassRender(id);
   const { data: spells, isLoading: spellsLoading } = useQuery({
     queryKey: ["class-spells", id],
     queryFn: ({ signal }) => getClassSpells(id, signal),
@@ -95,6 +166,7 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
 
   const desc = breed?.gameplayDescription?.fr || breed?.description?.fr || "";
   const allSpells = spells ?? [];
+  const heroImg = render ?? classIllus(id) ?? breed?.img ?? "";
 
   // Mêmes sorts que le Builder : groupés par variante (sort de base + sa variante empilés).
   const spellColumns = useMemo(() => {
@@ -126,20 +198,25 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         className="glass flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl ring-1 ring-white/10"
       >
-        <div className="relative flex items-center gap-4 border-b border-white/10 p-4">
-          <img
-            src={breed ? (classIllus(breed.id) ?? breed.img) : ""}
-            alt={breed?.name.fr ?? ""}
-            className="h-16 w-16 shrink-0 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.5)]"
-          />
-          <div className="min-w-0 flex-1">
+        <div className="relative flex items-center gap-4 overflow-hidden border-b border-white/10 p-4">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_50%,rgba(124,92,255,0.18),transparent_45%)]" />
+          <div className="relative grid h-20 w-20 shrink-0 place-items-center">
+            {heroImg ? (
+              <img
+                src={heroImg}
+                alt={breed?.name.fr ?? ""}
+                className="h-20 w-20 object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.5)]"
+              />
+            ) : null}
+          </div>
+          <div className="relative min-w-0 flex-1">
             <h2 className="font-display text-2xl font-extrabold text-white">{breed?.name.fr ?? "Classe"}</h2>
-            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-              <ComplexityDots value={breed?.complexity ?? 1} />
-              <span>Difficulté {Math.max(1, Math.min(3, breed?.complexity ?? 1))}/3</span>
+            <div className="mt-1.5 flex items-center gap-2.5 text-xs text-slate-400">
+              <StarRating value={breed?.complexity ?? 1} />
+              <span>{DIFFICULTY_LABEL[Math.max(1, Math.min(3, breed?.complexity ?? 1))]}</span>
             </div>
           </div>
-          <button onClick={onClose} className="no-drag rounded-lg bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
+          <button onClick={onClose} className="no-drag relative rounded-lg bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>

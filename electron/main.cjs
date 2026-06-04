@@ -109,9 +109,9 @@ app.whenReady().then(() => {
   ipcMain.handle("app:platform", () => process.platform);
   ipcMain.handle("app:version", () => app.getVersion());
 
-  // Maj : Windows installe en SILENCE puis relance (true, true) → pas de wizard sur la maj,
-  // alors que la 1ʳᵉ install (lancement manuel du .exe) garde l'assistant complet.
-  ipcMain.handle("update:install", () => autoUpdater?.quitAndInstall(true, true));
+  // Maj : on lance l'installeur AVEC son UI (isSilent=false) → l'utilisateur voit la barre de
+  // progression NSIS pendant la mise à jour, puis l'app se relance (isForceRunAfter=true).
+  ipcMain.handle("update:install", () => autoUpdater?.quitAndInstall(false, true));
   ipcMain.handle("update:open", () => shell.openExternal(RELEASES_URL));
 
   // Rendu du personnage équipé via le renderer de DofusRoom (Barbofus/Ankama).
@@ -238,9 +238,9 @@ function initAutoUpdater() {
   if (!app.isPackaged) return;
   try {
     autoUpdater = require("electron-updater").autoUpdater;
-    // L'installeur est en mode assistant (oneClick:false) pour offrir tous les paramètres à la
-    // 1ʳᵉ install. On évite donc l'install-au-quit (qui rejouerait le wizard) ; la maj passe
-    // uniquement par quitAndInstall(true) → mode SILENCIEUX (cf. update:install).
+    // L'installeur est en mode assistant (oneClick:false). On évite l'install-au-quit
+    // automatique ; la maj passe par quitAndInstall(false) → l'installeur s'affiche AVEC sa
+    // barre de progression (visuel demandé), puis relance l'app (cf. update:install).
     autoUpdater.autoInstallOnAppQuit = false;
     autoUpdater.autoDownload = !IS_MAC; // mac : juste détecter, pas télécharger
     autoUpdater.on("error", (e) => console.log("[updater] error:", e?.message));

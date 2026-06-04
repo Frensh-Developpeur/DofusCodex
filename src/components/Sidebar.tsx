@@ -36,6 +36,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   },
   {
     title: "Jeu",
+    collapsible: true,
     items: [
       { to: "/donjons", label: "Donjons", icon: Swords },
       { to: "/guides", label: "Guides", icon: BookOpen },
@@ -56,6 +57,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   },
   {
     title: "Skin",
+    collapsible: true,
     items: [
       { to: "/skinator", label: "Skinator", icon: Palette },
       { to: "/mes-skins", label: "Mes Skins", icon: Images },
@@ -63,6 +65,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   },
   {
     title: "Outils",
+    collapsible: true,
     items: [
       { to: "/builder", label: "Builder", icon: Hammer },
       { to: "/chasse", label: "Chasse au trésor", icon: Compass },

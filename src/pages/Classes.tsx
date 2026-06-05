@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Zap, Crosshair, Star, Loader2 } from "lucide-react";
+import { X, Sparkles, Star, Loader2 } from "lucide-react";
+import DofusIcon from "../components/DofusIcon";
 import { listBreeds, getClassSpells, type Breed, type ClassSpell } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
 import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
@@ -311,14 +312,14 @@ function SpellDetail({ spell }: { spell: ClassSpell }) {
           {lvl && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <Pill tone="cyan">
-                <Zap className="h-3 w-3" /> {lvl.apCost} PA
+                <DofusIcon name="pa" size={12} /> {lvl.apCost} PA
               </Pill>
               <Pill tone="purple">
-                <Crosshair className="h-3 w-3" /> {range} PO
+                <DofusIcon name="po" size={12} /> {range} PO
               </Pill>
               {lvl.critProbability > 0 && (
                 <Pill tone="gold">
-                  <Star className="h-3 w-3" /> {lvl.critProbability}%
+                  <DofusIcon name="critique" size={12} /> {lvl.critProbability}%
                 </Pill>
               )}
             </div>

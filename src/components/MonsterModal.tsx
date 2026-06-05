@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Skull, Heart, Zap, Footprints, X, Swords, Package } from "lucide-react";
+import { Skull, X, Swords, Package } from "lucide-react";
+import DofusIcon, { type DofusIconName } from "./DofusIcon";
 import { getMonster, getItemsByIds, dungeonsWithMonster } from "../api/dofusdb";
 import { levelTone } from "../data/meta";
 import { Pill, Spinner, ErrorState } from "./ui";
 
 const RES = [
-  { key: "earthResistance", label: "Terre" },
-  { key: "fireResistance", label: "Feu" },
-  { key: "waterResistance", label: "Eau" },
-  { key: "airResistance", label: "Air" },
-  { key: "neutralResistance", label: "Neutre" },
+  { key: "earthResistance", label: "Terre", icon: "resTerre" },
+  { key: "fireResistance", label: "Feu", icon: "resFeu" },
+  { key: "waterResistance", label: "Eau", icon: "resEau" },
+  { key: "airResistance", label: "Air", icon: "resAir" },
+  { key: "neutralResistance", label: "Neutre", icon: "resNeutre" },
 ] as const;
 
 export default function MonsterModal({ id, onClose }: { id: number; onClose: () => void }) {
@@ -94,16 +95,19 @@ export default function MonsterModal({ id, onClose }: { id: number; onClose: () 
             {g && (
               <>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Stat icon={Heart} label="PV" value={g.lifePoints.toLocaleString("fr-FR")} color="text-glow-rose" />
-                  <Stat icon={Zap} label="PA" value={g.actionPoints} color="text-glow-cyan" />
-                  <Stat icon={Footprints} label="PM" value={g.movementPoints} color="text-glow-emerald" />
+                  <Stat icon="pv" label="PV" value={g.lifePoints.toLocaleString("fr-FR")} />
+                  <Stat icon="pa" label="PA" value={g.actionPoints} />
+                  <Stat icon="pm" label="PM" value={g.movementPoints} />
                 </div>
                 <div className="mt-4 grid grid-cols-5 gap-2">
                   {RES.map((r) => {
                     const v = (g[r.key] as number) ?? 0;
                     return (
                       <div key={r.key} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 text-center">
-                        <div className="text-[10px] uppercase text-slate-500">{r.label}</div>
+                        <div className="mb-0.5 flex items-center justify-center gap-1">
+                          <DofusIcon name={r.icon} size={12} />
+                          <span className="text-[10px] uppercase text-slate-500">{r.label}</span>
+                        </div>
                         <div className={`text-sm font-bold ${v < 0 ? "text-glow-emerald" : "text-white"}`}>
                           {v > 0 ? "+" : ""}
                           {v}%
@@ -174,10 +178,10 @@ export default function MonsterModal({ id, onClose }: { id: number; onClose: () 
   );
 }
 
-function Stat({ icon: Icon, label, value, color }: any) {
+function Stat({ icon, label, value }: { icon: DofusIconName; label: string; value: string | number }) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-      <Icon className={`h-4 w-4 ${color}`} />
+      <DofusIcon name={icon} size={16} />
       <div className="leading-none">
         <div className="text-sm font-bold text-white">{value}</div>
         <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>

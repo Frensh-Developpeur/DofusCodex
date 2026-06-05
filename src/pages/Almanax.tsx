@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getAlmanaxDay, getAlmanaxRange, type AlmanaxDay } from "../api/dofusdude";
 import { almanaxBonusStyle, type PillTone } from "../data/meta";
+import DofusIcon from "../components/DofusIcon";
 import { parseLocalIsoDate, shiftLocalIsoDate, toLocalIsoDate, useTodayIso } from "../lib/date";
 import ItemModal from "../components/ItemModal";
 import { Pill, SectionHeader, Skeleton, ErrorState, fadeUp } from "../components/ui";
@@ -346,7 +347,7 @@ function FeaturedDay({
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Pill tone="emerald">
-              <Coins className="h-3.5 w-3.5" /> +{day.reward_kamas.toLocaleString("fr-FR")} kamas
+              <DofusIcon name="kama" size={14} /> +{day.reward_kamas.toLocaleString("fr-FR")} kamas
             </Pill>
             <Pill tone={bonus.tone}>
               <Gift className="h-3.5 w-3.5" /> {day.bonus.type.name}
@@ -386,7 +387,7 @@ function UpcomingCard({
           {fmtDate(day.date, { weekday: "long", day: "numeric", month: "short" })}
         </span>
         <Pill tone="gold">
-          <Coins className="h-3 w-3" /> {day.reward_kamas.toLocaleString("fr-FR")}
+          <DofusIcon name="kama" size={12} /> {day.reward_kamas.toLocaleString("fr-FR")}
         </Pill>
       </div>
       <div className="mt-3 flex items-center gap-3">

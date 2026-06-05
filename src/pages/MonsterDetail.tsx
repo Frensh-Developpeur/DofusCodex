@@ -3,23 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
-import {
-  ArrowLeft,
-  Heart,
-  Zap,
-  Footprints,
-  Skull,
-  Swords,
-  Package,
-  Sparkles,
-  Crosshair,
-  Star,
-  Target,
-  Maximize2,
-  X,
-  Move,
-  WandSparkles,
-} from "lucide-react";
+import { ArrowLeft, Skull, Swords, Package, Sparkles, Target, Maximize2, X } from "lucide-react";
 import {
   getMonster,
   getMonsterSpells,
@@ -34,6 +18,7 @@ import {
 } from "../api/dofusdb";
 import { Pill, Spinner, ErrorState, SectionHeader } from "../components/ui";
 import ItemModal from "../components/ItemModal";
+import DofusIcon, { elementIcon, type DofusIconName } from "../components/DofusIcon";
 
 // 0 Neutre · 1 Terre · 2 Feu · 3 Eau · 4 Air · 5 meilleur élément.
 const ELEMENTS = [
@@ -46,20 +31,20 @@ const ELEMENTS = [
 ];
 
 const RES = [
-  { key: "earthResistance", label: "Terre", el: 1 },
-  { key: "fireResistance", label: "Feu", el: 2 },
-  { key: "waterResistance", label: "Eau", el: 3 },
-  { key: "airResistance", label: "Air", el: 4 },
-  { key: "neutralResistance", label: "Neutre", el: 0 },
+  { key: "earthResistance", label: "Terre", icon: "resTerre" },
+  { key: "fireResistance", label: "Feu", icon: "resFeu" },
+  { key: "waterResistance", label: "Eau", icon: "resEau" },
+  { key: "airResistance", label: "Air", icon: "resAir" },
+  { key: "neutralResistance", label: "Neutre", icon: "resNeutre" },
 ] as const;
 
 const CHARS = [
-  { key: "strength", label: "Force", el: 1 },
-  { key: "intelligence", label: "Intelligence", el: 2 },
-  { key: "chance", label: "Chance", el: 3 },
-  { key: "agility", label: "Agilité", el: 4 },
-  { key: "vitality", label: "Vitalité", el: 5 },
-  { key: "wisdom", label: "Sagesse", el: 5 },
+  { key: "strength", label: "Force", icon: "force" },
+  { key: "intelligence", label: "Intelligence", icon: "intelligence" },
+  { key: "chance", label: "Chance", icon: "chance" },
+  { key: "agility", label: "Agilité", icon: "agilite" },
+  { key: "vitality", label: "Vitalité", icon: "vitalite" },
+  { key: "wisdom", label: "Sagesse", icon: "sagesse" },
 ] as const;
 
 export default function MonsterDetail() {
@@ -397,9 +382,9 @@ function StatsBlock({ grade }: { grade: MonsterGrade }) {
   return (
     <div className="flex-1">
       <div className="flex flex-wrap gap-2">
-        <BigStat icon={Heart} label="PV" value={grade.lifePoints.toLocaleString("fr-FR")} color="text-glow-rose" />
-        <BigStat icon={Zap} label="PA" value={grade.actionPoints} color="text-glow-cyan" />
-        <BigStat icon={Footprints} label="PM" value={grade.movementPoints} color="text-glow-emerald" />
+        <BigStat icon="pv" label="PV" value={grade.lifePoints.toLocaleString("fr-FR")} />
+        <BigStat icon="pa" label="PA" value={grade.actionPoints} />
+        <BigStat icon="pm" label="PM" value={grade.movementPoints} />
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -407,7 +392,10 @@ function StatsBlock({ grade }: { grade: MonsterGrade }) {
           const v = (grade[c.key] as number | undefined) ?? 0;
           return (
             <div key={c.key} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 text-center">
-              <div className="truncate text-[10px] uppercase tracking-wide text-slate-500">{c.label}</div>
+              <div className="mb-0.5 flex items-center justify-center gap-1">
+                <DofusIcon name={c.icon} size={13} />
+                <span className="truncate text-[10px] uppercase tracking-wide text-slate-500">{c.label}</span>
+              </div>
               <div className="text-sm font-bold text-white">{v}</div>
             </div>
           );
@@ -417,11 +405,10 @@ function StatsBlock({ grade }: { grade: MonsterGrade }) {
       <div className="mt-2 grid grid-cols-5 gap-2">
         {RES.map((r) => {
           const v = (grade[r.key] as number) ?? 0;
-          const el = ELEMENTS[r.el];
           return (
             <div key={r.key} className="rounded-xl border border-white/5 bg-white/[0.02] p-2 text-center">
               <div className="mb-0.5 flex items-center justify-center gap-1">
-                <span className={clsx("h-1.5 w-1.5 rounded-full", el.dot)} />
+                <DofusIcon name={r.icon} size={13} />
                 <span className="text-[10px] uppercase text-slate-500">{r.label}</span>
               </div>
               <div className={clsx("text-sm font-bold", v < 0 ? "text-glow-emerald" : "text-white")}>
@@ -463,14 +450,14 @@ function SpellDetail({ spell, level, grade }: { spell: ClassSpell; level?: Spell
           {level && (
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <Pill tone="cyan">
-                <Zap className="h-3 w-3" /> {level.apCost} PA
+                <DofusIcon name="pa" size={13} /> {level.apCost} PA
               </Pill>
               <Pill tone="purple">
-                <Crosshair className="h-3 w-3" /> {rangeLabel(level)} PO
+                <DofusIcon name="po" size={13} /> {rangeLabel(level)} PO
               </Pill>
               {level.critProbability > 0 && (
                 <Pill tone="gold">
-                  <Star className="h-3 w-3" /> {level.critProbability}%
+                  <DofusIcon name="critique" size={13} /> {level.critProbability}%
                 </Pill>
               )}
             </div>
@@ -510,7 +497,7 @@ function EffectList({ title, damage, utility = [] }: { title: string; damage: Sp
               className="rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5 text-sm"
             >
               <div className="flex items-center gap-2">
-                <span className={clsx("h-2.5 w-2.5 shrink-0 rounded-full", el.dot)} />
+                <DofusIcon name={elementIcon(d.element)} size={16} />
                 <span className="text-slate-200">
                   <span className="font-semibold text-white">{range}</span>{" "}
                   {d.steal ? "vol de vie" : "dommages"} <span className={clsx("font-semibold", el.text)}>{el.label}</span>
@@ -523,14 +510,13 @@ function EffectList({ title, damage, utility = [] }: { title: string; damage: Sp
           );
         })}
         {utility.map((u, i) => {
-          const { Icon, color } = utilityIcon(u);
           const [main, anno] = splitAnnotation(u);
           return (
             <li
               key={`u${i}`}
               className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-2.5 py-1.5 text-sm"
             >
-              <Icon className={clsx("h-3.5 w-3.5 shrink-0", color)} />
+              <DofusIcon name={utilityIcon(u)} size={16} />
               <span className="text-slate-200">
                 {main}
                 {anno && <span className="text-slate-500">{anno}</span>}
@@ -745,20 +731,10 @@ function SpellRangeMap({ level, cell = 16 }: { level: SpellLevel; cell?: number 
 // Décalages des cases touchées par la zone du sort (relatifs à la case d'impact),
 // selon la forme Ankama (code ASCII) + taille. dirX/dirY = direction lanceur → impact
 // (pour les lignes/perpendiculaires). Formes inconnues mais à zone → cercle (sûr).
-function BigStat({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: typeof Heart;
-  label: string;
-  value: string | number;
-  color: string;
-}) {
+function BigStat({ icon, label, value }: { icon: DofusIconName; label: string; value: string | number }) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-      <Icon className={`h-5 w-5 ${color}`} />
+      <DofusIcon name={icon} size={20} />
       <div className="leading-none">
         <div className="text-base font-bold text-white">{value}</div>
         <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
@@ -810,15 +786,21 @@ function splitAnnotation(s: string): [string, string] {
   return m ? [m[1], m[2]] : [s, ""];
 }
 
-// Icône + couleur d'un effet utilitaire selon son libellé.
-function utilityIcon(text: string): { Icon: typeof Star; color: string } {
+// Icône Dofus d'un effet utilitaire selon son libellé.
+function utilityIcon(text: string): DofusIconName {
   const t = text.toLowerCase();
-  if (t.startsWith("lance le sort")) return { Icon: WandSparkles, color: "text-glow-violet" };
-  if (/\bpa\b/.test(t)) return { Icon: Zap, color: "text-glow-cyan" };
-  if (/\bpm\b/.test(t)) return { Icon: Footprints, color: "text-glow-emerald" };
-  if (/téléporte|repousse|attire|échange|position|pousse/.test(t)) return { Icon: Move, color: "text-glow-violet" };
-  if (/soin|soigne|vie|pv/.test(t)) return { Icon: Heart, color: "text-glow-rose" };
-  return { Icon: Star, color: "text-glow-gold" };
+  if (t.startsWith("lance le sort")) return "etoile";
+  if (t.startsWith("invoque")) return "invocation";
+  if (t.includes("téléporte") || t.includes("position")) return "teleporter";
+  if (t.includes("attire")) return "attirer";
+  if (t.includes("échange")) return "echanger";
+  if (t.includes("repousse") || t.includes("pousse")) return "dmgPoussee";
+  if (t.includes("érosion") || t.includes("erosion")) return "erosion";
+  if (/\bpm\b/.test(t)) return "pm";
+  if (/\bpa\b/.test(t)) return "pa";
+  if (t.includes("soin") || t.includes("soigne") || t.includes("vie")) return "soin";
+  if (t.includes("bouclier") || t.includes("réduction") || t.includes("armure")) return "bouclier";
+  return "etoile";
 }
 
 function rangeLabel(level: SpellLevel): string {

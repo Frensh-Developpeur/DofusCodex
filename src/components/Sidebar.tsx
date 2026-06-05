@@ -2,6 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useStore, actions } from "../store/store";
 import { skinatorEngine, useEngineOpen } from "../store/skinatorEngine";
+import DofusIcon, { type DofusIconName } from "./DofusIcon";
 import {
   LayoutDashboard,
   Swords,
@@ -26,7 +27,8 @@ import {
 import clsx from "clsx";
 import { useState } from "react";
 
-type Item = { to: string; label: string; icon: typeof Swords; end?: boolean };
+// `dofus` = icône Dofus officielle (prioritaire) ; sinon `icon` lucide en repli.
+type Item = { to: string; label: string; icon: typeof Swords; end?: boolean; dofus?: DofusIconName };
 
 const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   {
@@ -37,7 +39,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     collapsible: true,
     items: [
       { to: "/donjons", label: "Donjons", icon: Swords },
-      { to: "/guides", label: "Guides", icon: BookOpen },
+      { to: "/guides", label: "Guides", icon: BookOpen, dofus: "quete" },
     ],
   },
   {
@@ -45,12 +47,12 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     collapsible: true,
     items: [
       { to: "/classes", label: "Classes", icon: Users },
-      { to: "/monstres", label: "Monstres", icon: Skull },
-      { to: "/stuffinator", label: "Équipements", icon: Shirt },
-      { to: "/panoplies", label: "Panoplies", icon: Layers3 },
+      { to: "/monstres", label: "Monstres", icon: Skull, dofus: "skull" },
+      { to: "/stuffinator", label: "Équipements", icon: Shirt, dofus: "weapon" },
+      { to: "/panoplies", label: "Panoplies", icon: Layers3, dofus: "panoplie" },
       { to: "/objets", label: "Objets & Ressources", icon: Boxes },
       { to: "/havre-sac", label: "Havre-Sacs", icon: Tent },
-      { to: "/succes", label: "Succès", icon: Trophy },
+      { to: "/succes", label: "Succès", icon: Trophy, dofus: "starFilled" },
     ],
   },
   {
@@ -171,12 +173,20 @@ export default function Sidebar() {
                             transition={{ type: "spring", stiffness: 400, damping: 32 }}
                           />
                         )}
-                        <item.icon
-                          className={clsx(
-                            "relative h-[18px] w-[18px] shrink-0 transition-colors",
-                            active ? "text-glow-violet" : "text-slate-500 group-hover:text-slate-300",
-                          )}
-                        />
+                        {item.dofus ? (
+                          <DofusIcon
+                            name={item.dofus}
+                            size={18}
+                            className={clsx("relative transition", active ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
+                          />
+                        ) : (
+                          <item.icon
+                            className={clsx(
+                              "relative h-[18px] w-[18px] shrink-0 transition-colors",
+                              active ? "text-glow-violet" : "text-slate-500 group-hover:text-slate-300",
+                            )}
+                          />
+                        )}
                         {!collapsed && <span className="relative truncate">{item.label}</span>}
                       </>
                     );

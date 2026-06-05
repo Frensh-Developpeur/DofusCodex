@@ -4,9 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
-  Heart,
-  Zap,
-  Footprints,
   ShieldAlert,
   Skull,
   Lightbulb,
@@ -23,13 +20,14 @@ import { getDungeonGuide, type BossPhase } from "../data/dungeonGuides";
 import { levelTone } from "../data/meta";
 import { useStore, actions } from "../store/store";
 import { Pill, Spinner, ErrorState, fadeUp } from "../components/ui";
+import DofusIcon, { type DofusIconName } from "../components/DofusIcon";
 
-const ELEMENTS: { key: keyof Monster["grades"][0]; label: string; color: string }[] = [
-  { key: "earthResistance", label: "Terre", color: "bg-amber-500" },
-  { key: "fireResistance", label: "Feu", color: "bg-glow-ember" },
-  { key: "waterResistance", label: "Eau", color: "bg-glow-cyan" },
-  { key: "airResistance", label: "Air", color: "bg-glow-emerald" },
-  { key: "neutralResistance", label: "Neutre", color: "bg-slate-400" },
+const ELEMENTS: { key: keyof Monster["grades"][0]; label: string; color: string; icon: DofusIconName }[] = [
+  { key: "earthResistance", label: "Terre", color: "bg-amber-500", icon: "resTerre" },
+  { key: "fireResistance", label: "Feu", color: "bg-glow-ember", icon: "resFeu" },
+  { key: "waterResistance", label: "Eau", color: "bg-glow-cyan", icon: "resEau" },
+  { key: "airResistance", label: "Air", color: "bg-glow-emerald", icon: "resAir" },
+  { key: "neutralResistance", label: "Neutre", color: "bg-slate-400", icon: "resNeutre" },
 ];
 
 const DANGER_META: Record<BossPhase["danger"], { label: string; tone: any; bar: string }> = {
@@ -39,10 +37,10 @@ const DANGER_META: Record<BossPhase["danger"], { label: string; tone: any; bar: 
   extreme: { label: "Extrême", tone: "rose", bar: "from-glow-rose to-glow-purple" },
 };
 
-function StatChip({ icon: Icon, label, value, color }: any) {
+function StatChip({ icon: Icon, dofus, label, value, color }: any) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-      <Icon className={`h-4 w-4 ${color}`} />
+      {dofus ? <DofusIcon name={dofus} size={16} /> : <Icon className={`h-4 w-4 ${color}`} />}
       <div className="leading-none">
         <div className="text-sm font-bold text-white">{value}</div>
         <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
@@ -51,13 +49,15 @@ function StatChip({ icon: Icon, label, value, color }: any) {
   );
 }
 
-function ResistanceBar({ label, value, color }: { label: string; value: number; color: string }) {
+function ResistanceBar({ label, value, color, icon }: { label: string; value: number; color: string; icon: DofusIconName }) {
   const width = Math.min(100, Math.max(4, Math.abs(value)));
   const weak = value < 0;
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="text-slate-400">{label}</span>
+        <span className="flex items-center gap-1.5 text-slate-400">
+          <DofusIcon name={icon} size={14} /> {label}
+        </span>
         <span className={weak ? "font-semibold text-glow-emerald" : "text-slate-300"}>
           {value > 0 ? `+${value}` : value}%{weak && " ⤵ faible"}
         </span>
@@ -287,9 +287,9 @@ export default function DungeonDetail() {
 
             {bossGrade && (
               <div className="mt-5 flex flex-wrap gap-2">
-                <StatChip icon={Heart} label="PV" value={bossGrade.lifePoints.toLocaleString("fr-FR")} color="text-glow-rose" />
-                <StatChip icon={Zap} label="PA" value={bossGrade.actionPoints} color="text-glow-cyan" />
-                <StatChip icon={Footprints} label="PM" value={bossGrade.movementPoints} color="text-glow-emerald" />
+                <StatChip dofus="pv" label="PV" value={bossGrade.lifePoints.toLocaleString("fr-FR")} />
+                <StatChip dofus="pa" label="PA" value={bossGrade.actionPoints} />
+                <StatChip dofus="pm" label="PM" value={bossGrade.movementPoints} />
                 <StatChip icon={Skull} label="Niveau" value={bossGrade.level} color="text-glow-gold" />
               </div>
             )}
@@ -342,6 +342,7 @@ export default function DungeonDetail() {
                     label={el.label}
                     value={(bossGrade[el.key] as number) ?? 0}
                     color={el.color}
+                    icon={el.icon}
                   />
                 ))}
               </div>

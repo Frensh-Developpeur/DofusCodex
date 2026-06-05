@@ -4,6 +4,7 @@ import { X, Hammer, Swords, Crosshair, Sparkles, Layers, Skull, Package } from "
 import { getEquipment, getSet } from "../api/dofusdude";
 import { monstersDroppingItem, getDbItem } from "../api/dofusdb";
 import { effectTone, levelTone } from "../data/meta";
+import DofusIcon, { effectIconFromName } from "./DofusIcon";
 import { Pill, Spinner, ErrorState } from "./ui";
 
 export default function ItemModal({
@@ -152,11 +153,15 @@ export default function ItemModal({
                   <Sparkles className="h-4 w-4 text-glow-violet" /> Caractéristiques
                 </h3>
                 <ul className="space-y-1 rounded-xl border border-white/5 bg-white/[0.02] p-3">
-                  {item.effects.map((e, i) => (
-                    <li key={i} className={`text-sm font-medium ${effectTone(e.type.name)}`}>
-                      {e.formatted}
-                    </li>
-                  ))}
+                  {item.effects.map((e, i) => {
+                    const ic = effectIconFromName(e.type.name);
+                    return (
+                      <li key={i} className={`flex items-center gap-2 text-sm font-medium ${effectTone(e.type.name)}`}>
+                        {ic && <DofusIcon name={ic} size={15} />}
+                        {e.formatted}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -202,11 +207,15 @@ export default function ItemModal({
                             {count} pièces
                           </p>
                           <ul className="space-y-0.5">
-                            {tier.map((e, j) => (
-                              <li key={j} className={`text-xs ${effectTone(e.type.name)}`}>
-                                {e.formatted}
-                              </li>
-                            ))}
+                            {tier.map((e, j) => {
+                              const ic = effectIconFromName(e.type.name);
+                              return (
+                                <li key={j} className={`flex items-center gap-1.5 text-xs ${effectTone(e.type.name)}`}>
+                                  {ic && <DofusIcon name={ic} size={13} />}
+                                  {e.formatted}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                       ) : null,
@@ -278,11 +287,15 @@ function DbItemView({ item }: { item: import("../api/dofusdb").DbItem }) {
             <Sparkles className="h-4 w-4 text-glow-violet" /> Effets
           </h3>
           <ul className="space-y-1 rounded-xl border border-white/5 bg-white/[0.02] p-3">
-            {effects.map((e, i) => (
-              <li key={i} className="text-sm font-medium text-slate-200">
-                {e.description!.fr}
-              </li>
-            ))}
+            {effects.map((e, i) => {
+              const ic = effectIconFromName(e.description!.fr);
+              return (
+                <li key={i} className="flex items-center gap-2 text-sm font-medium text-slate-200">
+                  {ic && <DofusIcon name={ic} size={15} />}
+                  {e.description!.fr}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -22,6 +22,7 @@ import GuideDetail from "./pages/GuideDetail";
 import Almanax from "./pages/Almanax";
 import Hunt from "./pages/Hunt";
 import Monsters from "./pages/Monsters";
+import MonsterDetail from "./pages/MonsterDetail";
 import Sets from "./pages/Sets";
 import Classes from "./pages/Classes";
 import Resources from "./pages/Resources";
@@ -102,6 +103,7 @@ export default function App() {
                 <Route path="/mes-skins" element={<Page><SkinatorSkins /></Page>} />
                 <Route path="/chasse" element={<Page><Hunt /></Page>} />
                 <Route path="/monstres" element={<Page><Monsters /></Page>} />
+                <Route path="/monstres/:id" element={<Page><MonsterDetail /></Page>} />
                 <Route path="/panoplies" element={<Page><Sets /></Page>} />
                 <Route path="/classes" element={<Page><Classes /></Page>} />
                 <Route path="/objets" element={<Page><Resources /></Page>} />

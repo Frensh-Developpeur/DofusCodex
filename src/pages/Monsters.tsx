@@ -1,18 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Search, Skull } from "lucide-react";
 import { listMonsters } from "../api/dofusdb";
 import { useDebounce } from "../hooks/useDebounce";
 import { dedupeById } from "../lib/dedupe";
 import { levelTone } from "../data/meta";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, LoadMore, fadeUp } from "../components/ui";
-import MonsterModal from "../components/MonsterModal";
 
 export default function Monsters() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [bossOnly, setBossOnly] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
   const debounced = useDebounce(search);
 
   const { data, isLoading, isError, error, refetch, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -90,7 +90,7 @@ export default function Monsters() {
                 variants={fadeUp}
                 custom={i % 16}
                 whileHover={{ y: -4 }}
-                onClick={() => setSelected(m.id)}
+                onClick={() => navigate(`/monstres/${m.id}`)}
                 className="glass glass-hover no-drag group flex flex-col items-center rounded-2xl p-4 text-center"
               >
                 <div className="relative mb-2">
@@ -128,10 +128,6 @@ export default function Monsters() {
           total={total}
         />
       )}
-
-      <AnimatePresence>
-        {selected !== null && <MonsterModal id={selected} onClose={() => setSelected(null)} />}
-      </AnimatePresence>
     </div>
   );
 }

@@ -55,6 +55,14 @@ export interface MonsterGrade {
   waterResistance: number;
   airResistance: number;
   neutralResistance: number;
+  strength?: number;
+  intelligence?: number;
+  chance?: number;
+  agility?: number;
+  vitality?: number;
+  wisdom?: number;
+  gradeXp?: number;
+  startingSpellId?: number; // id de NIVEAU de sort du sort « Auto » (passif de départ)
 }
 
 export interface MonsterDrop {
@@ -74,6 +82,9 @@ export interface Monster {
   grades: MonsterGrade[];
   drops?: MonsterDrop[];
   race?: number;
+  spells?: number[];
+  spellGrades?: string[]; // par sort : "monsterGrade,spellGrade;…" (mappe le niveau du mob au grade du sort)
+  look?: string; // look Ankama "{gfx|couleurs|scale}" — la dernière valeur = échelle d'affichage en %
 }
 
 export interface ItemLite {
@@ -271,6 +282,32 @@ export async function listMonsters(q: MonsterQuery, signal?: AbortSignal): Promi
 export async function getMonster(id: number, signal?: AbortSignal): Promise<Monster | null> {
   const data = await getJson<FeathersList<Monster>>(`${BASE}/monsters${qs({ id, lang: "fr" })}`, signal);
   return data.data[0] ?? null;
+}
+
+// Monstres de la même famille (race). Léger (id/nom/img), plafonné à 50 (limite DofusDB).
+export async function getMonstersByRace(raceId: number, signal?: AbortSignal): Promise<MonsterLite[]> {
+  if (raceId == null) return [];
+  const url = `${BASE}/monsters?lang=fr&$limit=50&race=${raceId}&$sort[id]=1&$select[]=id&$select[]=name&$select[]=gfxId&$select[]=isBoss`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; gfxId: number; isBoss?: boolean }>>(
+    url,
+    signal,
+  );
+  return data.data.map((m) => ({
+    id: m.id,
+    name: m.name,
+    isBoss: !!m.isBoss,
+    img: `${BASE}/img/monsters/${m.gfxId}.png`,
+  }));
+}
+
+// Nom de la famille/race du monstre (ex. « Invocations de monstre »). Optionnel.
+export async function getMonsterRaceName(raceId: number, signal?: AbortSignal): Promise<string | null> {
+  if (raceId == null) return null;
+  const data = await getJson<FeathersList<{ id: number; name: Localized }>>(
+    `${BASE}/monster-races${qs({ id: raceId, lang: "fr" })}`,
+    signal,
+  );
+  return data.data[0]?.name?.fr ?? null;
 }
 
 // Reverse drop: which monsters drop a given item (by Ankama object id).
@@ -512,6 +549,7 @@ export interface SpellDamage {
   delay: number; // nombre de tours avant déclenchement (0 = immédiat) → libellé « Dans N tour »
   condition: string; // état requis (depuis targetMask, ex "E244") → effets conditionnels = lignes séparées (pas sommées)
   conditionLabel: string; // nom lisible de l'état (résolu via spell-states, ex "Téléfrag", "Saoul") — "" si aucun
+  trigger?: string; // déclencheur lisible (ex. « déclenché lorsque … ») — "" si immédiat
 }
 
 export interface SpellLevel {
@@ -524,6 +562,13 @@ export interface SpellLevel {
   damage: SpellDamage[];
   criticalDamage: SpellDamage[];
   chargeScaled: boolean; // dégâts qui montent par charge/état (effet 293) → fourchettes affichées « par charge »
+  castInLine?: boolean; // ne se lance qu'en ligne droite (pour la map de portée)
+  castInDiagonal?: boolean; // ne se lance qu'en diagonale
+  losRequired?: boolean; // nécessite une ligne de vue (castTestLos)
+  zoneShape?: number; // id de forme DofusDB (effet à plus grande aire), 0/80 = mono-case
+  zoneSize?: number; // taille de la zone (param1)
+  utility?: string[]; // effets non-dégâts rendus en texte (téléporte, repousse, -PA, états…)
+  criticalUtility?: string[]; // idem pour les effets critiques
 }
 
 export interface ClassSpell {
@@ -534,10 +579,27 @@ export interface ClassSpell {
   levels: SpellLevel[];
   variantId: number; // identifiant de la variante (regroupe sort de base + variante)
   variantIndex: number; // 0 = sort de base, 1 = variante
+  auto?: boolean; // sort « Auto » (passif de départ d'un monstre)
 }
 
 const DMG_EFFECTS = new Set([96, 97, 98, 99, 100]); // dégâts directs
 const STEAL_EFFECTS = new Set([90, 91, 92, 93, 94, 95]); // vol de vie
+const hasLetters = (s: string) => /[a-zA-ZÀ-ÿ]/.test(s);
+
+// Codes de déclencheur DofusDB → texte. Sûrs (confirmés) : APA/MPA. Le reste → générique.
+const TRIGGER_TEXT: Record<string, string> = {
+  APA: "la cible subit une tentative de retrait PA",
+  MPA: "la cible subit une tentative de retrait PM",
+};
+function triggerNote(triggers: unknown): string {
+  const raw = String(triggers ?? "");
+  if (!raw || raw === "I") return ""; // I = immédiat (aucun déclencheur)
+  const known = raw.split("|").map((t) => TRIGGER_TEXT[t]).filter(Boolean);
+  if (known.length) return `déclenché lorsque ${known.join(" ou ")}`;
+  return "effet déclenché sous condition";
+}
+// Un effet « lance un sort » a un template sans aucune lettre (juste « #1 » ou vide) :
+// l'id du sort à lancer est alors dans diceNum (ou value).
 
 function decodeSpellDamage(effects: unknown): SpellDamage[] {
   const out: SpellDamage[] = [];
@@ -561,7 +623,76 @@ function decodeSpellDamage(effects: unknown): SpellDamage[] {
       .filter((tok) => /\d/.test(tok))
       .map((tok) => tok.replace(/^[*!]+/, ""))
       .join("+");
-    out.push({ element, steal: isSteal, min, max, delayed: delay > 0, delay, condition, conditionLabel: "" });
+    out.push({
+      element,
+      steal: isSteal,
+      min,
+      max,
+      delayed: delay > 0,
+      delay,
+      condition,
+      conditionLabel: "",
+      trigger: triggerNote((e as Record<string, unknown>).triggers),
+    });
+  }
+  return out;
+}
+
+// Rend un effet utilitaire (non-dégât) depuis son template Ankama.
+//  #1 = diceNum (min) · #2 = diceSide (max) · #3 = value
+//  {{~1 … }} = bloc affiché s'il y a une plage (min≠max) · {{~ps}} = pluriel sur #1
+function renderEffectTemplate(tpl: string, e: Record<string, any>, refNames: Map<number, string>): string {
+  const a = e.diceNum ?? 0;
+  const b = e.diceSide ?? 0;
+  const c = e.value ?? 0;
+  const hasRange = b > 0 && b !== a;
+  // Un grand nombre (≥1000) est en général un id de sort/monstre → on le remplace par son nom.
+  const sub = (n: number) => (n >= 1000 ? refNames.get(n) : undefined) ?? String(n);
+  let s = tpl;
+  s = s.replace(/\{\{~1([^{}]*)\}\}/g, (_m, inner) => (hasRange ? String(inner).replace(/~\d+/g, "") : ""));
+  s = s.replace(/\{\{~ps\}\}/g, a > 1 ? "s" : "");
+  s = s.replace(/\{\{[^{}]*\}\}/g, ""); // autres marqueurs (pluriels divers, refs) → retirés
+  s = s.replace(/<[^>]*>/g, ""); // balises (ex. <sprite name="erosion">) → retirées
+  s = s.replace(/#1/g, sub(a));
+  s = s.replace(/#2/g, hasRange ? sub(b) : "");
+  s = s.replace(/#3/g, sub(c));
+  s = s.replace(/\s+([%):.,])/g, "$1"); // espaces avant ponctuation
+  s = s.replace(/\s+/g, " ").trim();
+  return s + effectSuffix(e);
+}
+
+// Suffixe contextuel d'un effet : délai (« dans N tours »), durée (N tours / infini), probabilité.
+function effectSuffix(e: Record<string, any>): string {
+  let s = "";
+  const delay = e.delay ?? 0;
+  const dur = e.duration ?? 0;
+  const rnd = e.random ?? 0;
+  if (delay > 0) s += ` (dans ${delay} tour${delay > 1 ? "s" : ""})`;
+  if (dur === -1) s += " (infini)";
+  else if (dur > 0 && delay <= 0) s += ` (${dur} tour${dur > 1 ? "s" : ""})`;
+  if (rnd > 0 && rnd < 100) s += ` · ${rnd}% des cas`;
+  return s;
+}
+
+// Effets non-dégâts d'un niveau, rendus en texte (téléporte, repousse, états, lance un sort…).
+function buildUtility(effects: unknown, tpl: Map<number, string>, refNames: Map<number, string>): string[] {
+  const out: string[] = [];
+  if (!Array.isArray(effects)) return out;
+  for (const e of effects) {
+    const eff = e as Record<string, any>;
+    const id = eff?.effectId as number | undefined;
+    if (id == null || DMG_EFFECTS.has(id) || STEAL_EFFECTS.has(id) || id === 293) continue;
+    const t = tpl.get(id) ?? "";
+    const note = triggerNote(eff.triggers);
+    const seg = note ? ` — ${note}` : "";
+    if (!hasLetters(t)) {
+      // Template sans lettre → référence de sort « lancé ». On résout l'id en nom (sinon on ignore).
+      const name = refNames.get(eff.diceNum || eff.value || 0);
+      if (name) out.push(`Lance le sort ${name}${effectSuffix(eff)}${seg}`);
+      continue;
+    }
+    const s = renderEffectTemplate(t, eff, refNames);
+    if (s && hasLetters(s)) out.push(s + seg);
   }
   return out;
 }
@@ -704,6 +835,141 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
   // Tri : par variante puis position dans la variante (base avant variante).
   spells.sort((a, b) => a.variantId - b.variantId || a.variantIndex - b.variantIndex);
   return spells;
+}
+
+// Sorts d'un monstre par ids (réutilise le décodage de dégâts/effets des sorts de classe).
+// Renvoie des ClassSpell (variantId/variantIndex = 0). Inclut castInLine/Diagonal pour la map.
+// `startingLevelIds` = ids de NIVEAUX des sorts « Auto » (grade.startingSpellId), résolus vers
+// leurs sorts parents et ajoutés en tête (DofusDB les montre en premier, avec le tag Auto).
+export async function getMonsterSpells(
+  spellIds: number[],
+  startingLevelIds: number[] = [],
+  signal?: AbortSignal,
+): Promise<ClassSpell[]> {
+  // Résout les niveaux « Auto » vers leurs sorts parents.
+  const autoSpellIds: number[] = [];
+  const uniqStart = [...new Set(startingLevelIds.filter(Boolean))];
+  for (let i = 0; i < uniqStart.length; i += 50) {
+    const chunk = uniqStart.slice(i, i + 50);
+    const lp = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const d = await getJson<FeathersList<{ spellId?: number }>>(
+      `${BASE}/spell-levels?$limit=50&$select[]=spellId&${lp}`,
+      signal,
+    );
+    for (const l of d.data ?? []) if (l.spellId) autoSpellIds.push(l.spellId);
+  }
+  const allIds = [...new Set([...autoSpellIds, ...spellIds])];
+  if (!allIds.length) return [];
+  const idParams = allIds.map((i) => `id[$in][]=${i}`).join("&");
+  const sp = await getJson<FeathersList<Record<string, any>>>(
+    `${BASE}/spells?lang=fr&$limit=50&${idParams}`,
+    signal,
+  );
+  const byId = new Map<number, Record<string, any>>((sp.data ?? []).map((s) => [s.id, s]));
+  const autoSet = new Set(autoSpellIds);
+  const ordered = allIds.map((id) => byId.get(id)).filter((s): s is Record<string, any> => !!s);
+
+  const levelIds = [...new Set(ordered.flatMap((s) => (Array.isArray(s.spellLevels) ? s.spellLevels : [])))];
+  const levelById = new Map<number, Record<string, any>>();
+  for (let i = 0; i < levelIds.length; i += 50) {
+    const chunk = levelIds.slice(i, i + 50);
+    const lp = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const d = await getJson<FeathersList<Record<string, any>>>(`${BASE}/spell-levels?$limit=50&${lp}`, signal);
+    for (const l of d.data ?? []) levelById.set(l.id, l);
+  }
+
+  // Templates des effets (pour rendre les effets utilitaires en texte).
+  const effectIds = new Set<number>();
+  for (const l of levelById.values())
+    for (const e of [...(l.effects ?? []), ...(l.criticalEffect ?? [])])
+      if (e?.effectId) effectIds.add(e.effectId);
+  const tplById = new Map<number, string>();
+  const effArr = [...effectIds];
+  for (let i = 0; i < effArr.length; i += 50) {
+    const chunk = effArr.slice(i, i + 50);
+    const ep = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const d = await getJson<FeathersList<{ id: number; description?: Localized }>>(
+      `${BASE}/effects?lang=fr&$limit=50&$select[]=id&$select[]=description&${ep}`,
+      signal,
+    );
+    for (const e of d.data ?? []) if (e.description?.fr) tplById.set(e.id, e.description.fr);
+  }
+
+  // Références (sorts/monstres) embarquées comme grands nombres dans les effets (≥1000) :
+  // sorts « lancés » (template sans lettre) et ids dans #1/#2/#3 (ex. « Invoque: <monstre> »).
+  const refIds = new Set<number>();
+  for (const l of levelById.values())
+    for (const e of [...(l.effects ?? []), ...(l.criticalEffect ?? [])]) {
+      const id = e?.effectId;
+      if (id == null || DMG_EFFECTS.has(id) || STEAL_EFFECTS.has(id) || id === 293) continue;
+      for (const v of [e.diceNum, e.value]) if (typeof v === "number" && v >= 1000) refIds.add(v);
+    }
+  const refNames = new Map<number, string>();
+  const refArr = [...refIds];
+  // On résout d'abord en sorts puis en monstres (le monstre l'emporte → « Invoque <monstre> »).
+  for (const kind of ["spells", "monsters"] as const) {
+    for (let i = 0; i < refArr.length; i += 50) {
+      const chunk = refArr.slice(i, i + 50);
+      const cp = chunk.map((id) => `id[$in][]=${id}`).join("&");
+      const d = await getJson<FeathersList<{ id: number; name?: Localized }>>(
+        `${BASE}/${kind}?lang=fr&$limit=50&$select[]=id&$select[]=name&${cp}`,
+        signal,
+      );
+      for (const e of d.data ?? []) if (e.name?.fr) refNames.set(e.id, e.name.fr);
+    }
+  }
+
+  return ordered.map((s, idx) => {
+    const levelIdList: number[] = Array.isArray(s.spellLevels) ? s.spellLevels : [];
+    const levels: SpellLevel[] = levelIdList
+      .map((id) => levelById.get(id))
+      .filter((l): l is Record<string, any> => !!l)
+      .map((l) => ({
+        grade: l.grade ?? 1,
+        minPlayerLevel: l.minPlayerLevel ?? 1,
+        apCost: l.apCost ?? 0,
+        minRange: l.minRange ?? 0,
+        range: l.range ?? 0,
+        critProbability: l.criticalHitProbability ?? 0,
+        damage: decodeSpellDamage(l.effects),
+        criticalDamage: decodeSpellDamage(l.criticalEffect),
+        chargeScaled: Array.isArray(l.effects) && l.effects.some((e: Record<string, number>) => e?.effectId === 293),
+        castInLine: !!l.castInLine,
+        castInDiagonal: !!l.castInDiagonal,
+        losRequired: !!l.castTestLos,
+        utility: buildUtility(l.effects, tplById, refNames),
+        criticalUtility: buildUtility(l.criticalEffect, tplById, refNames),
+        ...extractZone(l.effects),
+      }))
+      .sort((a, b) => a.grade - b.grade);
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description ?? { fr: "" },
+      img: s.img,
+      levels,
+      variantId: 0,
+      variantIndex: idx,
+      auto: autoSet.has(s.id),
+    };
+  });
+}
+
+// Récupère la zone d'effet principale (1ʳᵉ qui a une forme/taille) parmi les effets.
+// Zone d'effet à prévisualiser : on prend l'effet à plus grande aire (shape ≠ POINT(80)/NONE(0)
+// et param1>0) — souvent l'effet de dégâts —, pas le 1ᵉʳ effet (souvent un état mono-case).
+// La TAILLE = param1 (l'atténuation de dégâts n'est PAS l'étendue).
+function extractZone(effects: unknown): { zoneShape: number; zoneSize: number } {
+  let best = { zoneShape: 0, zoneSize: 0 };
+  if (Array.isArray(effects)) {
+    for (const e of effects) {
+      const z = (e as Record<string, any>)?.zoneDescr;
+      const shape = z?.shape ?? 0;
+      const size = z?.param1 ?? 0;
+      if (shape && shape !== 80 && size > 0 && size > best.zoneSize) best = { zoneShape: shape, zoneSize: size };
+    }
+  }
+  return best;
 }
 
 // ── Succès (achievements) ────────────────────────────────────────────────────

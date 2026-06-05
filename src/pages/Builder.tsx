@@ -65,7 +65,17 @@ import { classIllus } from "../data/classIllus";
 import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
 import { actions, useStore, type Build, type BuildSlots } from "../store/store";
 import { Pill, Spinner, DofusLoader } from "../components/ui";
-import DofusIcon, { effectIconFromName, elementIcon } from "../components/DofusIcon";
+import DofusIcon, { effectIconFromName, elementIcon, type DofusIconName } from "../components/DofusIcon";
+
+// Icône Dofus pour les caractéristiques d'un sort (par libellé).
+const CARAC_ROW_ICON: Record<string, DofusIconName> = {
+  Coût: "pa",
+  Portée: "po",
+  Critique: "critique",
+  Relance: "sablier",
+  Zone: "areaCircle",
+  Lancer: "areaLine",
+};
 import SlotPicker from "../components/SlotPicker";
 
 interface SlotDef {
@@ -1254,15 +1264,18 @@ function SpellDetail({
         </div>
 
         <dl className="mt-5 space-y-1 text-sm">
-          {caracRows.map((row) => (
-            <div key={`${row.label}-${row.value}`} className="flex items-center gap-2 text-slate-300">
-              <dt className="min-w-[8rem] text-slate-400">{row.label}</dt>
-              <dd className="flex min-w-0 items-center gap-2 font-semibold text-white">
-                <row.icon className={`h-4 w-4 ${row.tone}`} />
-                {row.value}
-              </dd>
-            </div>
-          ))}
+          {caracRows.map((row) => {
+            const d = CARAC_ROW_ICON[row.label];
+            return (
+              <div key={`${row.label}-${row.value}`} className="flex items-center gap-2 text-slate-300">
+                <dt className="min-w-[8rem] text-slate-400">{row.label}</dt>
+                <dd className="flex min-w-0 items-center gap-2 font-semibold text-white">
+                  {d ? <DofusIcon name={d} size={16} /> : <row.icon className={`h-4 w-4 ${row.tone}`} />}
+                  {row.value}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
 
         <div className="mt-5">

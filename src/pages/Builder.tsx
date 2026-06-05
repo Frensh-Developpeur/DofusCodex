@@ -65,6 +65,7 @@ import { classIllus } from "../data/classIllus";
 import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
 import { actions, useStore, type Build, type BuildSlots } from "../store/store";
 import { Pill, Spinner, DofusLoader } from "../components/ui";
+import DofusIcon, { effectIconFromName, elementIcon } from "../components/DofusIcon";
 import SlotPicker from "../components/SlotPicker";
 
 interface SlotDef {
@@ -834,6 +835,7 @@ function BuildEditor({ build }: { build: Build }) {
                                     <div className="flex flex-wrap gap-1">
                                       {tier.effects.map((e, idx) => {
                                         const v = effectVisual(e.formatted);
+                                        const dIco = effectIconFromName(e.formatted);
                                         return (
                                           <span
                                             key={idx}
@@ -843,7 +845,11 @@ function BuildEditor({ build }: { build: Build }) {
                                                 : "text-slate-500 ring-transparent"
                                             }`}
                                           >
-                                            <v.icon className={`h-3 w-3 shrink-0 ${reached ? v.tone : "text-slate-600"}`} />
+                                            {dIco ? (
+                                              <DofusIcon name={dIco} size={12} />
+                                            ) : (
+                                              <v.icon className={`h-3 w-3 shrink-0 ${reached ? v.tone : "text-slate-600"}`} />
+                                            )}
                                             {e.formatted}
                                           </span>
                                         );
@@ -932,7 +938,7 @@ function BuildEditor({ build }: { build: Build }) {
                   const totalC = caracs[c.key] + parch[c.key] + equipBonus;
                   return (
                     <div key={c.key} className="flex items-center gap-1.5">
-                      <c.icon className={`h-4 w-4 shrink-0 ${c.tone}`} />
+                      <DofusIcon name={effectIconFromName(c.label) ?? "etoile"} size={16} />
                       <div className="min-w-0 flex-1 truncate">
                         <span className={`text-sm font-semibold ${c.tone}`}>{c.label}</span>
                         {equipBonus !== 0 && (
@@ -985,12 +991,11 @@ function BuildEditor({ build }: { build: Build }) {
                   <span className="w-12 text-right">Rés. %</span>
                 </div>
                 {ELEMENTS.map((el, i) => {
-                  const EIco = ELEMENT_ICON[i];
                   const dmg = total.damageByElement[i];
                   return (
                     <div key={el} className="flex items-center gap-2 px-3 py-1.5 odd:bg-white/[0.02]">
                       <span className={`flex flex-1 items-center gap-1.5 text-sm font-medium ${ELEMENT_TONE[i]}`}>
-                        <EIco className="h-3.5 w-3.5 shrink-0" /> {el}
+                        <DofusIcon name={elementIcon(i)} size={14} /> {el}
                       </span>
                       <span className="w-16 text-right text-sm font-bold tabular-nums text-white">
                         {dmg > 0 ? "+" : ""}
@@ -1346,11 +1351,10 @@ function SpellDetail({
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{line.label}</p>
                 <div className="space-y-1.5">
                   {line.elements.map((e) => {
-                    const EIco = ELEMENT_ICON[e.element] ?? CircleDot;
                     return (
                       <div key={e.element} className="flex items-center justify-between gap-3 text-sm tabular-nums">
                         <span className={`flex items-center gap-1.5 font-semibold ${ELEMENT_TONE[e.element]}`}>
-                          <EIco className="h-3.5 w-3.5 shrink-0" />
+                          <DofusIcon name={elementIcon(e.element)} size={14} />
                           {e.min === e.max ? e.min : `${e.min} - ${e.max}`}
                         </span>
                         {e.critMax > 0 && (
@@ -1415,6 +1419,8 @@ function SpellDetail({
 }
 
 function RoomStatIcon({ stat }: { stat: string }) {
+  const dofus = effectIconFromName(stat);
+  if (dofus) return <DofusIcon name={dofus} size={16} />;
   const n = normalizeName(stat);
   const Icon = n.includes("feu")
     ? Flame
@@ -2147,9 +2153,14 @@ function StatChip({
   tone?: string;
   suffix?: string;
 }) {
+  const dofus = effectIconFromName(label); // icône Dofus dérivée du libellé (sinon repli lucide)
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
-      <Icon className={`h-4 w-4 shrink-0 ${tone ?? "text-slate-400"}`} />
+      {dofus ? (
+        <DofusIcon name={dofus} size={16} />
+      ) : (
+        <Icon className={`h-4 w-4 shrink-0 ${tone ?? "text-slate-400"}`} />
+      )}
       <div className="min-w-0">
         <div className={`font-display text-sm font-bold leading-none ${value < 0 ? "text-glow-rose" : "text-white"}`}>
           {value > 0 ? "+" : ""}

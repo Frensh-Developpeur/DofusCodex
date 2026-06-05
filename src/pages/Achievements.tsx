@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Search, Trophy, Award, Swords, Skull, ArrowUpRight } from "lucide-react";
+import { ChevronDown, Search, Trophy, ArrowUpRight } from "lucide-react";
+import DofusIcon from "../components/DofusIcon";
 import {
   listAchievementCategories,
   getAchievementsByIds,
@@ -203,7 +204,7 @@ export default function Achievements() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2 rounded-xl border border-glow-gold/40 bg-void-900/60 px-4 py-2">
-                <Award className="h-5 w-5 text-glow-gold" />
+                <DofusIcon name="starFilled" size={20} />
                 <span className="font-display text-2xl font-extrabold text-glow-gold">{totalPoints}</span>
                 <span className="text-xs font-semibold text-glow-gold/70">pts</span>
               </div>
@@ -282,7 +283,7 @@ function DungeonLink({ bossId }: { bossId: number }) {
       to={`/donjons/${dungeon.id}`}
       className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-glow-purple/40 bg-glow-purple/15 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-glow-purple/25"
     >
-      <Swords className="h-3.5 w-3.5" /> Voir le donjon
+      <DofusIcon name="weapon" size={14} /> Voir le donjon
       <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
     </Link>
   );
@@ -376,13 +377,13 @@ function AchievementRow({
                   <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Récompenses</p>
                   <div className="flex flex-wrap items-center gap-2">
                     {r.xp > 0 && (
-                      <span className="rounded-lg border border-glow-cyan/30 bg-glow-cyan/10 px-2.5 py-1 text-xs font-bold text-glow-cyan">
-                        {nf(r.xp)} XP
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-glow-cyan/30 bg-glow-cyan/10 px-2.5 py-1 text-xs font-bold text-glow-cyan">
+                        <DofusIcon name="xp" size={14} /> {nf(r.xp)} XP
                       </span>
                     )}
                     {r.kamas > 0 && (
-                      <span className="rounded-lg border border-glow-gold/30 bg-glow-gold/10 px-2.5 py-1 text-xs font-bold text-glow-gold">
-                        {nf(r.kamas)} Kamas
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-glow-gold/30 bg-glow-gold/10 px-2.5 py-1 text-xs font-bold text-glow-gold">
+                        <DofusIcon name="kama" size={14} /> {nf(r.kamas)} Kamas
                       </span>
                     )}
                     {r.items.map((it, i) => (
@@ -446,7 +447,7 @@ function AchievementRow({
                           className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-glow-rose/30 bg-glow-rose/10 px-2.5 py-1.5 text-xs font-semibold text-glow-rose transition hover:bg-glow-rose/20"
                           title={`Voir ${m.name}`}
                         >
-                          <Skull className="h-3.5 w-3.5" /> {m.name}
+                          <DofusIcon name="skull" size={14} /> {m.name}
                         </button>
                       ))}
                   </div>

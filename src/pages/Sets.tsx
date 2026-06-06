@@ -8,6 +8,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import { levelTone } from "../data/meta";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, LoadMore, fadeUp } from "../components/ui";
 import ItemModal from "../components/ItemModal";
+import DofusIcon, { effectIconFromName } from "../components/DofusIcon";
 
 const PAGE = 30;
 
@@ -215,11 +216,15 @@ function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
                       </span>
                     </div>
                     <ul className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                      {t.effects.map((e, i) => (
-                        <li key={i} className="text-sm text-slate-300">
-                          {e.formatted}
-                        </li>
-                      ))}
+                      {t.effects.map((e, i) => {
+                        const ic = effectIconFromName(e.type?.name ?? e.formatted);
+                        return (
+                          <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                            {ic && <DofusIcon name={ic} size={15} />}
+                            {e.formatted}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}

@@ -1808,11 +1808,11 @@ function CharacterPanel({
     placeholderData: (prev) => prev, // garde le rendu précédent pendant le re-render (pas de flash)
   });
 
-  const kpis = [
-    { icon: Heart, tone: "text-glow-rose", label: "PV", value: kpi.hp },
-    { icon: Zap, tone: "text-glow-cyan", label: "PA", value: kpi.pa },
-    { icon: Footprints, tone: "text-glow-emerald", label: "PM", value: kpi.pm },
-    { icon: Crosshair, tone: "text-glow-violet", label: "PO", value: kpi.po },
+  const kpis: { dofus: DofusIconName; tone: string; label: string; value: number }[] = [
+    { dofus: "pv", tone: "text-glow-rose", label: "PV", value: kpi.hp },
+    { dofus: "pa", tone: "text-glow-cyan", label: "PA", value: kpi.pa },
+    { dofus: "pm", tone: "text-glow-emerald", label: "PM", value: kpi.pm },
+    { dofus: "po", tone: "text-glow-violet", label: "PO", value: kpi.po },
   ];
 
   // Pseudo-3D : position du curseur normalisée (-0.5 → 0.5) sur la carte.
@@ -1946,7 +1946,7 @@ function CharacterPanel({
               key={s.label}
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2"
             >
-              <s.icon className={`h-5 w-5 shrink-0 ${s.tone}`} />
+              <DofusIcon name={s.dofus} size={20} />
               <div className="min-w-0">
                 <div className="font-display text-lg font-bold leading-none text-white">{s.value}</div>
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">{s.label}</div>

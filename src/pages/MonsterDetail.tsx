@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
-import { ArrowLeft, Skull, Swords, Package, Sparkles, Target, Maximize2, X } from "lucide-react";
+
 import {
   getMonster,
   getMonsterSpells,
@@ -17,8 +17,8 @@ import {
   type SpellDamage,
 } from "../api/dofusdb";
 import { Pill, Spinner, ErrorState, SectionHeader } from "../components/ui";
-import ItemModal from "../components/ItemModal";
 import DofusIcon, { elementIcon, type DofusIconName } from "../components/DofusIcon";
+import DetailBack from "../components/DetailBack";
 
 // 0 Neutre · 1 Terre · 2 Feu · 3 Eau · 4 Air · 5 meilleur élément.
 const ELEMENTS = [
@@ -49,6 +49,7 @@ const CHARS = [
 
 export default function MonsterDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const monsterId = Number(id);
 
   const { data: monster, isLoading, isError, refetch } = useQuery({
@@ -92,7 +93,6 @@ export default function MonsterDetail() {
   const grades = monster?.grades ?? [];
   const [gradeIdx, setGradeIdx] = useState(0);
   const [spellId, setSpellId] = useState<number | null>(null);
-  const [openItem, setOpenItem] = useState<number | null>(null);
   const [mapBig, setMapBig] = useState(false);
 
   // Reset de la sélection quand on navigue vers un autre monstre (composant non remonté).
@@ -128,12 +128,7 @@ export default function MonsterDetail() {
 
   return (
     <div>
-      <Link
-        to="/monstres"
-        className="no-drag mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 transition hover:text-white"
-      >
-        <ArrowLeft className="h-4 w-4" /> Monstres
-      </Link>
+      <DetailBack />
 
       {/* En-tête : portrait + identité + sélecteur de niveau + stats du grade. */}
       <div className="glass relative overflow-hidden rounded-3xl p-5">
@@ -161,7 +156,7 @@ export default function MonsterDetail() {
                 )}
                 {monster.isBoss && (
                   <Pill tone="rose">
-                    <Skull className="h-3 w-3" /> Boss
+                    <DofusIcon name="boss" size={12} /> Boss
                   </Pill>
                 )}
               </div>
@@ -196,7 +191,7 @@ export default function MonsterDetail() {
         {(spells?.length ?? 0) > 0 && (
           <section className="glass rounded-2xl p-4">
             <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
-              <Sparkles className="h-5 w-5 text-glow-violet" /> Sorts
+              <DofusIcon name="spells" size={20} /> Sorts
             </h2>
             <div className="mb-4 flex flex-wrap gap-2">
               {spells!.map((sp) => (
@@ -230,13 +225,13 @@ export default function MonsterDetail() {
             <div className="glass rounded-2xl p-4">
               <div className="mb-1 flex items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                  <Target className="h-5 w-5 text-glow-cyan" /> Zone ciblable
+                  <DofusIcon name="target" size={20} /> Zone ciblable
                 </h2>
                 <button
                   onClick={() => setMapBig(true)}
                   className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
                 >
-                  <Maximize2 className="h-3.5 w-3.5" /> Agrandir
+                  <DofusIcon name="zoom" size={14} /> Agrandir
                 </button>
               </div>
               <p className="mb-2 text-xs text-slate-500">
@@ -249,7 +244,7 @@ export default function MonsterDetail() {
           {drops.length > 0 && (
             <div className="glass rounded-2xl p-4">
               <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
-                <Package className="h-5 w-5 text-glow-gold" /> Butin ({drops.length})
+                <DofusIcon name="reward" size={20} /> Butin ({drops.length})
               </h2>
               <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
                 {drops.map((d) => {
@@ -257,7 +252,7 @@ export default function MonsterDetail() {
                   return (
                     <button
                       key={d.objectId}
-                      onClick={() => setOpenItem(d.objectId)}
+                      onClick={() => navigate(`/objets/${d.objectId}`)}
                       title={it?.name.fr ?? `Objet #${d.objectId}`}
                       className="no-drag group relative flex flex-col items-center gap-1 rounded-xl border border-white/5 bg-white/[0.02] p-2 text-center transition hover:border-glow-gold/40 hover:bg-white/[0.05]"
                     >
@@ -291,7 +286,7 @@ export default function MonsterDetail() {
                 to={`/donjons/${dg.id}`}
                 className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:border-glow-ember/40 hover:bg-white/10"
               >
-                <Swords className="h-4 w-4 text-glow-ember" /> {dg.name.fr}
+                <DofusIcon name="dungeon" size={16} /> {dg.name.fr}
               </Link>
             ))}
           </div>
@@ -314,7 +309,7 @@ export default function MonsterDetail() {
                 >
                   {m.isBoss && (
                     <span className="absolute right-1 top-1 rounded-full bg-glow-rose p-0.5">
-                      <Skull className="h-2.5 w-2.5 text-white" />
+                      <DofusIcon name="boss" size={10} />
                     </span>
                   )}
                   <img
@@ -351,13 +346,13 @@ export default function MonsterDetail() {
             >
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                  <Target className="h-5 w-5 text-glow-cyan" /> {selectedSpell.name.fr} — Zone ciblable
+                  <DofusIcon name="target" size={20} /> {selectedSpell.name.fr} — Zone ciblable
                 </h3>
                 <button
                   onClick={() => setMapBig(false)}
                   className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
                 >
-                  <X className="h-4 w-4" />
+                  <DofusIcon name="closeRed" size={16} />
                 </button>
               </div>
               <p className="mb-3 text-xs text-slate-500">
@@ -366,12 +361,6 @@ export default function MonsterDetail() {
               <SpellRangeMap level={spellLevel} cell={24} />
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {openItem !== null && (
-          <ItemModal id={openItem} onClose={() => setOpenItem(null)} onSelectItem={setOpenItem} />
         )}
       </AnimatePresence>
     </div>

@@ -2,20 +2,21 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  MapPin,
-  Search,
-  Target,
-  Compass,
   ChevronRight,
-  Crosshair,
   ImageOff,
   Check,
   BadgeCheck,
-} from "lucide-react";
+  dofusUiIcon,
+} from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
+
+// Flèches de chasse authentiques du client Dofus 3 (0=droite 2=bas 4=gauche 6=haut).
+// Les sprites sont gris foncé (faits pour un parchemin clair) → on les éclaircit en blanc.
+const ARROW_FX = "brightness-0 invert";
+const ArrowUp = dofusUiIcon("huntArrowUp", ARROW_FX);
+const ArrowDown = dofusUiIcon("huntArrowDown", ARROW_FX);
+const ArrowLeft = dofusUiIcon("huntArrowLeft", ARROW_FX);
+const ArrowRight = dofusUiIcon("huntArrowRight", ARROW_FX);
 import {
   treasureHunt,
   huntMapImage,
@@ -184,6 +185,7 @@ export default function Hunt() {
         eyebrow="Outil"
         title="Chasse au trésor"
         subtitle="Entrez votre position de départ, choisissez la direction de la flèche, puis cherchez votre indice : la case exacte et sa map s'affichent."
+        right={<DofusIcon name="chest" size={48} title="Chasse au trésor" />}
       />
 
       {/* Note compacte — données fiables (live) */}
@@ -200,7 +202,7 @@ export default function Hunt() {
         <div className="space-y-4 lg:col-span-1">
           <div className="glass rounded-2xl p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-              <MapPin className="h-4 w-4 text-glow-cyan" /> Position de départ
+              <DofusIcon name="world" size={16} /> Position de départ
             </h3>
             <div className="flex gap-3">
               <Coord label="X" value={x} onChange={setX} />
@@ -210,7 +212,7 @@ export default function Hunt() {
 
           <div className="glass rounded-2xl p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-              <Compass className="h-4 w-4 text-glow-violet" /> Direction de la flèche
+              <DofusIcon name="map" size={16} /> Direction de la flèche
             </h3>
             <div className="mx-auto grid w-44 grid-cols-3 grid-rows-3 gap-2">
               {DIRS.map((d) => {
@@ -235,15 +237,12 @@ export default function Hunt() {
                   </button>
                 );
               })}
-              <div className="col-start-2 row-start-2 flex items-center justify-center">
-                <Crosshair className="h-5 w-5 text-glow-cyan" />
-              </div>
             </div>
           </div>
 
           <div className="glass rounded-2xl p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-              <Search className="h-4 w-4 text-glow-gold" /> Votre indice
+              <DofusIcon name="pp" size={16} /> Votre indice
             </h3>
             <input
               value={clue}
@@ -267,7 +266,7 @@ export default function Hunt() {
                 accent="cyan"
                 topLeft={
                   <Badge accent="cyan">
-                    <MapPin className="h-3.5 w-3.5" /> Départ [{x}, {y}]
+                    <DofusIcon name="map" size={14} /> Départ [{x}, {y}]
                   </Badge>
                 }
               />
@@ -292,7 +291,7 @@ export default function Hunt() {
               {uniqueClues.length > 0 && (
                 <div className="glass rounded-2xl p-5">
                   <h3 className="flex items-center gap-2 font-display font-bold text-white">
-                    <Target className="h-4 w-4 text-glow-gold" /> Quel est votre indice ?
+                    <DofusIcon name="pip" size={16} /> Quel est votre indice ?
                   </h3>
                   <p className="mb-3 mt-1 text-xs text-slate-500">
                     {uniqueClues.length} indice{uniqueClues.length > 1 ? "s" : ""} sur le chemin dans
@@ -328,7 +327,7 @@ export default function Hunt() {
                     accent="emerald"
                     topLeft={
                       <Badge accent="emerald">
-                        <Target className="h-3.5 w-3.5" />
+                        <DofusIcon name="map" size={14} />
                         [{activeMap.posX}, {activeMap.posY}]
                       </Badge>
                     }
@@ -486,8 +485,12 @@ function TravelCheck({ checked, onChange }: { checked: boolean; onChange: (b: bo
         onChange={(e) => onChange(e.target.checked)}
         className="peer sr-only"
       />
-      <span className="flex h-4 w-4 items-center justify-center rounded border border-white/15 bg-white/5 text-transparent transition peer-checked:border-glow-emerald/50 peer-checked:bg-glow-emerald/25 peer-checked:text-glow-emerald">
-        <Check className="h-3 w-3" />
+      <span
+        className={`flex h-4 w-4 items-center justify-center rounded border transition ${
+          checked ? "border-glow-emerald/50 bg-glow-emerald/25" : "border-white/15 bg-white/5"
+        }`}
+      >
+        {checked && <Check className="h-3 w-3" />}
       </span>
       Copier <span className="font-mono text-slate-300">/travel</span>
     </label>

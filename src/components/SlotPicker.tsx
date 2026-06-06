@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Search, X, ArrowDownWideNarrow, ArrowUpNarrowWide, ArrowDownAZ } from "lucide-react";
+import { Search, X, ArrowDownWideNarrow, ArrowUpNarrowWide, ArrowDownAZ } from "./DofusIcons";
 import { searchEquipment, browseEquipment, browseEquipmentAll, type EquipmentLight } from "../api/dofusdude";
 import { useDebounce } from "../hooks/useDebounce";
 import { levelTone } from "../data/meta";

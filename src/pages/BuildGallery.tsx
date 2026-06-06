@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Sparkles, Layers, Hammer, ChevronRight, FlaskConical } from "lucide-react";
+import DofusIcon from "../components/DofusIcon";
 import { listBreeds } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
 import { levelTone } from "../data/meta";
@@ -62,7 +62,7 @@ export default function BuildGallery() {
       {/* Avertissement v1 — fiabilité des calculs de dégâts */}
       <div className="mb-8 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-glow-gold/15 ring-1 ring-glow-gold/30">
-          <FlaskConical className="h-5 w-5 text-glow-gold" />
+          <DofusIcon name="trophy" size={20} />
         </span>
         <div className="min-w-0">
           <p className="font-display text-sm font-bold text-glow-gold">
@@ -81,7 +81,7 @@ export default function BuildGallery() {
         <div className="grid gap-0 lg:grid-cols-[1fr_320px]">
           <div className="p-6">
             <h3 className="mb-1 flex items-center gap-2 font-display text-lg font-bold text-white">
-              <Sparkles className="h-5 w-5 text-glow-violet" /> Nouveau build
+              <DofusIcon name="characteristic" size={20} /> Nouveau build
             </h3>
             <p className="mb-4 text-sm text-slate-400">Choisissez une classe, puis le niveau.</p>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Classe</p>
@@ -153,7 +153,7 @@ export default function BuildGallery() {
               disabled={creatorBreed == null}
               className="no-drag relative mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-glow-purple to-glow-cyan px-4 py-2.5 font-display font-bold text-white shadow-glow transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale"
             >
-              <Plus className="h-5 w-5" /> Créer le build
+              <DofusIcon name="ajouterEtat" size={20} tint="#04ff2d" /> Créer le build
             </button>
           </div>
         </div>
@@ -162,14 +162,14 @@ export default function BuildGallery() {
       {/* Temps 2 — Galerie des builds */}
       <div className="mb-4 flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-          <Layers className="h-5 w-5 text-glow-cyan" /> Mes builds
+          <DofusIcon name="menuStuffs" size={20} /> Mes builds
         </h3>
         {sorted.length > 0 && <Pill tone="slate">{sorted.length}</Pill>}
       </div>
 
       {sorted.length === 0 ? (
         <div className="glass rounded-2xl p-10 text-center">
-          <Hammer className="mx-auto mb-3 h-8 w-8 text-glow-violet/60" />
+          <DofusIcon name="characteristic" size={32} className="mx-auto mb-3 opacity-70" />
           <p className="text-slate-400">Aucun build pour l'instant. Créez-en un ci-dessus pour commencer.</p>
         </div>
       ) : (
@@ -179,20 +179,26 @@ export default function BuildGallery() {
           variants={{ show: { transition: { staggerChildren: 0.05 } } }}
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          <AnimatePresence>
-            {sorted.map((build) => {
+          <AnimatePresence mode="popLayout">
+            {sorted.map((build, i) => {
               const meta = build.breedId != null ? breedById.get(build.breedId) : undefined;
               const illus = classIllus(build.breedId);
               const filled = Object.values(build.slots ?? {}).filter((v) => typeof v === "number").length;
               return (
-                <motion.button
+                <motion.div
                   key={build.id}
                   layout
-                  variants={{ hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0 } }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ y: -4 }}
-                  onClick={() => navigate(`/builder/${build.id}`)}
-                  className="no-drag group relative flex h-44 flex-col justify-end overflow-hidden rounded-2xl border border-white/10 bg-void-800/60 p-4 text-left transition hover:border-glow-purple/45 hover:shadow-glow"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.94 }}
+                  transition={{
+                    layout: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+                    delay: Math.min(i * 0.04, 0.3),
+                    duration: 0.4,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  whileHover={{ y: -5 }}
+                  className="group relative h-52 overflow-hidden rounded-2xl border border-white/10 bg-void-900 ring-1 ring-white/[0.03] transition-colors duration-300 hover:border-glow-purple/45"
                 >
                   {/* Illustration de classe en fond */}
                   {illus ? (
@@ -200,12 +206,17 @@ export default function BuildGallery() {
                       src={illus}
                       alt=""
                       loading="lazy"
-                      className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_22%] opacity-45 transition duration-500 group-hover:scale-110 group-hover:opacity-60"
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[center_22%] opacity-50 transition-transform duration-[600ms] ease-out group-hover:scale-[1.06]"
                     />
                   ) : (
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-glow-purple/15 to-void-900" />
                   )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-void-900 via-void-900/55 to-void-900/10" />
+
+                  {/* Halo violet doux au survol */}
+                  <div className="pointer-events-none absolute inset-0 bg-glow-purple/0 transition-colors duration-300 group-hover:bg-glow-purple/10" />
+
+                  {/* Dégradé bas pour lisibilité */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-void-900 via-void-900/70 to-transparent" />
 
                   {/* Crest classe */}
                   {meta && (
@@ -217,29 +228,9 @@ export default function BuildGallery() {
                     Niv. {build.level ?? "?"}
                   </Pill>
 
-                  {/* Supprimer */}
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      actions.deleteBuild(build.id);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                        actions.deleteBuild(build.id);
-                      }
-                    }}
-                    title="Supprimer"
-                    className="absolute bottom-3 right-3 z-10 cursor-pointer rounded-lg bg-black/45 p-1.5 text-slate-300 opacity-0 transition hover:bg-glow-rose/25 hover:text-glow-rose group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </span>
-
-                  {/* Infos */}
-                  <div className="relative min-w-0">
-                    <p className="truncate font-display text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+                  {/* Nom + meta — glissent vers le haut au survol pour laisser place aux actions */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 transition-transform duration-300 ease-out group-hover:-translate-y-[52px]">
+                    <p className="truncate font-display text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                       {build.name}
                     </p>
                     <p className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
@@ -250,8 +241,24 @@ export default function BuildGallery() {
                       <span>{timeAgo(build.updatedAt ?? build.createdAt)}</span>
                     </p>
                   </div>
-                  <ChevronRight className="absolute bottom-3 right-3 h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-glow-violet group-hover:opacity-0" />
-                </motion.button>
+
+                  {/* Barre d'actions — glisse depuis le bas au survol */}
+                  <div className="absolute inset-x-0 bottom-0 z-20 flex translate-y-3 items-center gap-1.5 p-3 opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+                    <button
+                      onClick={() => navigate(`/builder/${build.id}`)}
+                      className="no-drag inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-glow-purple/45 bg-glow-purple/25 px-3 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-glow-purple/40"
+                    >
+                      <DofusIcon name="characteristic" size={16} /> Ouvrir
+                    </button>
+                    <button
+                      onClick={() => actions.deleteBuild(build.id)}
+                      title="Supprimer"
+                      className="no-drag inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/10 p-2 backdrop-blur transition hover:border-glow-rose/40 hover:bg-glow-rose/15"
+                    >
+                      <DofusIcon name="closeRed" size={16} />
+                    </button>
+                  </div>
+                </motion.div>
               );
             })}
           </AnimatePresence>

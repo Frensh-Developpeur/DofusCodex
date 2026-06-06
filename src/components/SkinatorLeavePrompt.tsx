@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Power, Layers, X } from "lucide-react";
+import DofusIcon from "./DofusIcon";
 import { skinatorEngine, usePendingLeave } from "../store/skinatorEngine";
 
 const BACKDROP =
@@ -50,7 +50,7 @@ export default function SkinatorLeavePrompt() {
             aria-label="Annuler"
             className="absolute right-5 top-5 rounded-lg border border-white/10 bg-white/[0.04] p-2 text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
           >
-            <X className="h-5 w-5" />
+            <DofusIcon name="closeRed" size={20} />
           </button>
 
           <motion.div
@@ -76,7 +76,7 @@ export default function SkinatorLeavePrompt() {
                 className="group flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center transition hover:border-glow-ember/40 hover:bg-white/[0.06]"
               >
                 <span className="grid h-14 w-14 place-items-center rounded-xl bg-glow-ember/15 text-glow-ember ring-1 ring-glow-ember/30 transition group-hover:bg-glow-ember/25">
-                  <Power className="h-6 w-6" />
+                  <DofusIcon name="lightning" size={24} />
                 </span>
                 <span className="font-display text-base font-bold text-white">Fermer le moteur</span>
                 <span className="text-xs leading-5 text-slate-400">
@@ -94,7 +94,7 @@ export default function SkinatorLeavePrompt() {
                   Recommandé
                 </span>
                 <span className="grid h-14 w-14 place-items-center rounded-xl bg-glow-purple/20 text-glow-violet ring-1 ring-glow-purple/40 transition group-hover:bg-glow-purple/30">
-                  <Layers className="h-6 w-6" />
+                  <DofusIcon name="sablier" size={24} />
                 </span>
                 <span className="font-display text-base font-bold text-white">Laisser en fond</span>
                 <span className="text-xs leading-5 text-slate-300">

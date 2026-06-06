@@ -85,8 +85,9 @@ interface ListResponse<T> {
 
 // ---- Equipment ----
 
-export function searchEquipment(query: string, limit = 24, signal?: AbortSignal) {
-  const url = `${BASE}/items/equipment/search${qs({ query, limit })}`;
+export function searchEquipment(query: string, limit = 24, signal?: AbortSignal, skip = 0) {
+  // L'endpoint search accepte `skip` → pagination par décalage (limit plafonné à ~50 côté API).
+  const url = `${BASE}/items/equipment/search${qs({ query, limit, skip: skip || undefined })}`;
   return getJson<EquipmentLight[]>(url, signal);
 }
 

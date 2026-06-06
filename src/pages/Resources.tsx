@@ -1,26 +1,27 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Boxes, FlaskConical, Cat, Package } from "lucide-react";
+import { motion } from "framer-motion";
+import DofusIcon, { type DofusIconName } from "../components/DofusIcon";
+import { Search } from "../components/DofusIcons";
 import { listItemTypes, browseItems } from "../api/dofusdb";
 import { useDebounce } from "../hooks/useDebounce";
+import { useViewState } from "../lib/viewState";
 import { levelTone } from "../data/meta";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, LoadMore, fadeUp } from "../components/ui";
-import ItemModal from "../components/ItemModal";
 
 const PAGE = 48;
 
 const CATEGORIES = [
-  { key: "res", label: "Ressources", superTypeId: 9, icon: Boxes },
-  { key: "conso", label: "Consommables", superTypeId: 6, icon: FlaskConical },
-  { key: "pets", label: "Familiers", superTypeId: 12, icon: Cat },
-  { key: "divers", label: "Divers", superTypeId: 14, icon: Package },
+  { key: "res", label: "Ressources", superTypeId: 9, icon: "resources" },
+  { key: "conso", label: "Consommables", superTypeId: 6, icon: "consumables" },
+  { key: "divers", label: "Divers", superTypeId: 14, icon: "inventory" },
 ] as const;
 
 export default function Resources() {
-  const [cat, setCat] = useState<(typeof CATEGORIES)[number]["key"]>("res");
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const [cat, setCat] = useViewState<(typeof CATEGORIES)[number]["key"]>("resources:cat", "res");
+  const [search, setSearch] = useViewState("resources:search", "");
   const debounced = useDebounce(search);
 
   const { data: types, isLoading: typesLoading } = useQuery({
@@ -52,7 +53,7 @@ export default function Resources() {
       <SectionHeader
         eyebrow="Encyclopédie"
         title="Objets & Ressources"
-        subtitle="Tout ce qui n'est pas équipement : ressources, consommables, familiers, objets divers. Clique pour la fiche complète."
+        subtitle="Tout ce qui n'est pas équipement : ressources, consommables, objets divers. Clique pour la fiche complète."
       />
 
       <div className="glass mb-4 rounded-2xl p-4">
@@ -70,7 +71,7 @@ export default function Resources() {
       <div className="mb-6 flex flex-wrap gap-1.5">
         {CATEGORIES.map((c) => (
           <button key={c.key} onClick={() => setCat(c.key)} className={chip(cat === c.key)}>
-            <c.icon className="h-3.5 w-3.5" /> {c.label}
+            <DofusIcon name={c.icon as DofusIconName} size={14} /> {c.label}
           </button>
         ))}
       </div>
@@ -102,7 +103,7 @@ export default function Resources() {
                 variants={fadeUp}
                 custom={i % 16}
                 whileHover={{ y: -4 }}
-                onClick={() => setSelected(it.id)}
+                onClick={() => navigate(`/objets/${it.id}`, { state: { fromSection: true } })}
                 className="glass glass-hover no-drag group flex flex-col items-center rounded-2xl p-4 text-center"
               >
                 <div className="relative mb-3">
@@ -127,10 +128,6 @@ export default function Resources() {
           />
         </>
       )}
-
-      <AnimatePresence>
-        {selected !== null && <ItemModal id={selected} onClose={() => setSelected(null)} onSelectItem={setSelected} />}
-      </AnimatePresence>
     </div>
   );
 }

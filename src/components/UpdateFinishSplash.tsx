@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check } from "./DofusIcons";
 import AppLoader from "./AppLoader";
 
 const VERSION_KEY = "dofuscodex.appVersion";

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -7,17 +8,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
-  Gift,
   RotateCcw,
   Timer,
   X,
   BadgeCheck,
-} from "lucide-react";
+} from "../components/DofusIcons";
 import { getAlmanaxDay, getAlmanaxRange, type AlmanaxDay } from "../api/dofusdude";
 import { almanaxBonusStyle, type PillTone } from "../data/meta";
 import DofusIcon from "../components/DofusIcon";
 import { parseLocalIsoDate, shiftLocalIsoDate, toLocalIsoDate, useTodayIso } from "../lib/date";
-import ItemModal from "../components/ItemModal";
 import { Pill, SectionHeader, Skeleton, ErrorState, fadeUp } from "../components/ui";
 
 function fmtDate(iso: string, opts: Intl.DateTimeFormatOptions) {
@@ -92,10 +91,10 @@ function useResetCountdown() {
 }
 
 export default function Almanax() {
+  const navigate = useNavigate();
   const today = useTodayIso();
   const [selected, setSelected] = useState(today);
   const [monthAnchor, setMonthAnchor] = useState(firstOfMonth(today));
-  const [modalItem, setModalItem] = useState<number | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const countdown = useResetCountdown();
   const featuredRef = useRef<HTMLDivElement>(null);
@@ -189,7 +188,7 @@ export default function Almanax() {
             onPrev={selected > today ? () => setSelected(shiftDate(selected, -1)) : undefined}
             onNext={() => setSelected(shiftDate(selected, 1))}
             onResetToday={isToday ? undefined : () => setSelected(today)}
-            onOpenItem={() => dayQuery.data && setModalItem(dayQuery.data.tribute.item.ankama_id)}
+            onOpenItem={() => dayQuery.data && navigate(`/objets/${dayQuery.data.tribute.item.ankama_id}`)}
           />
         )}
       </div>
@@ -240,12 +239,6 @@ export default function Almanax() {
             onMonthShift={(delta) => setMonthAnchor((m) => shiftMonth(m, delta))}
             onClose={() => setCalendarOpen(false)}
           />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {modalItem != null && (
-          <ItemModal id={modalItem} onClose={() => setModalItem(null)} onSelectItem={setModalItem} />
         )}
       </AnimatePresence>
     </div>
@@ -350,7 +343,7 @@ function FeaturedDay({
               <DofusIcon name="kama" size={14} /> +{day.reward_kamas.toLocaleString("fr-FR")} kamas
             </Pill>
             <Pill tone={bonus.tone}>
-              <Gift className="h-3.5 w-3.5" /> {day.bonus.type.name}
+              <DofusIcon name="cadeau" size={14} /> {day.bonus.type.name}
             </Pill>
           </div>
         </div>

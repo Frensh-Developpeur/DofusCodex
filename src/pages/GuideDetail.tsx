@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -13,18 +13,16 @@ import {
   BadgeCheck,
   CheckCircle2,
   RotateCcw,
-  Flag,
   Maximize2,
   Minimize2,
-} from "lucide-react";
+} from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import { STATUS_LABEL, type GuideStatus } from "../api/ganymede";
 import { getGuideData } from "../lib/guideStore";
 import { categoryOf } from "../lib/guideCategory";
 import { useStore, actions } from "../store/store";
 import { GuideText } from "../lib/guideMarkup";
 import { Pill, Spinner, ErrorState } from "../components/ui";
-import ItemModal from "../components/ItemModal";
-import MonsterModal from "../components/MonsterModal";
 import GuideTabs from "../components/GuideTabs";
 
 const STATUS_TONE: Record<GuideStatus, "gold" | "purple" | "cyan" | "slate"> = {
@@ -36,6 +34,7 @@ const STATUS_TONE: Record<GuideStatus, "gold" | "purple" | "cyan" | "slate"> = {
 
 export default function GuideDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const guideId = Number(id);
 
   // L'étape courante vit dans le store (source unique) : un « Retour » depuis une
@@ -43,8 +42,6 @@ export default function GuideDetail() {
   const savedStep = useStore((s) => s.guideStep[guideId] ?? 0);
   const done = useStore((s) => s.doneGuides.includes(guideId));
 
-  const [itemId, setItemId] = useState<number | null>(null);
-  const [monsterId, setMonsterId] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [focus, setFocus] = useState(false);
 
@@ -60,8 +57,6 @@ export default function GuideDetail() {
   // Le composant ne remonte plus entre guides (clé stable) : on referme donc les
   // modales/focus quand on bascule sur un autre guide.
   useEffect(() => {
-    setItemId(null);
-    setMonsterId(null);
     setCopied(false);
     document.querySelector("main")?.scrollTo({ top: 0 });
   }, [guideId]);
@@ -280,8 +275,8 @@ export default function GuideDetail() {
                     text={current.text}
                     guideId={guideId}
                     stepIndex={step}
-                    onItem={setItemId}
-                    onMonster={setMonsterId}
+                    onItem={(itemId) => navigate(`/objets/${itemId}`)}
+                    onMonster={(mid) => navigate(`/monstres/${mid}`)}
                   />
                 )}
               </motion.div>
@@ -313,7 +308,7 @@ export default function GuideDetail() {
                     : "bg-glow-emerald/25 text-white ring-1 ring-glow-emerald/40 hover:bg-glow-emerald/35"
                 }`}
               >
-                <Flag className="h-4 w-4" /> {done ? "Guide terminé" : "Terminer le guide"}
+                <DofusIcon name={done ? "success" : "tick"} size={16} /> {done ? "Guide terminé" : "Terminer le guide"}
               </button>
             )}
           </div>
@@ -378,8 +373,8 @@ export default function GuideDetail() {
                       text={current.text}
                       guideId={guideId}
                       stepIndex={step}
-                      onItem={setItemId}
-                      onMonster={setMonsterId}
+                      onItem={(itemId) => navigate(`/objets/${itemId}`)}
+                      onMonster={(mid) => navigate(`/monstres/${mid}`)}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -407,13 +402,6 @@ export default function GuideDetail() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {itemId !== null && (
-          <ItemModal id={itemId} onClose={() => setItemId(null)} onSelectItem={setItemId} />
-        )}
-        {monsterId !== null && <MonsterModal id={monsterId} onClose={() => setMonsterId(null)} />}
       </AnimatePresence>
     </div>
   );

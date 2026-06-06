@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, Hexagon, SearchX } from "lucide-react";
+import { AlertTriangle, SearchX } from "./DofusIcons";
+import CodexMark from "./CodexMark";
 import clsx from "clsx";
 
 export function Skeleton({ className }: { className?: string }) {
@@ -21,7 +22,7 @@ export function DofusLoader({ label, className }: { label?: string; className?: 
             mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
           }}
         />
-        <Hexagon className="h-3.5 w-3.5 text-glow-violet" fill="rgba(124,92,255,0.35)" />
+        <CodexMark className="h-3.5 w-3.5 text-glow-violet" fill="rgba(124,92,255,0.35)" />
       </span>
       {label && <span className="text-sm">{label}</span>}
     </div>

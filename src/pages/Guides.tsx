@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -8,22 +8,15 @@ import {
   Download,
   BadgeCheck,
   CheckCircle2,
-  PlayCircle,
-  LayoutGrid,
-  Crown,
-  ScrollText,
-  Swords,
-  Trophy,
-  Snowflake,
-  BookOpen,
-  Star,
-  FlaskConical,
-  type LucideIcon,
-} from "lucide-react";
+  dofusUiIcon,
+  type DofusUiIcon,
+} from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import { STATUS_LABEL, type GuideLight, type GuideStatus } from "../api/ganymede";
 import { getGuideListData, getGuideData } from "../lib/guideStore";
 import { categoryOf } from "../lib/guideCategory";
 import { useDebounce } from "../hooks/useDebounce";
+import { useViewState } from "../lib/viewState";
 import { useStore, actions } from "../store/store";
 import { stripGuideMarkup } from "../lib/guideMarkup";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, fadeUp } from "../components/ui";
@@ -31,20 +24,20 @@ import GuideTabs from "../components/GuideTabs";
 import GuidesSyncBar from "../components/GuidesSyncBar";
 
 // Un seul jeu d'onglets : progression (perso) puis catégories (type de guide).
-const CATEGORIES: { label: string; Icon: LucideIcon }[] = [
-  { label: "Tous", Icon: LayoutGrid },
-  { label: "Principal", Icon: Crown },
-  { label: "Quête", Icon: ScrollText },
-  { label: "Donjon", Icon: Swords },
-  { label: "Succès", Icon: Trophy },
-  { label: "Frigost", Icon: Snowflake },
-  { label: "Guide", Icon: BookOpen },
+const CATEGORIES: { label: string; Icon: DofusUiIcon }[] = [
+  { label: "Tous", Icon: dofusUiIcon("areaCross") },
+  { label: "Principal", Icon: dofusUiIcon("questGroup") },
+  { label: "Quête", Icon: dofusUiIcon("dofusQuest") },
+  { label: "Donjon", Icon: dofusUiIcon("dungeon") },
+  { label: "Succès", Icon: dofusUiIcon("trophy") },
+  { label: "Frigost", Icon: dofusUiIcon("eau") },
+  { label: "Guide", Icon: dofusUiIcon("questGroup") },
 ];
 
 // Filtres de progression (état perso) — en tête, mis en avant.
-const PROGRESS: { label: string; Icon: LucideIcon }[] = [
-  { label: "En cours", Icon: PlayCircle },
-  { label: "Favoris", Icon: Star },
+const PROGRESS: { label: string; Icon: DofusUiIcon }[] = [
+  { label: "En cours", Icon: dofusUiIcon("tour") },
+  { label: "Favoris", Icon: dofusUiIcon("starFilled") },
 ];
 
 type SortMode = "likes" | "downloads" | "recent";
@@ -62,9 +55,9 @@ const STATUS_TONE: Record<GuideStatus, "gold" | "purple" | "cyan" | "slate"> = {
 };
 
 export default function Guides() {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Tous");
-  const [sort, setSort] = useState<SortMode>("likes");
+  const [search, setSearch] = useViewState("guides:search", "");
+  const [category, setCategory] = useViewState("guides:category", "Tous");
+  const [sort, setSort] = useViewState<SortMode>("guides:sort", "likes");
   const debounced = useDebounce(search);
 
   const guideStep = useStore((s) => s.guideStep);
@@ -144,7 +137,7 @@ export default function Guides() {
 
       {/* Avertissement compact — guides communautaires (Ganymède) */}
       <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-glow-gold/20 bg-glow-gold/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300">
-        <FlaskConical className="h-4 w-4 shrink-0 text-glow-gold" />
+        <DofusIcon name="questGroup" size={16} />
         <span>
           <span className="font-semibold text-glow-gold">Guides communautaires (Ganymède)</span> — qualité et
           exactitude variables selon l'auteur ; certains peuvent être incomplets ou datés.
@@ -271,7 +264,7 @@ function GuideCard({
   return (
     <motion.div variants={fadeUp} custom={index % 16} whileHover={{ y: -4 }}>
       <Link
-        to={`/guides/${guide.id}`}
+        to={`/guides/${guide.id}`} state={{ fromSection: true }}
         onMouseEnter={() =>
           qc.prefetchQuery({
             queryKey: ["ganymede-guide", guide.id],
@@ -310,7 +303,7 @@ function GuideCard({
               <CheckCircle2 className="h-5 w-5 text-glow-emerald" />
             ) : inProgress ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-glow-cyan/15 px-2 py-0.5 text-[10px] font-bold text-glow-cyan">
-                <PlayCircle className="h-3 w-3" /> {currentStep + 1}
+                <DofusIcon name="tour" size={12} /> {currentStep + 1}
               </span>
             ) : null}
             <button
@@ -326,7 +319,7 @@ function GuideCard({
                   : "text-slate-600 opacity-0 hover:text-glow-gold group-hover:opacity-100"
               }`}
             >
-              <Star className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
+              <DofusIcon name={favorite ? "starFilled" : "starEmpty"} size={16} />
             </button>
           </div>
         </div>

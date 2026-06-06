@@ -316,9 +316,11 @@ export async function monstersDroppingItem(
   limit = 24,
   signal?: AbortSignal,
 ): Promise<Monster[]> {
-  const url = `${BASE}/monsters?lang=fr&$limit=${limit}&$sort=id&drops.objectId=${objectId}&$select[]=name&$select[]=id&$select[]=img&$select[]=grades&$select[]=isBoss`;
+  // NB: le champ `img` virtuel casse sous $select (→ undefined.png) → on prend gfxId
+  // et on construit l'URL nous-mêmes, comme dans getMonstersLite.
+  const url = `${BASE}/monsters?lang=fr&$limit=${limit}&$sort=id&drops.objectId=${objectId}&$select[]=name&$select[]=id&$select[]=gfxId&$select[]=grades&$select[]=isBoss`;
   const data = await getJson<FeathersList<Monster>>(url, signal);
-  return data.data;
+  return data.data.map((m) => ({ ...m, img: `${BASE}/img/monsters/${m.gfxId}.png` }));
 }
 
 // Which dungeons contain a given monster.

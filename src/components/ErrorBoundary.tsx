@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "./DofusIcons";
 
 interface Props {
   children: ReactNode;

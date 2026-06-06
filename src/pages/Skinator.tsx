@@ -4,31 +4,17 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Check,
-  ChevronLeft,
   Copy,
-  Crown,
-  Download,
   Eye,
   ExternalLink,
   ImageOff,
   Info,
   Loader2,
-  Maximize2,
-  Minimize2,
-  Palette,
-  RefreshCw,
-  Save,
   Search,
-  Shield,
-  Shirt,
-  Sparkles,
   Trash2,
-  User,
-  Users,
-  WandSparkles,
-  Wind,
-  X,
-} from "lucide-react";
+  dofusUiIcon,
+} from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import clsx from "clsx";
 import { browseEquipment, browseEquipmentAll, searchEquipment, type EquipmentLight } from "../api/dofusdude";
 import { listBreeds, type Breed } from "../api/dofusdb";
@@ -57,11 +43,11 @@ const COLOR_PRESETS = [
 ];
 
 const COSMETIC_SLOTS = [
-  { id: "hat", label: "Coiffe", typeNameId: "hat", icon: Crown },
-  { id: "cloak", label: "Cape", typeNameId: "cloak", icon: Wind },
-  { id: "shield", label: "Bouclier", typeNameId: "shield", icon: Shield },
-  { id: "weapon", label: "Arme", typeNameId: "sword", icon: WandSparkles },
-  { id: "petmount", label: "Familier", typeNameId: "pet", icon: Sparkles },
+  { id: "hat", label: "Coiffe", typeNameId: "hat", icon: dofusUiIcon("armor") },
+  { id: "cloak", label: "Cape", typeNameId: "cloak", icon: dofusUiIcon("armor") },
+  { id: "shield", label: "Bouclier", typeNameId: "shield", icon: dofusUiIcon("shield") },
+  { id: "weapon", label: "Arme", typeNameId: "sword", icon: dofusUiIcon("weapon") },
+  { id: "petmount", label: "Familier", typeNameId: "pet", icon: dofusUiIcon("familier") },
 ] as const;
 
 const RENDER_AVAILABLE = typeof window !== "undefined" && !!window.dofusCodex?.renderSkin;
@@ -280,7 +266,7 @@ export default function Skinator() {
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="font-display text-lg font-bold text-white">Identité</h2>
                   <Pill tone="cyan">
-                    <Eye className="h-3.5 w-3.5" /> Dofus
+                    <DofusIcon name="dofusEgg" size={14} /> Dofus
                   </Pill>
                 </div>
                 <input
@@ -290,10 +276,10 @@ export default function Skinator() {
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={() => patch({ gender: "m" })} className={choiceButton(draft.gender === "m")}>
-                    <User className="h-4 w-4" /> Masculin
+                    Masculin
                   </button>
                   <button onClick={() => patch({ gender: "f" })} className={choiceButton(draft.gender === "f")}>
-                    <Users className="h-4 w-4" /> Féminin
+                    Féminin
                   </button>
                 </div>
                 <div className="mt-3 grid grid-cols-4 gap-2">
@@ -314,7 +300,7 @@ export default function Skinator() {
 
           <div className="glass rounded-2xl p-4">
             <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
-              <Sparkles className="h-5 w-5 text-glow-violet" /> Classes
+              <DofusIcon name="emote" size={20} /> Classes
             </h2>
             {breedsLoading ? (
               <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
@@ -345,7 +331,7 @@ export default function Skinator() {
 
           <div className="glass rounded-2xl p-4">
             <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
-              <Palette className="h-5 w-5 text-glow-cyan" /> Codes couleur
+              <DofusIcon name="character" size={20} /> Codes couleur
             </h2>
             <div className="grid gap-3 md:grid-cols-5">
               {Object.entries(draft.colors).map(([key, value]) => (
@@ -398,7 +384,7 @@ export default function Skinator() {
           <div className="glass rounded-2xl p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                <Shirt className="h-5 w-5 text-glow-gold" /> Cosmétiques
+                <DofusIcon name="armor" size={20} /> Cosmétiques
               </h2>
               <div className="relative w-full sm:w-72">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -475,7 +461,7 @@ export default function Skinator() {
         <aside className="space-y-5">
           <div className="glass rounded-2xl p-4">
             <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-white">
-              <Download className="h-5 w-5 text-glow-cyan" /> Partage
+              <DofusIcon name="liaison" size={20} /> Partage
             </h2>
             <button onClick={copyCode} className={toolButton("cyan") + " mb-3 w-full justify-center"}>
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copié" : "Copier le code"}
@@ -766,7 +752,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
     <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.035] px-4 py-2">
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-glow-purple/40 to-emerald-500/30 text-emerald-200 shadow-[0_0_14px_-2px_rgba(16,185,129,0.5)]">
-          <Sparkles className="h-4 w-4" />
+          <DofusIcon name="character" size={16} />
         </span>
         <h2 className="truncate font-display text-base font-bold text-white">Moteur Barbofus</h2>
         <span className="hidden text-[10px] font-semibold uppercase tracking-widest text-emerald-300/80 sm:inline">Animé</span>
@@ -787,7 +773,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
             className={toolButton("cyan")}
             title="Sauvegarder ce skin dans « Mes Skins »"
           >
-            <Save className="h-4 w-4" />{" "}
+            <DofusIcon name="bank" size={16} />{" "}
             <span className="hidden sm:inline">
               Sauvegarder{currentSkinUrl && extractSkinId(currentSkinUrl) ? ` #${extractSkinId(currentSkinUrl)}` : ""}
             </span>
@@ -795,11 +781,11 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
           <button onClick={() => setExpanded((v) => !v)} className={toolButton(expanded ? "slate" : "purple")}>
             {expanded ? (
               <>
-                <Minimize2 className="h-4 w-4" /> Réduire
+                <DofusIcon name="closeRed" size={16} /> Réduire
               </>
             ) : (
               <>
-                <Maximize2 className="h-4 w-4" /> Agrandir
+                <DofusIcon name="zoom" size={16} /> Agrandir
               </>
             )}
           </button>
@@ -819,7 +805,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
       }}
     >
       <span className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-glow-purple/40 to-glow-cyan/25 text-white shadow-glow">
-        <WandSparkles className="h-7 w-7" />
+        <DofusIcon name="character" size={28} />
       </span>
       <div className="space-y-1.5">
         <p className="font-display text-xl font-bold text-white">Rendu animé Barbofus</p>
@@ -829,7 +815,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
         </p>
       </div>
       <button onClick={() => skinatorEngine.setOpen(true)} className={toolButton("purple")}>
-        <WandSparkles className="h-4 w-4" /> Ouvrir le moteur
+        Ouvrir le moteur
       </button>
     </div>
   );
@@ -1002,7 +988,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
                   onClick={confirmSave}
                   className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-glow-purple/40 bg-glow-purple/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-glow-purple/30"
                 >
-                  <Save className="h-4 w-4" /> {overwriteId ? "Écraser" : "Enregistrer"}
+                  <DofusIcon name="bank" size={16} /> {overwriteId ? "Écraser" : "Enregistrer"}
                 </button>
               </div>
             </motion.div>

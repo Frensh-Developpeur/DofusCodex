@@ -1,20 +1,44 @@
-import { useState } from "react";
 import { useQuery, useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Layers, Sparkles, X } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Search } from "../components/DofusIcons";
 import { browseSets, searchSets, getSet, type SetLight } from "../api/dofusdude";
 import { getItemsByIds, type ItemLite } from "../api/dofusdb";
 import { useDebounce } from "../hooks/useDebounce";
-import { levelTone } from "../data/meta";
+import { useViewState } from "../lib/viewState";
+import { levelTone, statRank } from "../data/meta";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, LoadMore, fadeUp } from "../components/ui";
-import ItemModal from "../components/ItemModal";
 import DofusIcon, { effectIconFromName } from "../components/DofusIcon";
+import DetailBack from "../components/DetailBack";
+import { goItem } from "../lib/itemNav";
 
 const PAGE = 30;
 
+// Icône d'une panoplie = icône de son premier item. SetLight (liste) ne contient pas
+// les pièces → on résout la panoplie (getSet, mis en cache et partagé avec la page détail)
+// puis on charge son premier item. Fallback panoplie le temps du chargement / si échec.
+function SetItemIcon({ id, size = 28 }: { id: number; size?: number }) {
+  const { data: set } = useQuery({
+    queryKey: ["set", id],
+    queryFn: ({ signal }) => getSet(id, signal),
+    staleTime: 1000 * 60 * 30,
+  });
+  const firstId = set?.equipment_ids?.[0];
+  const { data: items } = useQuery({
+    queryKey: ["set-first-item", firstId],
+    queryFn: ({ signal }) => getItemsByIds([firstId!], signal),
+    enabled: !!firstId,
+    staleTime: 1000 * 60 * 30,
+  });
+  const img = items?.[0]?.img;
+  if (img)
+    return <img src={img} alt="" loading="lazy" className="object-contain" style={{ width: size, height: size }} />;
+  return <DofusIcon name="menuItemsets" size={20} />;
+}
+
 export default function Sets() {
-  const [search, setSearch] = useState("");
-  const [openId, setOpenId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const [search, setSearch] = useViewState("sets:search", "");
   const debounced = useDebounce(search);
   const hasSearch = debounced.trim().length >= 2;
 
@@ -84,11 +108,11 @@ export default function Sets() {
                 variants={fadeUp}
                 custom={i % 18}
                 whileHover={{ y: -3 }}
-                onClick={() => setOpenId(s.ankama_id)}
+                onClick={() => navigate(`/panoplies/${s.ankama_id}`, { state: { fromSection: true } })}
                 className="glass glass-hover no-drag group flex items-center gap-3 rounded-2xl p-4 text-left"
               >
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-glow-purple/30 to-glow-cyan/15 text-glow-violet">
-                  <Layers className="h-5 w-5" />
+                  <SetItemIcon id={s.ankama_id} size={30} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-white">{s.name}</p>
@@ -99,7 +123,7 @@ export default function Sets() {
                     </Pill>
                     {s.contains_cosmetics_only && (
                       <Pill tone="cyan">
-                        <Sparkles className="h-3 w-3" /> Apparat
+                        <DofusIcon name="cosmetics" size={12} /> Apparat
                       </Pill>
                     )}
                   </div>
@@ -118,14 +142,16 @@ export default function Sets() {
           )}
         </>
       )}
-
-      <AnimatePresence>{openId !== null && <SetModal id={openId} onClose={() => setOpenId(null)} />}</AnimatePresence>
     </div>
   );
 }
 
-function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
-  const [piece, setPiece] = useState<number | null>(null);
+// Page détail d'une panoplie (route /panoplies/:id). Les pièces ouvrent leur propre page item.
+export function SetDetail() {
+  const { id: idParam } = useParams();
+  const id = Number(idParam);
+  const navigate = useNavigate();
+
   const { data: set, isLoading } = useQuery({
     queryKey: ["set", id],
     queryFn: ({ signal }) => getSet(id, signal),
@@ -141,47 +167,36 @@ function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
   // Paliers de bonus (clé = nombre d'items équipés), triés croissant, vides ignorés.
   const tiers = set?.effects
     ? Object.entries(set.effects)
-        .map(([k, v]) => ({ count: Number(k), effects: v ?? [] }))
+        .map(([k, v]) => ({
+          count: Number(k),
+          effects: (v ?? [])
+            .slice()
+            .sort((a, b) => statRank(a.type?.name ?? a.formatted) - statRank(b.type?.name ?? b.formatted)),
+        }))
         .filter((t) => t.effects.length > 0)
         .sort((a, b) => a.count - b.count)
     : [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 16 }}
-        transition={{ type: "spring", stiffness: 260, damping: 26 }}
-        onClick={(e) => e.stopPropagation()}
-        className="glass flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl ring-1 ring-white/10"
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-glow-purple/40 to-glow-cyan/20 text-glow-violet">
-              <Layers className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="truncate font-display text-lg font-bold text-white">{set?.name ?? "Panoplie"}</h2>
-              {set && (
-                <p className="text-xs text-slate-500">
-                  {set.equipment_ids.length} pièces · niveau max {set.highest_equipment_level ?? "?"}
-                </p>
-              )}
-            </div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-2xl">
+      <DetailBack />
+
+      <div className="glass rounded-2xl ring-1 ring-white/10">
+        <div className="flex items-center gap-3 border-b border-white/10 p-4">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-glow-purple/40 to-glow-cyan/20 text-glow-violet">
+            <SetItemIcon id={id} size={28} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-lg font-bold text-white">{set?.name ?? "Panoplie"}</h2>
+            {set && (
+              <p className="text-xs text-slate-500">
+                {set.equipment_ids.length} pièces · niveau max {set.highest_equipment_level ?? "?"}
+              </p>
+            )}
           </div>
-          <button onClick={onClose} className="no-drag rounded-lg bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="p-4">
           {isLoading || !set ? (
             <div className="space-y-3">
               <Skeleton className="h-20" />
@@ -189,13 +204,12 @@ function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
             </div>
           ) : (
             <>
-              {/* Pièces */}
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Pièces</p>
               <div className="mb-5 flex flex-wrap gap-2">
                 {(pieces ?? []).map((p: ItemLite) => (
                   <button
                     key={p.id}
-                    onClick={() => setPiece(p.id)}
+                    onClick={() => goItem(navigate, `/objets/${p.id}`)}
                     title={p.name.fr}
                     className="no-drag group flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-void-900/60 transition hover:border-glow-purple/40"
                   >
@@ -205,7 +219,6 @@ function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
                 {!pieces && <Skeleton className="h-12 w-full" />}
               </div>
 
-              {/* Bonus par palier */}
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Bonus de panoplie</p>
               <div className="space-y-3">
                 {tiers.map((t) => (
@@ -233,11 +246,7 @@ function SetModal({ id, onClose }: { id: number; onClose: () => void }) {
             </>
           )}
         </div>
-      </motion.div>
-
-      <AnimatePresence>
-        {piece !== null && <ItemModal id={piece} onClose={() => setPiece(null)} onSelectItem={setPiece} />}
-      </AnimatePresence>
+      </div>
     </motion.div>
   );
 }

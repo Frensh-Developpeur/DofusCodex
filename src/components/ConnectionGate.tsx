@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { WifiOff, RefreshCw } from "lucide-react";
+import { WifiOff, RefreshCw } from "./DofusIcons";
 import { dismissSplash } from "../lib/splash";
 import AppLoader from "./AppLoader";
 

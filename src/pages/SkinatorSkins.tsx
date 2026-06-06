@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Palette, WandSparkles, Trash2, ExternalLink, Pencil, Check, X, Plus } from "lucide-react";
+import { Check } from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import { useStore, actions, type BarbofusSkin } from "../store/store";
 import { skinatorEngine } from "../store/skinatorEngine";
 
@@ -20,7 +21,7 @@ export default function SkinatorSkins() {
         <div>
           <div className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-glow-purple/40 to-glow-cyan/25 text-white shadow-glow">
-              <Palette className="h-5 w-5" />
+              <DofusIcon name="glyph" size={20} />
             </span>
             <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">Mes Skins</h1>
           </div>
@@ -34,14 +35,14 @@ export default function SkinatorSkins() {
           onClick={() => navigate("/skinator")}
           className="no-drag inline-flex items-center gap-2 rounded-xl border border-glow-purple/40 bg-glow-purple/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-glow-purple/30"
         >
-          <Plus className="h-4 w-4" /> Ouvrir le Skinator
+          <DofusIcon name="ajouterEtat" size={16} tint="#04ff2d" /> Ouvrir le Skinator
         </button>
       </header>
 
       {skins.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl px-6 py-16 text-center">
           <span className="grid h-16 w-16 place-items-center rounded-2xl bg-white/[0.04] text-slate-500">
-            <WandSparkles className="h-7 w-7" />
+            <DofusIcon name="glyph" size={28} />
           </span>
           <div>
             <p className="font-display text-lg font-bold text-white">Aucun skin sauvegardé</p>
@@ -54,12 +55,12 @@ export default function SkinatorSkins() {
             onClick={() => navigate("/skinator")}
             className="no-drag inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
           >
-            <Palette className="h-4 w-4" /> Aller au Skinator
+            <DofusIcon name="character" size={16} /> Aller au Skinator
           </button>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence>
+          <AnimatePresence mode="popLayout">
             {skins.map((skin, i) => (
               <SkinCard key={skin.id} skin={skin} index={i} onLoad={() => loadSkin(skin)} />
             ))}
@@ -83,107 +84,126 @@ function SkinCard({ skin, index, onLoad }: { skin: BarbofusSkin; index: number; 
     setEditing(false);
   };
 
+  // Carte alignée sur le langage visuel du Builder : rendu du skin en fond plein cadre, dégradé
+  // bas, nom + date superposés, actions révélées au survol (slide-up). Pas de mix-blend (le fond
+  // sombre de la capture se fond déjà dans le fond sombre de la carte).
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ delay: Math.min(index * 0.05, 0.4), duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -4 }}
-      className="glass glass-hover flex flex-col gap-3 rounded-2xl p-4"
+      exit={{ opacity: 0, scale: 0.94 }}
+      transition={{
+        layout: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+        delay: Math.min(index * 0.04, 0.3),
+        duration: 0.4,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      whileHover={{ y: -5 }}
+      className="group relative h-60 overflow-hidden rounded-2xl border border-white/10 bg-void-900 ring-1 ring-white/[0.03] transition-colors duration-300 hover:border-glow-purple/45"
     >
-      {skin.thumb ? (
-        <button
-          onClick={onLoad}
-          className="no-drag group/thumb relative h-40 overflow-hidden rounded-xl border border-white/10"
-          title="Charger ce skin"
-          style={{
-            background:
-              "radial-gradient(ellipse 75% 70% at 50% 42%, rgba(124,92,255,.22), rgba(34,211,238,.07) 50%, transparent 75%), #0a0d18",
-          }}
-        >
-          {/* mix-blend screen : le fond noir de la capture se fond dans le dégradé, le perso ressort */}
+      {/* Rendu du skin en fond */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 78% 72% at 50% 40%, rgba(124,92,255,.20), rgba(34,211,238,.06) 52%, transparent 76%), #0a0d18",
+        }}
+      >
+        {skin.thumb ? (
           <img
             src={skin.thumb}
             alt={skin.name}
-            className="mx-auto h-full w-auto max-w-full object-contain mix-blend-screen transition-transform duration-500 ease-out group-hover/thumb:scale-[1.06]"
+            className="mx-auto h-full w-auto max-w-full object-contain transition-transform duration-[600ms] ease-out group-hover:scale-[1.05]"
           />
-          {/* balayage lumineux au survol */}
-          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-700 ease-out group-hover/thumb:translate-x-full" />
-          {/* léger vignettage bas pour ancrer le perso */}
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
-        </button>
-      ) : (
-        <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-white/10 bg-void-900 text-slate-600">
-          <WandSparkles className="h-8 w-8" />
+        ) : (
+          <span className="grid h-full w-full place-items-center text-slate-700">
+            <DofusIcon name="character" size={56} className="opacity-50" />
+          </span>
+        )}
+      </div>
+
+      {/* Halo violet doux au survol */}
+      <div className="pointer-events-none absolute inset-0 bg-glow-purple/0 transition-colors duration-300 group-hover:bg-glow-purple/10" />
+
+      {/* Dégradé bas pour lisibilité du nom */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-void-900 via-void-900/70 to-transparent" />
+
+      {/* Badge #id */}
+      {skin.skinId && (
+        <span className="pointer-events-none absolute right-3 top-3 rounded-md bg-black/55 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-200 backdrop-blur">
+          #{skin.skinId}
+        </span>
+      )}
+
+      {/* Nom + date en bas — glissent vers le haut au survol pour laisser place aux actions */}
+      {!editing && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 transition-transform duration-300 ease-out group-hover:-translate-y-[60px]">
+          <p className="truncate font-display text-lg font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+            {skin.name}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Sauvegardé le {new Date(skin.createdAt).toLocaleDateString("fr-FR")}
+          </p>
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-2">
-        {editing ? (
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commit();
-              if (e.key === "Escape") cancel();
-            }}
-            className="no-drag min-w-0 flex-1 rounded-lg border border-glow-purple/50 bg-void-800/70 px-2 py-1 text-sm font-bold text-white outline-none"
-          />
-        ) : (
-          <p className="min-w-0 flex-1 truncate font-display text-base font-bold text-white">{skin.name}</p>
-        )}
-        {editing ? (
-          <div className="flex shrink-0 gap-1">
-            <button onClick={commit} className="rounded-lg bg-glow-emerald/15 p-1.5 text-glow-emerald transition hover:bg-glow-emerald/25" title="Valider">
-              <Check className="h-4 w-4" />
-            </button>
-            <button onClick={cancel} className="rounded-lg bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10" title="Annuler">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
+      {/* Barre d'actions — apparaît en glissant depuis le bas au survol */}
+      {!editing && (
+        <div className="absolute inset-x-0 bottom-0 z-20 flex translate-y-3 items-center gap-1.5 p-3 opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
+          <button
+            onClick={onLoad}
+            className="no-drag inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-glow-purple/45 bg-glow-purple/25 px-3 py-2 text-sm font-bold text-white shadow-glow transition hover:bg-glow-purple/40"
+          >
+            <DofusIcon name="character" size={16} /> Charger
+          </button>
           <button
             onClick={() => setEditing(true)}
-            className="shrink-0 rounded-lg bg-white/5 p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-slate-300"
-            title="Renommer"
+            className="no-drag inline-flex items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200 backdrop-blur transition hover:bg-white/20"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            Renommer
           </button>
-        )}
-      </div>
+          <button
+            onClick={() => actions.deleteBarbofusSkin(skin.id)}
+            title="Supprimer"
+            className="no-drag inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/10 p-2 backdrop-blur transition hover:border-glow-rose/40 hover:bg-glow-rose/15"
+          >
+            <DofusIcon name="closeRed" size={16} />
+          </button>
+        </div>
+      )}
 
-      <div className="flex items-center gap-2 text-xs text-slate-500">
-        {skin.skinId && (
-          <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-slate-400">#{skin.skinId}</span>
-        )}
-        <span>{new Date(skin.createdAt).toLocaleDateString("fr-FR")}</span>
-      </div>
-
-      <div className="mt-auto flex items-center gap-2">
-        <button
-          onClick={onLoad}
-          className="no-drag inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-glow-purple/40 bg-glow-purple/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-purple/30"
-        >
-          <WandSparkles className="h-4 w-4" /> Charger
-        </button>
-        <a
-          href={skin.url}
-          className="no-drag inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
-          title="Ouvrir sur barbofus.com"
-        >
-          <ExternalLink className="h-4 w-4" />
-        </a>
-        <button
-          onClick={() => actions.deleteBarbofusSkin(skin.id)}
-          className="no-drag inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-slate-500 transition hover:border-glow-rose/30 hover:text-glow-rose"
-          title="Supprimer"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
+      {/* Édition du nom — overlay dédié */}
+      {editing && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-void-900/90 p-4 backdrop-blur-sm">
+          <div className="w-full">
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commit();
+                if (e.key === "Escape") cancel();
+              }}
+              className="no-drag w-full rounded-lg border border-glow-purple/50 bg-void-900/80 px-2.5 py-2 text-sm font-bold text-white outline-none"
+            />
+            <div className="mt-2 flex justify-end gap-1.5">
+              <button
+                onClick={commit}
+                className="no-drag inline-flex items-center gap-1 rounded-lg bg-glow-emerald/15 px-2.5 py-1.5 text-xs font-semibold text-glow-emerald transition hover:bg-glow-emerald/25"
+              >
+                <Check className="h-4 w-4" /> Valider
+              </button>
+              <button
+                onClick={cancel}
+                className="no-drag inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-glow-rose/15 hover:text-glow-rose"
+              >
+                <DofusIcon name="closeRed" size={16} /> Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

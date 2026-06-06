@@ -1,26 +1,18 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
-  ShieldAlert,
-  Skull,
-  Lightbulb,
-  Gift,
   ChevronDown,
-  Sparkles,
-  Star,
   Check,
-  Trophy,
-  ScrollText,
-} from "lucide-react";
+} from "../components/DofusIcons";
 import { getDungeon, getMonstersByIds, pickBoss, type Monster } from "../api/dofusdb";
 import { getDungeonGuide, type BossPhase } from "../data/dungeonGuides";
 import { levelTone } from "../data/meta";
 import { useStore, actions } from "../store/store";
 import { Pill, Spinner, ErrorState, fadeUp } from "../components/ui";
 import DofusIcon, { type DofusIconName } from "../components/DofusIcon";
+import DetailBack from "../components/DetailBack";
 
 const ELEMENTS: { key: keyof Monster["grades"][0]; label: string; color: string; icon: DofusIconName }[] = [
   { key: "earthResistance", label: "Terre", color: "bg-amber-500", icon: "resTerre" },
@@ -136,7 +128,7 @@ function MonsterCard({ monster, isBoss }: { monster: Monster; isBoss: boolean })
         />
         {isBoss && (
           <span className="absolute -right-1 -top-1 rounded-full bg-glow-rose p-0.5">
-            <Skull className="h-3 w-3 text-white" />
+            <DofusIcon name="boss" size={12} />
           </span>
         )}
       </div>
@@ -185,12 +177,7 @@ export default function DungeonDetail() {
 
   return (
     <div className="space-y-8">
-      <Link
-        to="/donjons"
-        className="no-drag inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-200"
-      >
-        <ArrowLeft className="h-4 w-4" /> Tous les donjons
-      </Link>
+      <DetailBack />
 
       {/* Boss hero */}
       <div className="glass relative overflow-hidden rounded-3xl p-8">
@@ -224,7 +211,7 @@ export default function DungeonDetail() {
                 onError={(e) => (e.currentTarget.style.opacity = "0.3")}
               />
             ) : (
-              <Skull className="h-32 w-32 text-slate-700" />
+              <DofusIcon name="boss" size={128} className="opacity-40" />
             )}
           </div>
 
@@ -232,23 +219,23 @@ export default function DungeonDetail() {
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <Pill tone="rose">
-                <Skull className="h-3.5 w-3.5" /> Boss de donjon
+                <DofusIcon name="boss" size={14} /> Boss de donjon
               </Pill>
               <Pill tone={levelTone(dungeon.optimalPlayerLevel)}>
                 Niv. optimal {dungeon.optimalPlayerLevel}
               </Pill>
               {authored ? (
                 <Pill tone="purple">
-                  <ScrollText className="h-3 w-3" /> Guide détaillé
+                  <DofusIcon name="book" size={12} /> Guide détaillé
                 </Pill>
               ) : (
                 <Pill tone="slate">
-                  <Sparkles className="h-3 w-3" /> Guide auto-généré
+                  <DofusIcon name="book" size={12} /> Guide auto-généré
                 </Pill>
               )}
               {guide.achievements && guide.achievements.length > 0 && (
                 <Pill tone="gold">
-                  <Trophy className="h-3 w-3" /> {guide.achievements.length} succès
+                  <DofusIcon name="trophy" size={12} /> {guide.achievements.length} succès
                 </Pill>
               )}
             </div>
@@ -281,7 +268,7 @@ export default function DungeonDetail() {
                     : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
                 }`}
               >
-                <Star className={`h-4 w-4 ${isFav ? "fill-glow-gold" : ""}`} /> Favori
+                <DofusIcon name={isFav ? "starFilled" : "starEmpty"} size={16} /> Favori
               </button>
             </div>
 
@@ -290,7 +277,7 @@ export default function DungeonDetail() {
                 <StatChip dofus="pv" label="PV" value={bossGrade.lifePoints.toLocaleString("fr-FR")} />
                 <StatChip dofus="pa" label="PA" value={bossGrade.actionPoints} />
                 <StatChip dofus="pm" label="PM" value={bossGrade.movementPoints} />
-                <StatChip icon={Skull} label="Niveau" value={bossGrade.level} color="text-glow-gold" />
+                <StatChip dofus="boss" label="Niveau" value={bossGrade.level} />
               </div>
             )}
           </div>
@@ -301,7 +288,7 @@ export default function DungeonDetail() {
         {/* Phases */}
         <div className="lg:col-span-2">
           <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-white">
-            <ShieldAlert className="h-5 w-5 text-glow-ember" /> Mécaniques du combat
+            <DofusIcon name="epeesCroisees" size={20} /> Mécaniques du combat
           </h2>
           <motion.div
             initial="hidden"
@@ -317,7 +304,7 @@ export default function DungeonDetail() {
           {/* Tips */}
           <div className="glass mt-6 rounded-2xl p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-              <Lightbulb className="h-5 w-5 text-glow-gold" /> Conseils
+              <DofusIcon name="info" size={20} /> Conseils
             </h3>
             <ul className="space-y-2">
               {guide.tips.map((t, i) => (
@@ -360,7 +347,7 @@ export default function DungeonDetail() {
 
           <div className="glass rounded-2xl p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-              <Gift className="h-5 w-5 text-glow-violet" /> Récompenses
+              <DofusIcon name="reward" size={20} /> Récompenses
             </h3>
             <div className="flex flex-wrap gap-2">
               {guide.rewards.map((rw, i) => (
@@ -380,7 +367,7 @@ export default function DungeonDetail() {
       {guide.achievements && guide.achievements.length > 0 && (
         <div>
           <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-white">
-            <Trophy className="h-5 w-5 text-glow-gold" /> Succès
+            <DofusIcon name="trophy" size={20} /> Succès
             <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs font-normal text-slate-400">
               {guide.achievements.length}
             </span>
@@ -400,7 +387,7 @@ export default function DungeonDetail() {
               >
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-glow-gold/15 text-glow-gold ring-1 ring-glow-gold/30">
-                    <Trophy className="h-4 w-4" />
+                    <DofusIcon name="trophy" size={16} />
                   </span>
                   <div className="min-w-0">
                     <p className="font-display font-semibold leading-snug text-white">{a.name}</p>
@@ -420,7 +407,7 @@ export default function DungeonDetail() {
       {/* Roster */}
       <div>
         <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-white">
-          <Skull className="h-5 w-5 text-glow-rose" /> Habitants du donjon
+          <DofusIcon name="bestiary" size={20} /> Habitants du donjon
         </h2>
         {loadingMonsters ? (
           <Spinner label="Chargement des monstres…" />

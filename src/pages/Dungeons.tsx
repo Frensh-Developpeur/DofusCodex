@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQueries, keepPreviousData } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Search, Swords, MapPin, ChevronRight, Star, Check, Skull, ScrollText, FlaskConical } from "lucide-react";
+import DofusIcon from "../components/DofusIcon";
+import { Search, ChevronRight, Check } from "../components/DofusIcons";
 import { listDungeons, getMonstersLite, type Dungeon, type MonsterLite } from "../api/dofusdb";
 import { useDebounce } from "../hooks/useDebounce";
+import { useViewState } from "../lib/viewState";
 import { hasGuide } from "../data/dungeonGuides";
 import { levelTone } from "../data/meta";
 import { useStore, actions } from "../store/store";
@@ -21,9 +23,9 @@ const RANGES = [
 ];
 
 export default function Dungeons() {
-  const [search, setSearch] = useState("");
-  const [range, setRange] = useState(0);
-  const [favOnly, setFavOnly] = useState(false);
+  const [search, setSearch] = useViewState("dungeons:search", "");
+  const [range, setRange] = useViewState("dungeons:range", 0);
+  const [favOnly, setFavOnly] = useViewState("dungeons:favOnly", false);
   const debounced = useDebounce(search);
   const r = RANGES[range];
 
@@ -104,7 +106,7 @@ export default function Dungeons() {
       {/* Avertissement — guides rédigés, pas forcément parfaits */}
       <div className="mb-6 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-glow-gold/15 ring-1 ring-glow-gold/30">
-          <FlaskConical className="h-5 w-5 text-glow-gold" />
+          <DofusIcon name="info" size={20} />
         </span>
         <div className="min-w-0">
           <p className="font-display text-sm font-bold text-glow-gold">Guides v1 — en amélioration continue</p>
@@ -148,7 +150,7 @@ export default function Dungeons() {
                 : "bg-white/5 text-slate-400 hover:bg-white/10"
             }`}
           >
-            <Star className={`h-3.5 w-3.5 ${favOnly ? "fill-glow-gold text-glow-gold" : ""}`} /> Favoris
+            <DofusIcon name={favOnly ? "starFilled" : "starEmpty"} size={14} /> Favoris
           </button>
         </div>
       </div>
@@ -179,7 +181,7 @@ export default function Dungeons() {
             return (
               <motion.div key={d.id} variants={fadeUp} custom={i % 12}>
                 <Link
-                  to={`/donjons/${d.id}`}
+                  to={`/donjons/${d.id}`} state={{ fromSection: true }}
                   className={`glass glass-hover group relative flex h-full flex-col rounded-2xl p-4 ${
                     isDone ? "ring-1 ring-glow-emerald/40" : ""
                   }`}
@@ -198,7 +200,7 @@ export default function Dungeons() {
                             onError={(e) => (e.currentTarget.style.visibility = "hidden")}
                           />
                         ) : (
-                          <Swords className="h-6 w-6 text-glow-ember/60" />
+                          <DofusIcon name="dungeon" size={26} className="opacity-80" />
                         )}
                       </div>
                       {isDone && (
@@ -223,14 +225,14 @@ export default function Dungeons() {
                           className="no-drag -mr-1 -mt-1 shrink-0 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-glow-gold"
                           title={isFav ? "Retirer des favoris" : "Ajouter aux favoris"}
                         >
-                          <Star className={`h-4 w-4 ${isFav ? "fill-glow-gold text-glow-gold" : ""}`} />
+                          <DofusIcon name={isFav ? "starFilled" : "starEmpty"} size={16} />
                         </button>
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                         <Pill tone={tone}>Niv. {d.optimalPlayerLevel}</Pill>
                         {boss && (
                           <span className="inline-flex min-w-0 items-center gap-1 text-[11px] text-glow-rose/90">
-                            <Skull className="h-3 w-3 shrink-0" />
+                            <DofusIcon name="boss" size={12} />
                             <span className="truncate">{boss.name.fr}</span>
                           </span>
                         )}
@@ -241,17 +243,17 @@ export default function Dungeons() {
                   {/* Méta bas de carte */}
                   <div className="mt-3 flex items-center gap-3 border-t border-white/5 pt-2.5 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" /> {d.mapIds?.length ?? 0} salles
+                      <DofusIcon name="dungeonDoor" size={14} /> {d.mapIds?.length ?? 0} salles
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Swords className="h-3.5 w-3.5" /> {d.monsters?.length ?? 0} ennemis
+                      <DofusIcon name="bestiary" size={14} /> {d.monsters?.length ?? 0} ennemis
                     </span>
                     {authored && (
                       <span
                         className="inline-flex items-center gap-1 text-glow-violet/80"
                         title="Guide rédigé disponible"
                       >
-                        <ScrollText className="h-3.5 w-3.5" /> Guide
+                        <DofusIcon name="book" size={14} /> Guide
                       </span>
                     )}
                     <ChevronRight className="ml-auto h-4 w-4 text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-glow-violet" />

@@ -1,42 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "../components/DofusIcons";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
 import {
-  Crown,
-  Wind,
-  Gem,
-  CircleDot,
-  Anchor,
-  Footprints,
-  Shield,
-  Sword,
-  Sparkles,
   X,
-  RotateCcw,
-  Zap,
-  Crosshair,
-  Flame,
   ChevronRight,
   Shuffle,
-  Heart,
-  Gauge,
-  PawPrint,
-  Layers,
   Save,
-  Trash2,
-  RotateCw,
-  Droplet,
-  Mountain,
-  Eye,
-  Package,
-  Plus,
-  TrendingUp,
-  Star,
   ChevronDown,
-} from "lucide-react";
+  dofusUiIcon,
+  type DofusUiIcon,
+} from "../components/DofusIcons";
 import { getEquipment, getSet, type EquipmentLight } from "../api/dofusdude";
 import {
   listBreeds,
@@ -76,12 +52,42 @@ const CARAC_ROW_ICON: Record<string, DofusIconName> = {
   Zone: "areaCircle",
   Lancer: "areaLine",
 };
+
+const ICON_FORCE = dofusUiIcon("terre");
+const ICON_INTELLIGENCE = dofusUiIcon("feu");
+const ICON_CHANCE = dofusUiIcon("eau");
+const ICON_AGILITE = dofusUiIcon("air");
+const ICON_VITALITE = dofusUiIcon("pv");
+const ICON_SAGESSE = dofusUiIcon("sagesse");
+const ICON_PUISSANCE = dofusUiIcon("puissance");
+const ICON_WEAPON = dofusUiIcon("weapon");
+const ICON_MULTI_ELEMENT = dofusUiIcon("multiElement");
+const ICON_DMG_ENVOYES = dofusUiIcon("dmgEnvoyes");
+const ICON_DMG_SORT = dofusUiIcon("dmgSort");
+const ICON_DMG_MELEE = dofusUiIcon("dmgMelee");
+const ICON_DMG_DISTANCE = dofusUiIcon("dmgDistance");
+const ICON_CRITIQUE = dofusUiIcon("critique");
+const ICON_SOIN = dofusUiIcon("soin");
+const ICON_RESISTANCE = dofusUiIcon("bouclier");
+const ICON_PA = dofusUiIcon("pa");
+const ICON_PM = dofusUiIcon("pm");
+const ICON_PO = dofusUiIcon("po");
+const ICON_TACLE = dofusUiIcon("tacle");
+const ICON_PROSPECTION = dofusUiIcon("pp");
+const ICON_INVOCATION = dofusUiIcon("invocation");
+const ICON_INITIATIVE = dofusUiIcon("initiative");
+const ICON_PODS = dofusUiIcon("pod");
+const ICON_NEUTRE = dofusUiIcon("neutre");
+const ICON_TOUR = dofusUiIcon("tour");
+const ICON_ZONE = dofusUiIcon("areaCircle");
+const ICON_LINE = dofusUiIcon("areaLine");
+const ICON_SPECIAL = dofusUiIcon("etoile");
 import SlotPicker from "../components/SlotPicker";
 
 interface SlotDef {
   key: string;
   label: string;
-  icon: typeof Crown;
+  icon: DofusUiIcon;
   types: string[];
 }
 
@@ -143,20 +149,20 @@ type RoomLineEstimate = {
 };
 
 const SLOTS: SlotDef[] = [
-  { key: "hat", label: "Chapeau", icon: Crown, types: ["hat"] },
-  { key: "cloak", label: "Cape", icon: Wind, types: ["cloak"] },
-  { key: "amulet", label: "Amulette", icon: Gem, types: ["amulet"] },
-  { key: "ring1", label: "Anneau 1", icon: CircleDot, types: ["ring"] },
-  { key: "ring2", label: "Anneau 2", icon: CircleDot, types: ["ring"] },
-  { key: "belt", label: "Ceinture", icon: Anchor, types: ["belt"] },
-  { key: "boots", label: "Bottes", icon: Footprints, types: ["boots"] },
-  { key: "shield", label: "Bouclier", icon: Shield, types: ["shield"] },
-  { key: "weapon", label: "Arme", icon: Sword, types: ["sword", "bow", "staff", "wand", "dagger", "hammer", "axe"] },
-  { key: "petmount", label: "Familier/Monture", icon: PawPrint, types: ["pet", "dragoturkey", "petsmount"] },
+  { key: "hat", label: "Chapeau", icon: dofusUiIcon("slotHat"), types: ["hat"] },
+  { key: "cloak", label: "Cape", icon: dofusUiIcon("slotCloak"), types: ["cloak"] },
+  { key: "amulet", label: "Amulette", icon: dofusUiIcon("slotAmulet"), types: ["amulet"] },
+  { key: "ring1", label: "Anneau 1", icon: dofusUiIcon("slotRing"), types: ["ring"] },
+  { key: "ring2", label: "Anneau 2", icon: dofusUiIcon("slotRing"), types: ["ring"] },
+  { key: "belt", label: "Ceinture", icon: dofusUiIcon("slotBelt"), types: ["belt"] },
+  { key: "boots", label: "Bottes", icon: dofusUiIcon("slotBoots"), types: ["boots"] },
+  { key: "shield", label: "Bouclier", icon: dofusUiIcon("slotShield"), types: ["shield"] },
+  { key: "weapon", label: "Arme", icon: dofusUiIcon("slotWeapon"), types: ["sword", "bow", "staff", "wand", "dagger", "hammer", "axe"] },
+  { key: "petmount", label: "Familier/Monture", icon: dofusUiIcon("slotPet"), types: ["pet", "dragoturkey", "petsmount"] },
   ...Array.from({ length: 6 }).map((_, i) => ({
     key: `dofus${i + 1}`,
     label: `Dofus/Trophée ${i + 1}`,
-    icon: Sparkles,
+    icon: dofusUiIcon("slotDofus"),
     types: ["dofus", "trophy", "prysmaradite"],
   })),
 ];
@@ -195,21 +201,18 @@ function findRoomSpell(spells: RoomSpell[], name: string): RoomSpell | undefined
 
 // Caractéristiques réparties + couleur d'accent + tier API correspondant.
 type CaracKey = "strength" | "intelligence" | "chance" | "agility" | "vitality" | "wisdom";
-const CARACS: { key: CaracKey; label: string; sub: string; tone: string; icon: typeof Crown; tier: keyof Breed }[] = [
-  { key: "strength", label: "Force", sub: "Terre / Neutre", tone: "text-amber-400", icon: Mountain, tier: "statsPointsForStrength" },
-  { key: "intelligence", label: "Intelligence", sub: "Feu", tone: "text-glow-ember", icon: Flame, tier: "statsPointsForIntelligence" },
-  { key: "chance", label: "Chance", sub: "Eau", tone: "text-glow-cyan", icon: Droplet, tier: "statsPointsForChance" },
-  { key: "agility", label: "Agilité", sub: "Air", tone: "text-glow-emerald", icon: Wind, tier: "statsPointsForAgility" },
-  { key: "vitality", label: "Vitalité", sub: "Points de vie", tone: "text-glow-rose", icon: Heart, tier: "statsPointsForVitality" },
-  { key: "wisdom", label: "Sagesse", sub: "Résistances / PM", tone: "text-glow-violet", icon: Sparkles, tier: "statsPointsForWisdom" },
+const CARACS: { key: CaracKey; label: string; sub: string; tone: string; icon: DofusUiIcon; tier: keyof Breed }[] = [
+  { key: "strength", label: "Force", sub: "Terre / Neutre", tone: "text-amber-400", icon: ICON_FORCE, tier: "statsPointsForStrength" },
+  { key: "intelligence", label: "Intelligence", sub: "Feu", tone: "text-glow-ember", icon: ICON_INTELLIGENCE, tier: "statsPointsForIntelligence" },
+  { key: "chance", label: "Chance", sub: "Eau", tone: "text-glow-cyan", icon: ICON_CHANCE, tier: "statsPointsForChance" },
+  { key: "agility", label: "Agilité", sub: "Air", tone: "text-glow-emerald", icon: ICON_AGILITE, tier: "statsPointsForAgility" },
+  { key: "vitality", label: "Vitalité", sub: "Points de vie", tone: "text-glow-rose", icon: ICON_VITALITE, tier: "statsPointsForVitality" },
+  { key: "wisdom", label: "Sagesse", sub: "Résistances / PM", tone: "text-glow-violet", icon: ICON_SAGESSE, tier: "statsPointsForWisdom" },
 ];
-
-// Icônes d'élément alignées sur ELEMENTS = [Neutre, Terre, Feu, Eau, Air].
-const ELEMENT_ICON = [CircleDot, Mountain, Flame, Droplet, Wind];
 
 // Icône + couleur d'une ligne de bonus (panoplie / effet) selon son intitulé, pour
 // que chaque ligne soit identifiable d'un coup d'œil (au lieu d'un bloc monochrome).
-function effectVisual(label: string): { icon: typeof Crown; tone: string } {
+function effectVisual(label: string): { icon: DofusUiIcon; tone: string } {
   const n = label.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   const el = n.includes("terre")
     ? "text-amber-400"
@@ -222,27 +225,27 @@ function effectVisual(label: string): { icon: typeof Crown; tone: string } {
           : n.includes("neutre")
             ? "text-slate-300"
             : null;
-  if (n.includes("resistance") || n.includes("renvoi")) return { icon: Shield, tone: el ?? "text-glow-violet" };
-  if (n.includes("dommage") && n.includes("critique")) return { icon: Star, tone: "text-glow-gold" };
-  if (n.includes("critique")) return { icon: Star, tone: "text-glow-gold" };
-  if (n.includes("dommage") || n.includes("puissance")) return { icon: Sword, tone: el ?? "text-glow-ember" };
-  if (n.includes("soin")) return { icon: Plus, tone: "text-glow-emerald" };
-  if (n.includes("vitalit") || n.includes(" pv") || n.includes("vie")) return { icon: Heart, tone: "text-glow-rose" };
-  if (n.includes("sagesse")) return { icon: Sparkles, tone: "text-glow-violet" };
-  if (n.includes("force")) return { icon: Mountain, tone: "text-amber-400" };
-  if (n.includes("intelligence")) return { icon: Flame, tone: "text-glow-ember" };
-  if (n.includes("chance")) return { icon: Droplet, tone: "text-glow-cyan" };
-  if (n.includes("agilit")) return { icon: Wind, tone: "text-glow-emerald" };
-  if (/\bpa\b/.test(n) || n.includes("action")) return { icon: Zap, tone: "text-glow-cyan" };
-  if (/\bpm\b/.test(n) || n.includes("mouvement")) return { icon: Footprints, tone: "text-glow-emerald" };
-  if (/\bpo\b/.test(n) || n.includes("portee")) return { icon: Crosshair, tone: "text-glow-violet" };
-  if (n.includes("tacle")) return { icon: Anchor, tone: "text-amber-400" };
-  if (n.includes("fuite")) return { icon: Wind, tone: "text-glow-emerald" };
-  if (n.includes("prospection")) return { icon: Eye, tone: "text-glow-gold" };
-  if (n.includes("invocation")) return { icon: PawPrint, tone: "text-glow-violet" };
-  if (n.includes("initiative")) return { icon: Gauge, tone: "text-glow-cyan" };
-  if (n.includes("pods")) return { icon: Package, tone: "text-slate-300" };
-  return { icon: CircleDot, tone: "text-slate-400" };
+  if (n.includes("resistance") || n.includes("renvoi")) return { icon: ICON_RESISTANCE, tone: el ?? "text-glow-violet" };
+  if (n.includes("dommage") && n.includes("critique")) return { icon: ICON_CRITIQUE, tone: "text-glow-gold" };
+  if (n.includes("critique")) return { icon: ICON_CRITIQUE, tone: "text-glow-gold" };
+  if (n.includes("dommage") || n.includes("puissance")) return { icon: ICON_WEAPON, tone: el ?? "text-glow-ember" };
+  if (n.includes("soin")) return { icon: ICON_SOIN, tone: "text-glow-emerald" };
+  if (n.includes("vitalit") || n.includes(" pv") || n.includes("vie")) return { icon: ICON_VITALITE, tone: "text-glow-rose" };
+  if (n.includes("sagesse")) return { icon: ICON_SAGESSE, tone: "text-glow-violet" };
+  if (n.includes("force")) return { icon: ICON_FORCE, tone: "text-amber-400" };
+  if (n.includes("intelligence")) return { icon: ICON_INTELLIGENCE, tone: "text-glow-ember" };
+  if (n.includes("chance")) return { icon: ICON_CHANCE, tone: "text-glow-cyan" };
+  if (n.includes("agilit")) return { icon: ICON_AGILITE, tone: "text-glow-emerald" };
+  if (/\bpa\b/.test(n) || n.includes("action")) return { icon: ICON_PA, tone: "text-glow-cyan" };
+  if (/\bpm\b/.test(n) || n.includes("mouvement")) return { icon: ICON_PM, tone: "text-glow-emerald" };
+  if (/\bpo\b/.test(n) || n.includes("portee")) return { icon: ICON_PO, tone: "text-glow-violet" };
+  if (n.includes("tacle")) return { icon: ICON_TACLE, tone: "text-amber-400" };
+  if (n.includes("fuite")) return { icon: ICON_AGILITE, tone: "text-glow-emerald" };
+  if (n.includes("prospection")) return { icon: ICON_PROSPECTION, tone: "text-glow-gold" };
+  if (n.includes("invocation")) return { icon: ICON_INVOCATION, tone: "text-glow-violet" };
+  if (n.includes("initiative")) return { icon: ICON_INITIATIVE, tone: "text-glow-cyan" };
+  if (n.includes("pods")) return { icon: ICON_PODS, tone: "text-slate-300" };
+  return { icon: ICON_NEUTRE, tone: "text-slate-400" };
 }
 
 type Caracs = Record<CaracKey, number>;
@@ -574,27 +577,27 @@ function BuildEditor({ build }: { build: Build }) {
 
   // Chips du résumé détaillé (icône + valeur), façon DofusRoom.
   const dmgChips = [
-    { icon: TrendingUp, label: "Puissance", value: total.power },
-    { icon: Sword, label: "Dommages", value: total.damageFlat },
-    { icon: Star, label: "Dom. meilleur élt", value: total.damageBestElement },
-    { icon: Plus, label: "% Dom. finaux", value: total.damageFinal, suffix: "%" },
-    { icon: Sparkles, label: "% Dom. sorts", value: total.damageSpell, suffix: "%" },
-    { icon: Sword, label: "% Dom. mêlée", value: total.damageMelee, suffix: "%" },
-    { icon: Crosshair, label: "% Dom. distance", value: total.damageRanged, suffix: "%" },
-    { icon: Star, label: "% Critique", value: total.critChance, suffix: "%", tone: "text-glow-gold" },
-    { icon: Star, label: "Dom. Critiques", value: total.critDamage, tone: "text-glow-gold" },
+    { icon: ICON_PUISSANCE, label: "Puissance", value: total.power },
+    { icon: ICON_WEAPON, label: "Dommages", value: total.damageFlat },
+    { icon: ICON_MULTI_ELEMENT, label: "Dom. meilleur élt", value: total.damageBestElement },
+    { icon: ICON_DMG_ENVOYES, label: "% Dom. finaux", value: total.damageFinal, suffix: "%" },
+    { icon: ICON_DMG_SORT, label: "% Dom. sorts", value: total.damageSpell, suffix: "%" },
+    { icon: ICON_DMG_MELEE, label: "% Dom. mêlée", value: total.damageMelee, suffix: "%" },
+    { icon: ICON_DMG_DISTANCE, label: "% Dom. distance", value: total.damageRanged, suffix: "%" },
+    { icon: ICON_CRITIQUE, label: "% Critique", value: total.critChance, suffix: "%", tone: "text-glow-gold" },
+    { icon: ICON_CRITIQUE, label: "Dom. Critiques", value: total.critDamage, tone: "text-glow-gold" },
   ].filter((c) => c.value !== 0);
   const supportChips = [
-    { icon: Heart, label: "PV de base", value: baseHpForLevel(level), tone: "text-glow-rose" },
-    { icon: Heart, label: "Vitalité", value: total.vitality, tone: "text-glow-rose" },
-    { icon: Sparkles, label: "Sagesse", value: total.wisdom, tone: "text-glow-violet" },
-    { icon: Plus, label: "Soins", value: misc.soin, tone: "text-glow-emerald" },
-    { icon: PawPrint, label: "Invocations", value: misc.invocation },
-    { icon: Gauge, label: "Initiative", value: misc.initiative },
-    { icon: Eye, label: "Prospection", value: misc.prospection },
-    { icon: Anchor, label: "Tacle", value: misc.tacle },
-    { icon: Footprints, label: "Fuite", value: misc.fuite },
-    { icon: Package, label: "Pods", value: misc.pods },
+    { icon: ICON_VITALITE, label: "PV de base", value: baseHpForLevel(level), tone: "text-glow-rose" },
+    { icon: ICON_VITALITE, label: "Vitalité", value: total.vitality, tone: "text-glow-rose" },
+    { icon: ICON_SAGESSE, label: "Sagesse", value: total.wisdom, tone: "text-glow-violet" },
+    { icon: ICON_SOIN, label: "Soins", value: misc.soin, tone: "text-glow-emerald" },
+    { icon: ICON_INVOCATION, label: "Invocations", value: misc.invocation },
+    { icon: ICON_INITIATIVE, label: "Initiative", value: misc.initiative },
+    { icon: ICON_PROSPECTION, label: "Prospection", value: misc.prospection },
+    { icon: ICON_TACLE, label: "Tacle", value: misc.tacle },
+    { icon: ICON_AGILITE, label: "Fuite", value: misc.fuite },
+    { icon: ICON_PODS, label: "Pods", value: misc.pods },
   ];
 
   const renderSlot = (slot: SlotDef) => (
@@ -636,7 +639,7 @@ function BuildEditor({ build }: { build: Build }) {
             {breed ? (
               <img src={breed.img} alt="" className="h-6 w-6 object-contain" />
             ) : (
-              <Sparkles className="h-5 w-5 text-glow-violet" />
+              <DofusIcon name="emote" size={20} />
             )}
             <span className="hidden sm:inline">{breed?.name.fr ?? "Classe"}</span>
             <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
@@ -727,7 +730,7 @@ function BuildEditor({ build }: { build: Build }) {
           title="Supprimer ce build"
           className="no-drag rounded-xl border border-white/10 bg-white/5 p-2 text-slate-500 transition hover:border-glow-rose/30 hover:bg-glow-rose/10 hover:text-glow-rose"
         >
-          <Trash2 className="h-4 w-4" />
+          <DofusIcon name="closeRed" size={16} />
         </button>
       </div>
 
@@ -743,7 +746,7 @@ function BuildEditor({ build }: { build: Build }) {
 
       {!breed ? (
         <div className="glass rounded-2xl p-10 text-center">
-          <Sparkles className="mx-auto mb-3 h-8 w-8 text-glow-violet/60" />
+          <DofusIcon name="emote" size={32} className="mx-auto mb-3 opacity-60" />
           <p className="text-slate-400">Sélectionnez une classe pour afficher ses sorts et estimer vos dégâts.</p>
         </div>
       ) : (
@@ -754,7 +757,7 @@ function BuildEditor({ build }: { build: Build }) {
             <div className="glass rounded-3xl p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                  <Shield className="h-5 w-5 text-glow-violet" /> Équipement
+                  <DofusIcon name="armor" size={20} /> Équipement
                 </h3>
                 <div className="flex items-center gap-2">
                   <Pill tone="slate">{filledCount}/{SLOTS.length}</Pill>
@@ -762,7 +765,7 @@ function BuildEditor({ build }: { build: Build }) {
                     onClick={resetAll}
                     className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" /> Réinitialiser
+                    <DofusIcon name="reset" size={14} tint="#22d3ee" /> Réinitialiser
                   </button>
                 </div>
               </div>
@@ -778,7 +781,7 @@ function BuildEditor({ build }: { build: Build }) {
               </div>
               <div className="mt-5">
                 <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  <Sparkles className="h-3.5 w-3.5 text-glow-violet" /> Dofus &amp; Trophées
+                  <DofusIcon name="dofus" size={14} /> Dofus &amp; Trophées
                 </p>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
                   {DOFUS_SLOTS.map(renderSlot)}
@@ -787,7 +790,7 @@ function BuildEditor({ build }: { build: Build }) {
               {activeSets.length > 0 && (
                 <div className="mt-5 border-t border-white/5 pt-4">
                   <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <Layers className="h-3.5 w-3.5 text-glow-cyan" /> Panoplies
+                    <DofusIcon name="menuItemsets" size={14} /> Panoplies
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {activeSets.map((set) => {
@@ -881,7 +884,7 @@ function BuildEditor({ build }: { build: Build }) {
               {specialBonuses.length > 0 && (
                 <div className="mt-5 border-t border-white/5 pt-4">
                   <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <Sparkles className="h-3.5 w-3.5 text-glow-gold" /> Bonus spéciaux
+                    <DofusIcon name="etoile" size={14} /> Bonus spéciaux
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {specialBonuses.map((b) => (
@@ -913,7 +916,7 @@ function BuildEditor({ build }: { build: Build }) {
               className="no-drag group flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-glow-ember/20 to-glow-rose/15 p-4 text-left ring-1 ring-glow-ember/30 transition hover:from-glow-ember/30 hover:to-glow-rose/25"
             >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-glow-ember/20 text-glow-ember">
-                <Flame className="h-5 w-5" />
+                <DofusIcon name="spells" size={20} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-display font-bold text-white">Sorts &amp; dégâts</span>
@@ -948,7 +951,7 @@ function BuildEditor({ build }: { build: Build }) {
                   const totalC = caracs[c.key] + parch[c.key] + equipBonus;
                   return (
                     <div key={c.key} className="flex items-center gap-1.5">
-                      <DofusIcon name={effectIconFromName(c.label) ?? "etoile"} size={16} />
+                      <c.icon className="h-4 w-4" />
                       <div className="min-w-0 flex-1 truncate">
                         <span className={`text-sm font-semibold ${c.tone}`}>{c.label}</span>
                         {equipBonus !== 0 && (
@@ -984,7 +987,7 @@ function BuildEditor({ build }: { build: Build }) {
             {/* Dommages & Résistances */}
             <div className="glass rounded-2xl p-5">
               <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-                <Sword className="h-5 w-5 text-glow-ember" /> Dommages &amp; Résistances
+                <DofusIcon name="weapon" size={20} /> Dommages &amp; Résistances
               </h3>
               {dmgChips.length > 0 && (
                 <div className="mb-3 grid grid-cols-2 gap-2">
@@ -1027,7 +1030,7 @@ function BuildEditor({ build }: { build: Build }) {
             {/* Soutien & divers */}
             <div className="glass rounded-2xl p-5">
               <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-                <Heart className="h-5 w-5 text-glow-rose" /> Soutien &amp; divers
+                <DofusIcon name="pv" size={20} /> Soutien &amp; divers
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {supportChips.map((c) => (
@@ -1198,10 +1201,10 @@ function SpellDetail({
     ? roomCaracRows(roomCarac)
     : cur
       ? [
-          { label: "Coût", value: `${cur.apCost} PA`, icon: Zap, tone: "text-glow-cyan" },
-          { label: "Portée", value: `${rangeLabel} PO`, icon: Crosshair, tone: "text-glow-violet" },
+          { label: "Coût", value: `${cur.apCost} PA`, icon: ICON_PA, tone: "text-glow-cyan" },
+          { label: "Portée", value: `${rangeLabel} PO`, icon: ICON_PO, tone: "text-glow-violet" },
           ...(est && est.critChance > 0
-            ? [{ label: "Critique", value: `${est.critChance}%`, icon: Star, tone: "text-glow-gold" }]
+            ? [{ label: "Critique", value: `${est.critChance}%`, icon: ICON_CRITIQUE, tone: "text-glow-gold" }]
             : []),
         ]
       : [];
@@ -1351,7 +1354,7 @@ function SpellDetail({
 
       <aside className="rounded-2xl bg-[#2f2f2f] p-4 ring-1 ring-black/25 lg:sticky lg:top-4">
         <h4 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-white">
-          <Sword className="h-5 w-5 text-glow-ember" />
+          <DofusIcon name="weapon" size={20} />
           Dégâts
         </h4>
         {damageLines.length > 0 ? (
@@ -1381,7 +1384,7 @@ function SpellDetail({
                   {line.elements.length > 1 && (
                     <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-1.5 text-sm font-bold tabular-nums">
                       <span className="flex items-center gap-1.5 text-glow-gold">
-                        <Star className="h-3.5 w-3.5 shrink-0" />
+                        <DofusIcon name="critique" size={14} />
                         {line.totalMin} - {line.totalMax}
                       </span>
                       {line.totalCritMax > 0 && (
@@ -1435,27 +1438,20 @@ function RoomStatIcon({ stat }: { stat: string }) {
   const dofus = effectIconFromName(stat);
   if (dofus) return <DofusIcon name={dofus} size={16} />;
   const n = normalizeName(stat);
-  const Icon = n.includes("feu")
-    ? Flame
+  const fallback: DofusIconName = n.includes("feu")
+    ? "feu"
     : n.includes("eau")
-      ? Droplet
+      ? "eau"
       : n.includes("air")
-        ? Wind
-        : n.includes("terre") || n.includes("neutre")
-          ? Mountain
-          : n.includes("poussee")
-            ? ChevronRight
-            : Sword;
-  const tone = n.includes("feu")
-    ? "text-glow-ember"
-    : n.includes("eau")
-      ? "text-glow-cyan"
-      : n.includes("air")
-        ? "text-glow-emerald"
-        : n.includes("terre") || n.includes("neutre")
-          ? "text-amber-400"
-          : "text-slate-300";
-  return <Icon className={`h-4 w-4 shrink-0 ${tone}`} />;
+        ? "air"
+        : n.includes("terre")
+          ? "terre"
+          : n.includes("neutre")
+            ? "neutre"
+            : n.includes("poussee")
+              ? "dmgPoussee"
+              : "weapon";
+  return <DofusIcon name={fallback} size={16} />;
 }
 
 function roomRankInfo(spell: RoomSpell, level: number): { key: "fRank" | "sRank" | "tRank"; level: number; index: number } | null {
@@ -1472,36 +1468,36 @@ function roomRankLevels(spell: RoomSpell): { key: string; level: number; active:
     .filter((rank) => rank.level > 0);
 }
 
-function roomCaracRows(carac: RoomCarac): { label: string; value: string; icon: typeof Crown; tone: string }[] {
-  const rows: { label: string; value: string; icon: typeof Crown; tone: string }[] = [];
-  if (carac.pa != null) rows.push({ label: "Coût", value: `${carac.pa} PA`, icon: Zap, tone: "text-glow-cyan" });
+function roomCaracRows(carac: RoomCarac): { label: string; value: string; icon: DofusUiIcon; tone: string }[] {
+  const rows: { label: string; value: string; icon: DofusUiIcon; tone: string }[] = [];
+  if (carac.pa != null) rows.push({ label: "Coût", value: `${carac.pa} PA`, icon: ICON_PA, tone: "text-glow-cyan" });
   if (carac.po) {
     rows.push({
       label: "Portée",
       value: `${carac.po.replace(/\s*-\s*/g, " - ")}${carac.alterableRange ? " (modifiable)" : ""}`,
-      icon: Crosshair,
+      icon: ICON_PO,
       tone: "text-glow-violet",
     });
   }
-  if (carac.cc != null) rows.push({ label: "Critique", value: `${carac.cc}%`, icon: Star, tone: "text-glow-gold" });
+  if (carac.cc != null) rows.push({ label: "Critique", value: `${carac.cc}%`, icon: ICON_CRITIQUE, tone: "text-glow-gold" });
   if (carac.area) {
     const size = carac.area.size ?? 1;
     rows.push({
       label: "Zone",
       value: `${areaLabel(carac.area.type)} ${size} case${size > 1 ? "s" : ""}`,
-      icon: Layers,
+      icon: ICON_ZONE,
       tone: "text-glow-emerald",
     });
   }
-  if (carac.line) rows.push({ label: "Lancer", value: "En ligne", icon: Crosshair, tone: "text-slate-300" });
-  if (carac.diagonale) rows.push({ label: "Lancer", value: "En diagonale", icon: Crosshair, tone: "text-slate-300" });
-  if (carac.throughObstacles === false) rows.push({ label: "Ligne de vue", value: "Requise", icon: Eye, tone: "text-slate-300" });
+  if (carac.line) rows.push({ label: "Lancer", value: "En ligne", icon: ICON_LINE, tone: "text-slate-300" });
+  if (carac.diagonale) rows.push({ label: "Lancer", value: "En diagonale", icon: ICON_LINE, tone: "text-slate-300" });
+  if (carac.throughObstacles === false) rows.push({ label: "Ligne de vue", value: "Requise", icon: ICON_PROSPECTION, tone: "text-slate-300" });
   if (carac.perTurnPerPlayer) {
-    rows.push({ label: "Limitation par tour par cible", value: String(carac.perTurnPerPlayer), icon: Gauge, tone: "text-slate-300" });
+    rows.push({ label: "Limitation par tour par cible", value: String(carac.perTurnPerPlayer), icon: ICON_TOUR, tone: "text-slate-300" });
   }
-  if (carac.stack) rows.push({ label: "Cumul max. des effets", value: String(carac.stack), icon: Layers, tone: "text-slate-300" });
-  if (carac.perTurn) rows.push({ label: "Utilisations par tour", value: String(carac.perTurn), icon: RotateCw, tone: "text-slate-300" });
-  if (carac.interval) rows.push({ label: "Relance", value: `${carac.interval} tour${carac.interval > 1 ? "s" : ""}`, icon: RotateCcw, tone: "text-slate-300" });
+  if (carac.stack) rows.push({ label: "Cumul max. des effets", value: String(carac.stack), icon: ICON_SPECIAL, tone: "text-slate-300" });
+  if (carac.perTurn) rows.push({ label: "Utilisations par tour", value: String(carac.perTurn), icon: ICON_TOUR, tone: "text-slate-300" });
+  if (carac.interval) rows.push({ label: "Relance", value: `${carac.interval} tour${carac.interval > 1 ? "s" : ""}`, icon: ICON_TOUR, tone: "text-slate-300" });
   return rows;
 }
 
@@ -1580,7 +1576,7 @@ function DamageEstimateCard({
     <div className="rounded-xl bg-void-900/50 p-4 ring-1 ring-white/5">
       <p className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
         <span className="inline-flex items-center gap-1.5">
-          <Sword className={`h-3.5 w-3.5 ${accent}`} /> {title}
+          <DofusIcon name="weapon" size={14} /> {title}
         </span>
         {hint && <span className="normal-case tracking-normal text-glow-violet/80">{hint}</span>}
       </p>
@@ -1599,7 +1595,7 @@ function DamageEstimateCard({
       {critChance > 0 && (
         <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2.5">
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-glow-gold">
-            <Star className="h-3.5 w-3.5" /> Critique {critChance}%
+            <DofusIcon name="critique" size={14} /> Critique {critChance}%
           </span>
           <span className="font-display text-base font-bold tabular-nums text-glow-gold">
             {critMin}–{critMax}
@@ -1920,7 +1916,7 @@ function CharacterPanel({
               title="Pivoter à gauche"
               className="no-drag grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
             >
-              <RotateCcw className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => setGender((g) => (g === "m" ? "f" : "m"))}
@@ -1934,7 +1930,7 @@ function CharacterPanel({
               title="Pivoter à droite"
               className="no-drag grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
             >
-              <RotateCw className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -2160,13 +2156,13 @@ function StatChip({
   tone,
   suffix,
 }: {
-  icon: typeof Crown;
+  icon: DofusUiIcon;
   label: string;
   value: number;
   tone?: string;
   suffix?: string;
 }) {
-  const dofus = effectIconFromName(label); // icône Dofus dérivée du libellé (sinon repli lucide)
+  const dofus = effectIconFromName(label); // icône Dofus dérivée du libellé (sinon repli Dofus)
   return (
     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
       {dofus ? (

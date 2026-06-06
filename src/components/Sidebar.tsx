@@ -1,75 +1,60 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { getEquipment } from "../api/dofusdude";
 import { useStore, actions } from "../store/store";
 import { skinatorEngine, useEngineOpen } from "../store/skinatorEngine";
 import DofusIcon, { type DofusIconName } from "./DofusIcon";
 import {
-  LayoutDashboard,
-  Swords,
-  Shirt,
-  Hammer,
-  BookOpen,
-  CalendarDays,
-  Skull,
-  Compass,
-  Palette,
-  Images,
-  Layers3,
-  Users,
-  Boxes,
-  Tent,
-  Trophy,
-  Settings,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-} from "lucide-react";
+} from "./DofusIcons";
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// `dofus` = icône Dofus officielle (prioritaire) ; sinon `icon` lucide en repli.
-type Item = { to: string; label: string; icon: typeof Swords; end?: boolean; dofus?: DofusIconName };
+type Item = { to: string; label: string; end?: boolean; dofus: DofusIconName };
 
 const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
   {
-    items: [{ to: "/", label: "Accueil", icon: LayoutDashboard, end: true }],
+    items: [{ to: "/", label: "Accueil", dofus: "world", end: true }],
   },
   {
     title: "Jeu",
     collapsible: true,
     items: [
-      { to: "/donjons", label: "Donjons", icon: Swords },
-      { to: "/guides", label: "Guides", icon: BookOpen, dofus: "quete" },
+      { to: "/donjons", label: "Donjons", dofus: "dungeon" },
+      { to: "/guides", label: "Guides", dofus: "book" },
     ],
   },
   {
     title: "Encyclopédie",
     collapsible: true,
     items: [
-      { to: "/classes", label: "Classes", icon: Users },
-      { to: "/monstres", label: "Monstres", icon: Skull, dofus: "skull" },
-      { to: "/stuffinator", label: "Équipements", icon: Shirt, dofus: "weapon" },
-      { to: "/panoplies", label: "Panoplies", icon: Layers3, dofus: "panoplie" },
-      { to: "/objets", label: "Objets & Ressources", icon: Boxes },
-      { to: "/havre-sac", label: "Havre-Sacs", icon: Tent },
-      { to: "/succes", label: "Succès", icon: Trophy, dofus: "starFilled" },
+      { to: "/classes", label: "Classes", dofus: "emote" },
+      { to: "/monstres", label: "Monstres", dofus: "bestiary" },
+      { to: "/stuffinator", label: "Équipements", dofus: "menuStuffs" },
+      { to: "/panoplies", label: "Panoplies", dofus: "menuItemsets" },
+      { to: "/objets", label: "Objets & Ressources", dofus: "inventory" },
+      { to: "/havre-sac", label: "Havre-Sacs", dofus: "havenbag" },
+      { to: "/succes", label: "Succès", dofus: "trophy" },
     ],
   },
   {
     title: "Skin",
     collapsible: true,
     items: [
-      { to: "/skinator", label: "Skinator", icon: Palette },
-      { to: "/mes-skins", label: "Mes Skins", icon: Images },
+      { to: "/skinator", label: "Skinator", dofus: "character" },
+      { to: "/mes-skins", label: "Mes Skins", dofus: "glyph" },
     ],
   },
   {
     title: "Outils",
     collapsible: true,
     items: [
-      { to: "/builder", label: "Builder", icon: Hammer },
-      { to: "/chasse", label: "Chasse au trésor", icon: Compass },
-      { to: "/almanax", label: "Almanax", icon: CalendarDays },
+      { to: "/builder", label: "Builder", dofus: "characteristic" },
+      { to: "/chasse", label: "Chasse au trésor", dofus: "map" },
+      { to: "/almanax", label: "Almanax", dofus: "calendar" },
     ],
   },
 ];
@@ -93,6 +78,41 @@ export default function Sidebar() {
   // Quitter le Skinator avec le moteur ouvert → on intercepte pour proposer un choix.
   const engineOpen = useEngineOpen();
   const guardLeave = location.pathname === "/skinator" && engineOpen;
+
+  // Mémoire de section : dernier chemin visité sous chaque onglet (le temps de la session).
+  // Recliquer un onglet ramène donc sur la sous-page quittée (ex. la fiche d'un monstre/donjon
+  // ouverte), pas sur la liste — sauf si on est déjà dans la section (là, on va à la liste).
+  // Sur une fiche objet /objets/:id, l'item peut être un ÉQUIPEMENT (→ onglet Équipements)
+  // ou une ressource (→ onglet Objets). On lit le même cache que la page détail (queryKey
+  // ["item-equip", id]) pour décider quel onglet surligner. `itemSection` ne vaut que sur ces
+  // pages ; ailleurs il est null → comportement normal (NavLink isActive) pour tout le reste.
+  const itemMatch = location.pathname.match(/^\/objets\/(\d+)/);
+  const itemId = itemMatch ? Number(itemMatch[1]) : null;
+  const { data: equipItem } = useQuery({
+    queryKey: ["item-equip", itemId],
+    queryFn: ({ signal }) => getEquipment(itemId!, signal).catch(() => null),
+    enabled: itemId != null,
+  });
+  const itemSection = itemId == null ? null : equipItem ? "/stuffinator" : "/objets";
+
+  // Mémoire de section : dernier chemin visité par onglet. Pour une fiche objet, on rattache
+  // la save à la section RÉELLE (itemSection) — pas à /objets via l'URL — afin que recliquer
+  // l'onglet d'origine (ex. Équipements) y revienne. On attend que le type soit connu.
+  const sectionMemory = useRef<Record<string, string>>({});
+  useEffect(() => {
+    const path = location.pathname;
+    if (itemId != null) {
+      if (itemSection) sectionMemory.current[itemSection] = path;
+      return;
+    }
+    for (const g of GROUPS) {
+      for (const it of g.items) {
+        if (it.to !== "/" && (path === it.to || path.startsWith(it.to + "/"))) {
+          sectionMemory.current[it.to] = path;
+        }
+      }
+    }
+  }, [location.pathname, itemId, itemSection]);
 
   return (
     <aside
@@ -140,13 +160,30 @@ export default function Sidebar() {
             {groupOpen &&
               group.items.map((item) => {
               const isGuides = item.to === "/guides";
-              const to = isGuides && lastGuide ? `/guides/${lastGuide}` : item.to;
+              // « Dans la section » inclut le cas fiche objet rattachée à cet onglet
+              // (itemSection) → recliquer l'onglet actif y ramène à la liste, et depuis
+              // une AUTRE section on revient à l'item mémorisé.
+              const inSection =
+                location.pathname === item.to ||
+                location.pathname.startsWith(item.to + "/") ||
+                item.to === itemSection;
+              const remembered = sectionMemory.current[item.to];
+              // Guides : repère via le store (persistant). Autres sections : mémoire de session.
+              // Si on est déjà dans la section, on cible la liste (item.to) pour pouvoir y revenir.
+              const to = isGuides && lastGuide ? `/guides/${lastGuide}` : !inSection && remembered ? remembered : item.to;
               const forceActive = isGuides && location.pathname.startsWith("/guides");
+              // Sur une fiche objet, l'onglet actif dépend du type (équipement → Équipements,
+              // ressource → Objets) ; partout ailleurs, highlight normal (NavLink isActive).
+              const activeFor = (isActive: boolean) =>
+                itemSection ? item.to === itemSection : isActive || forceActive;
               return (
                 <NavLink
                   key={item.to}
                   to={to}
                   end={item.end}
+                  // Arrivée « par la sidebar » = interne à la section → la fiche éventuelle
+                  // propose un retour vers la liste de la section (et non un navigate(-1)).
+                  state={{ fromSection: true }}
                   title={collapsed ? item.label : undefined}
                   onClick={(e) => {
                     if (guardLeave && to !== "/skinator") {
@@ -158,12 +195,12 @@ export default function Sidebar() {
                     clsx(
                       "no-drag group relative flex items-center rounded-xl text-sm font-medium transition-colors",
                       collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
-                      isActive || forceActive ? "text-white" : "text-slate-400 hover:text-slate-200",
+                      activeFor(isActive) ? "text-white" : "text-slate-400 hover:text-slate-200",
                     )
                   }
                 >
                   {({ isActive }) => {
-                    const active = isActive || forceActive;
+                    const active = activeFor(isActive);
                     return (
                       <>
                         {active && (
@@ -173,20 +210,11 @@ export default function Sidebar() {
                             transition={{ type: "spring", stiffness: 400, damping: 32 }}
                           />
                         )}
-                        {item.dofus ? (
-                          <DofusIcon
-                            name={item.dofus}
-                            size={18}
-                            className={clsx("relative transition", active ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
-                          />
-                        ) : (
-                          <item.icon
-                            className={clsx(
-                              "relative h-[18px] w-[18px] shrink-0 transition-colors",
-                              active ? "text-glow-violet" : "text-slate-500 group-hover:text-slate-300",
-                            )}
-                          />
-                        )}
+                        <DofusIcon
+                          name={item.dofus}
+                          size={18}
+                          className={clsx("relative transition", active ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
+                        />
                         {!collapsed && <span className="relative truncate">{item.label}</span>}
                       </>
                     );
@@ -202,6 +230,7 @@ export default function Sidebar() {
       <div className="mt-auto border-t border-white/5 p-3">
         <NavLink
           to="/parametres"
+          state={{ fromSidebar: true }}
           title={collapsed ? "Paramètres" : undefined}
           onClick={(e) => {
             if (guardLeave) {
@@ -226,11 +255,10 @@ export default function Sidebar() {
                   transition={{ type: "spring", stiffness: 400, damping: 32 }}
                 />
               )}
-              <Settings
-                className={clsx(
-                  "relative h-[18px] w-[18px] shrink-0 transition-colors",
-                  isActive ? "text-glow-violet" : "text-slate-500 group-hover:text-slate-300",
-                )}
+              <DofusIcon
+                name="settingsGear"
+                size={18}
+                className={clsx("relative transition", isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
               />
               {!collapsed && <span className="relative truncate">Paramètres</span>}
             </>

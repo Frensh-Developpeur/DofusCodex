@@ -1,7 +1,8 @@
 import { Fragment, ReactNode, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Swords, ScrollText, Skull, ExternalLink, MapPin, Check } from "lucide-react";
+import DofusIcon from "../components/DofusIcon";
+import { ExternalLink, MapPin, Check } from "../components/DofusIcons";
 import { resolveQuestDungeon } from "../api/dofusdb";
 import { useStore, actions } from "../store/store";
 
@@ -53,7 +54,7 @@ const CHIP =
 
 // ganymede-dofus.com (ancien domaine, avant migration vers ganymede-app.com) est mort :
 // ses icônes génériques (quêtes, donjons) renvoient une erreur réseau. On les ignore
-// et on retombe sur l'icône lucide. Les icônes api.dofusdb.fr (items, monstres) restent.
+// et on retombe sur l'icône Dofus. Les icônes api.dofusdb.fr (items, monstres) restent.
 function isUsableImg(url?: string): url is string {
   return !!url && !url.includes("ganymede-dofus.com");
 }
@@ -90,13 +91,13 @@ function QuestRef({ id, image, children }: { id?: number; image?: string; childr
         className="no-drag hover:brightness-125"
       >
         <span className={`${CHIP} border-glow-ember/30 bg-glow-ember/15 text-glow-ember`}>
-          <Swords className="h-3.5 w-3.5" /> {children}
+          <DofusIcon name="dungeon" size={14} /> {children}
         </span>
       </Link>
     );
   return (
     <span className={`${CHIP} border-glow-cyan/30 bg-glow-cyan/15 text-glow-cyan`}>
-      <EntityIcon url={image} fallback={<ScrollText className="h-3.5 w-3.5" />} />
+      <EntityIcon url={image} fallback={<DofusIcon name="dofusQuest" size={14} />} />
       {children}
     </span>
   );
@@ -146,7 +147,7 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
           <div key={key} className="my-2 rounded-xl border border-glow-gold/25 bg-glow-gold/[0.06] p-3">
             {title && (
               <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                <ScrollText className="h-4 w-4 shrink-0 text-glow-gold" />
+                <DofusIcon name="dofusQuest" size={16} />
                 <span className="font-semibold text-glow-gold">{title}</span>
                 {statusLabel && (
                   <span className="rounded-full bg-glow-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-glow-gold">
@@ -189,7 +190,7 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
       const img = attr(el, "imageurl");
       const chip = (
         <span className={`${CHIP} border-glow-purple/30 bg-glow-purple/15 text-glow-violet`}>
-          <EntityIcon url={img} fallback={<Swords className="h-3.5 w-3.5" />} />
+          <EntityIcon url={img} fallback={<DofusIcon name="chestGrey" size={14} />} />
           {kids}
         </span>
       );
@@ -214,7 +215,7 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
       const img = attr(el, "imageurl");
       const chip = (
         <span className={`${CHIP} border-glow-ember/30 bg-glow-ember/15 text-glow-ember`}>
-          <EntityIcon url={img} fallback={<Swords className="h-3.5 w-3.5" />} />
+          <EntityIcon url={img} fallback={<DofusIcon name="dungeon" size={14} />} />
           {kids}
         </span>
       );
@@ -236,7 +237,7 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
       const img = attr(el, "imageurl");
       const chip = (
         <span className={`${CHIP} border-glow-rose/30 bg-glow-rose/15 text-glow-rose`}>
-          <EntityIcon url={img} fallback={<Skull className="h-3.5 w-3.5" />} />
+          <EntityIcon url={img} fallback={<DofusIcon name="monsterGrey" size={14} />} />
           {kids}
         </span>
       );

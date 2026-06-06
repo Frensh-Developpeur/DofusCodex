@@ -1,18 +1,19 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Search, Skull } from "lucide-react";
+import { Search } from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import { listMonsters } from "../api/dofusdb";
 import { useDebounce } from "../hooks/useDebounce";
+import { useViewState } from "../lib/viewState";
 import { dedupeById } from "../lib/dedupe";
 import { levelTone } from "../data/meta";
 import { Pill, SectionHeader, Skeleton, EmptyState, ErrorState, LoadMore, fadeUp } from "../components/ui";
 
 export default function Monsters() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [bossOnly, setBossOnly] = useState(false);
+  const [search, setSearch] = useViewState("monsters:search", "");
+  const [bossOnly, setBossOnly] = useViewState("monsters:bossOnly", false);
   const debounced = useDebounce(search);
 
   const { data, isLoading, isError, error, refetch, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -58,7 +59,7 @@ export default function Monsters() {
               : "bg-white/5 text-slate-400 hover:bg-white/10"
           }`}
         >
-          <Skull className="h-3.5 w-3.5" /> Boss uniquement
+          <DofusIcon name="boss" size={14} /> Boss uniquement
         </button>
       </div>
 
@@ -90,7 +91,7 @@ export default function Monsters() {
                 variants={fadeUp}
                 custom={i % 16}
                 whileHover={{ y: -4 }}
-                onClick={() => navigate(`/monstres/${m.id}`)}
+                onClick={() => navigate(`/monstres/${m.id}`, { state: { fromSection: true } })}
                 className="glass glass-hover no-drag group flex flex-col items-center rounded-2xl p-4 text-center"
               >
                 <div className="relative mb-2">
@@ -103,7 +104,7 @@ export default function Monsters() {
                   />
                   {m.isBoss && (
                     <span className="absolute -right-1 -top-1 rounded-full bg-glow-rose p-0.5">
-                      <Skull className="h-3 w-3 text-white" />
+                      <DofusIcon name="boss" size={12} />
                     </span>
                   )}
                 </div>

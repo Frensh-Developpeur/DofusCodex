@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, Star, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Loader2 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
+import DetailBack from "../components/DetailBack";
 import { listBreeds, getClassSpells, type Breed, type ClassSpell } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
 import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
@@ -27,7 +29,7 @@ function useClassRender(id: number) {
 }
 
 export default function Classes() {
-  const [openId, setOpenId] = useState<number | null>(null);
+  const navigate = useNavigate();
   const { data: breeds, isLoading, isError, refetch } = useQuery({
     queryKey: ["breeds"],
     queryFn: ({ signal }) => listBreeds(signal),
@@ -60,12 +62,10 @@ export default function Classes() {
           className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
         >
           {breeds.map((b, i) => (
-            <ClassCard key={b.id} breed={b} index={i} onOpen={() => setOpenId(b.id)} />
+            <ClassCard key={b.id} breed={b} index={i} onOpen={() => navigate(`/classes/${b.id}`, { state: { fromSection: true } })} />
           ))}
         </motion.div>
       )}
-
-      <AnimatePresence>{openId !== null && <ClassModal id={openId} onClose={() => setOpenId(null)} />}</AnimatePresence>
     </div>
   );
 }
@@ -140,21 +140,20 @@ function StarRating({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <span className="inline-flex items-center gap-0.5" title={`Difficulté ${n}/3`}>
       {[1, 2, 3].map((d) => (
-        <Star
+        <DofusIcon
           key={d}
-          style={{ width: size, height: size }}
-          className={
-            d <= n
-              ? "fill-glow-gold text-glow-gold drop-shadow-[0_0_4px_rgba(245,182,76,0.5)]"
-              : "fill-white/5 text-white/20"
-          }
+          name={d <= n ? "starFilled" : "starEmpty"}
+          size={size}
+          className={d <= n ? "drop-shadow-[0_0_4px_rgba(245,182,76,0.5)]" : "opacity-35"}
         />
       ))}
     </span>
   );
 }
 
-function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
+export function ClassDetail() {
+  const { id: idParam } = useParams();
+  const id = Number(idParam);
   const { data: breeds } = useQuery({ queryKey: ["breeds"], queryFn: ({ signal }) => listBreeds(signal), staleTime: Infinity });
   const breed: Breed | undefined = breeds?.find((b) => b.id === id);
   const { data: render } = useClassRender(id);
@@ -184,21 +183,10 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
   const sel = allSpells.find((s) => s.id === selId) ?? allSpells[0];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 16 }}
-        transition={{ type: "spring", stiffness: 260, damping: 26 }}
-        onClick={(e) => e.stopPropagation()}
-        className="glass flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl ring-1 ring-white/10"
-      >
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-3xl">
+      <DetailBack />
+
+      <div className="glass flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/10">
         <div className="relative flex items-center gap-4 overflow-hidden border-b border-white/10 p-4">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_50%,rgba(124,92,255,0.18),transparent_45%)]" />
           <div className="relative grid h-20 w-20 shrink-0 place-items-center">
@@ -217,16 +205,13 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
               <span>{DIFFICULTY_LABEL[Math.max(1, Math.min(3, breed?.complexity ?? 1))]}</span>
             </div>
           </div>
-          <button onClick={onClose} className="no-drag relative rounded-lg bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="p-4">
           {desc && <p className="mb-5 text-sm leading-6 text-slate-300">{desc}</p>}
 
           <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <Sparkles className="h-3.5 w-3.5 text-glow-violet" /> Sorts
+            <DofusIcon name="spells" size={14} /> Sorts
           </p>
           {spellsLoading ? (
             <div className="flex flex-wrap gap-1.5">
@@ -274,7 +259,7 @@ function ClassModal({ id, onClose }: { id: number; onClose: () => void }) {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

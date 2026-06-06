@@ -8,15 +8,9 @@ import {
   Loader2,
   Github,
   ShieldCheck,
-  HardDrive,
-  Database,
-  Swords,
-  BookOpen,
-  Hammer,
-  Palette,
-  Heart,
-  CheckCircle2,
-} from "lucide-react";
+  dofusUiIcon,
+} from "../components/DofusIcons";
+import DofusIcon from "../components/DofusIcon";
 import { useStore, actions } from "../store/store";
 import { getSyncState, type SyncState } from "../lib/guideStore";
 import { SectionHeader, fadeUp } from "../components/ui";
@@ -28,6 +22,13 @@ const SOURCES = [
   { name: "DofusDB", desc: "Donjons, monstres, drops, quêtes, classes, chasse", url: "https://dofusdb.fr" },
   { name: "Ganymède", desc: "Guides communautaires", url: "https://ganymede-app.com" },
 ];
+
+const DungeonStatIcon = dofusUiIcon("dungeon");
+const FavoriteStatIcon = dofusUiIcon("etoile");
+const QuestStatIcon = dofusUiIcon("success");
+const BuildStatIcon = dofusUiIcon("characteristic");
+const SkinStatIcon = dofusUiIcon("character");
+const GuideStatIcon = dofusUiIcon("questGroup");
 
 function platformLabel(p?: string): string {
   if (p === "darwin") return "macOS";
@@ -100,12 +101,12 @@ export default function Settings() {
   };
 
   const stats = [
-    { icon: Heart, label: "Donjons favoris", value: favoriteDungeons, tone: "text-glow-rose" },
-    { icon: Swords, label: "Donjons terminés", value: doneDungeons, tone: "text-glow-violet" },
-    { icon: CheckCircle2, label: "Quêtes terminées", value: doneQuests, tone: "text-glow-emerald" },
-    { icon: Hammer, label: "Builds enregistrés", value: builds, tone: "text-glow-gold" },
-    { icon: Palette, label: "Skins sauvegardés", value: skinDesigns + barbofusSkins, tone: "text-glow-cyan" },
-    { icon: BookOpen, label: "Guides suivis / favoris", value: doneGuides + favoriteGuides, tone: "text-glow-violet" },
+    { icon: FavoriteStatIcon, label: "Donjons favoris", value: favoriteDungeons, tone: "text-glow-rose" },
+    { icon: DungeonStatIcon, label: "Donjons terminés", value: doneDungeons, tone: "text-glow-violet" },
+    { icon: QuestStatIcon, label: "Quêtes terminées", value: doneQuests, tone: "text-glow-emerald" },
+    { icon: BuildStatIcon, label: "Builds enregistrés", value: builds, tone: "text-glow-gold" },
+    { icon: SkinStatIcon, label: "Skins sauvegardés", value: skinDesigns + barbofusSkins, tone: "text-glow-cyan" },
+    { icon: GuideStatIcon, label: "Guides suivis / favoris", value: doneGuides + favoriteGuides, tone: "text-glow-violet" },
   ];
 
   return (
@@ -176,7 +177,7 @@ export default function Settings() {
         {/* Sources de données */}
         <section className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2.5">
-            <Database className="h-5 w-5 text-glow-cyan" />
+            <DofusIcon name="world" size={20} />
             <h2 className="font-display text-lg font-bold text-white">Données live</h2>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
@@ -204,7 +205,7 @@ export default function Settings() {
         {/* Mes données locales */}
         <section className="glass rounded-2xl p-5 lg:col-span-2">
           <div className="flex items-center gap-2.5">
-            <HardDrive className="h-5 w-5 text-glow-emerald" />
+            <DofusIcon name="workbenchOff" size={20} />
             <h2 className="font-display text-lg font-bold text-white">Mes données</h2>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
@@ -225,7 +226,7 @@ export default function Settings() {
             ))}
             <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
               <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-glow-cyan" />
+                <DofusIcon name="questGroup" size={16} />
                 <span className="font-display text-xl font-extrabold text-white">
                   {sync ? sync.storedCount : "—"}
                 </span>

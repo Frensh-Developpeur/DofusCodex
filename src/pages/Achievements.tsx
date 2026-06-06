@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Search, Trophy, ArrowUpRight } from "lucide-react";
+import { ChevronDown, Search } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
 import {
   listAchievementCategories,
@@ -12,8 +12,7 @@ import {
   type Achievement,
 } from "../api/dofusdb";
 import { SectionHeader, Skeleton, ErrorState, EmptyState, fadeUp } from "../components/ui";
-import ItemModal from "../components/ItemModal";
-import MonsterModal from "../components/MonsterModal";
+import { useViewState } from "../lib/viewState";
 
 const DUNGEONS_ROOT = 3; // catégorie racine « Donjons »
 
@@ -29,12 +28,11 @@ export default function Achievements() {
     staleTime: Infinity,
   });
 
-  const [selected, setSelected] = useState<number>(DEFAULT_CATEGORY);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useViewState<number>("achievements:selected", DEFAULT_CATEGORY);
+  const [expanded, setExpanded] = useViewState<Set<number>>("achievements:expanded", new Set());
+  const [search, setSearch] = useViewState("achievements:search", "");
+  const navigate = useNavigate();
   const [openAch, setOpenAch] = useState<number | null>(null);
-  const [openItem, setOpenItem] = useState<number | null>(null);
-  const [openMonster, setOpenMonster] = useState<number | null>(null);
 
   // Construit l'arbre : racines (parentId 0) triées par order, chacune avec ses enfants.
   const tree = useMemo<TreeNode[]>(() => {
@@ -143,7 +141,7 @@ export default function Achievements() {
                           : "text-slate-300 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <Trophy className="h-4 w-4 shrink-0 text-glow-gold" />
+                      <DofusIcon name="trophy" size={16} />
                       <span className="min-w-0 flex-1 truncate">{root.name.fr}</span>
                       {hasKids && (
                         <ChevronDown
@@ -204,7 +202,7 @@ export default function Achievements() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2 rounded-xl border border-glow-gold/40 bg-void-900/60 px-4 py-2">
-                <DofusIcon name="starFilled" size={20} />
+                <DofusIcon name="trophy" size={20} />
                 <span className="font-display text-2xl font-extrabold text-glow-gold">{totalPoints}</span>
                 <span className="text-xs font-semibold text-glow-gold/70">pts</span>
               </div>
@@ -247,8 +245,8 @@ export default function Achievements() {
                     index={i}
                     open={openAch === a.id}
                     onToggle={() => setOpenAch((cur) => (cur === a.id ? null : a.id))}
-                    onOpenItem={setOpenItem}
-                    onOpenMonster={setOpenMonster}
+                    onOpenItem={(itemId) => navigate(`/objets/${itemId}`)}
+                    onOpenMonster={(mid) => navigate(`/monstres/${mid}`)}
                     isDungeonCat={isDungeonCat}
                   />
                 ))}
@@ -257,13 +255,6 @@ export default function Achievements() {
           </section>
         </div>
       )}
-
-      <AnimatePresence>
-        {openItem !== null && (
-          <ItemModal id={openItem} onClose={() => setOpenItem(null)} onSelectItem={setOpenItem} />
-        )}
-        {openMonster !== null && <MonsterModal id={openMonster} onClose={() => setOpenMonster(null)} />}
-      </AnimatePresence>
     </div>
   );
 }
@@ -283,8 +274,7 @@ function DungeonLink({ bossId }: { bossId: number }) {
       to={`/donjons/${dungeon.id}`}
       className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-glow-purple/40 bg-glow-purple/15 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-glow-purple/25"
     >
-      <DofusIcon name="weapon" size={14} /> Voir le donjon
-      <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
+      <DofusIcon name="dungeon" size={14} /> Voir le donjon
     </Link>
   );
 }
@@ -447,7 +437,7 @@ function AchievementRow({
                           className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-glow-rose/30 bg-glow-rose/10 px-2.5 py-1.5 text-xs font-semibold text-glow-rose transition hover:bg-glow-rose/20"
                           title={`Voir ${m.name}`}
                         >
-                          <DofusIcon name="skull" size={14} /> {m.name}
+                          <DofusIcon name="monsterGrey" size={14} /> {m.name}
                         </button>
                       ))}
                   </div>

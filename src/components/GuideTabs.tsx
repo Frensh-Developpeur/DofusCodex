@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutGrid, X, CheckCircle2 } from "lucide-react";
+import { LayoutGrid, X, CheckCircle2 } from "./DofusIcons";
 import { getGuideListData, getGuideData } from "../lib/guideStore";
 import { useStore, actions } from "../store/store";
 

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Trash2, AlertTriangle, Loader2 } from "./DofusIcons";
 import { actions } from "../store/store";
 import { idbClearAll } from "../lib/guideDb";
+import { clearViewState } from "../lib/viewState";
 
 // Liste affichée dans l'avertissement.
 const WIPES = [
@@ -24,6 +25,7 @@ export default function ClearCacheButton({ collapsed = false }: { collapsed?: bo
     setBusy(true);
     try {
       actions.resetAll(); // store + localStorage
+      clearViewState(); // filtres/recherche/scroll mémorisés
       await idbClearAll(); // cache guides (IndexedDB)
       qc.clear(); // cache requêtes en mémoire
     } catch {

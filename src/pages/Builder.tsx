@@ -5,10 +5,8 @@ import { ArrowLeft, ArrowRight } from "../components/DofusIcons";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
 import {
-  X,
   ChevronRight,
   Shuffle,
-  Save,
   ChevronDown,
   dofusUiIcon,
   type DofusUiIcon,
@@ -51,6 +49,8 @@ const CARAC_ROW_ICON: Record<string, DofusIconName> = {
   Relance: "sablier",
   Zone: "areaCircle",
   Lancer: "areaLine",
+  "Limitation par tour par cible": "reset",
+  "Utilisations par tour": "reset",
 };
 
 const ICON_FORCE = dofusUiIcon("terre");
@@ -305,29 +305,21 @@ function BuildEditor({ build }: { build: Build }) {
   const [levelOpen, setLevelOpen] = useState(false);
   const [selectedSpellId, setSelectedSpellId] = useState<number | null>(null);
 
-  // Auto-save : à chaque modification, on patche le build dans le store (debounce léger).
-  const skipFirst = useRef(true);
-  useEffect(() => {
-    if (skipFirst.current) {
-      skipFirst.current = false;
-      return;
-    }
-    const t = window.setTimeout(() => {
-      actions.updateBuild(build.id, {
-        name: buildName.trim() || "Build sans nom",
-        slots,
-        breedId,
-        level,
-        caracs,
-        parch,
-        exos,
-        target,
-      });
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1400);
-    }, 500);
-    return () => window.clearTimeout(t);
-  }, [build.id, buildName, slots, breedId, level, caracs, parch, exos, target]);
+  // Sauvegarde manuelle : patche le build dans le store au clic sur « Enregistrer ».
+  const save = () => {
+    actions.updateBuild(build.id, {
+      name: buildName.trim() || "Build sans nom",
+      slots,
+      breedId,
+      level,
+      caracs,
+      parch,
+      exos,
+      target,
+    });
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1400);
+  };
 
   const { data: breeds } = useQuery({ queryKey: ["breeds"], queryFn: ({ signal }) => listBreeds(signal), staleTime: Infinity });
   const breed = breeds?.find((b) => b.id === breedId);
@@ -715,13 +707,17 @@ function BuildEditor({ build }: { build: Build }) {
           </AnimatePresence>
         </div>
 
-        <span
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold transition ${
-            saved ? "text-glow-emerald" : "text-slate-500"
+        <button
+          onClick={save}
+          title="Enregistrer ce build"
+          className={`no-drag inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+            saved
+              ? "border-glow-emerald/40 bg-glow-emerald/15 text-glow-emerald"
+              : "border-glow-purple/40 bg-glow-purple/20 text-white hover:bg-glow-purple/30"
           }`}
         >
-          <Save className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{saved ? "Enregistré" : "Auto-save"}</span>
-        </span>
+          <DofusIcon name="bank" size={16} /> {saved ? "Enregistré" : "Enregistrer"}
+        </button>
         <button
           onClick={() => {
             actions.deleteBuild(build.id);
@@ -757,7 +753,7 @@ function BuildEditor({ build }: { build: Build }) {
             <div className="glass rounded-3xl p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
-                  <DofusIcon name="armor" size={20} /> Équipement
+                  <DofusIcon name="menuStuffs" size={20} /> Équipement
                 </h3>
                 <div className="flex items-center gap-2">
                   <Pill tone="slate">{filledCount}/{SLOTS.length}</Pill>
@@ -1093,7 +1089,7 @@ function BuildEditor({ build }: { build: Build }) {
                   onClick={() => setShowSpells(false)}
                   className="no-drag rounded-xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10"
                 >
-                  <X className="h-5 w-5" />
+                  <DofusIcon name="closeRed" size={20} />
                 </button>
               </div>
               {spellsLoading ? (
@@ -2050,7 +2046,7 @@ function SlotCard({
               title="Retirer"
               className="no-drag absolute right-1 top-1 z-10 rounded-lg bg-black/50 p-1 text-slate-300 opacity-0 transition hover:bg-glow-rose/25 hover:text-glow-rose group-hover:opacity-100"
             >
-              <X className="h-3.5 w-3.5" />
+              <DofusIcon name="closeRed" size={14} />
             </button>
             {exo && (
               <span className="pointer-events-none absolute bottom-1 left-1 z-10 rounded-md bg-glow-gold/20 px-1.5 py-0.5 text-[9px] font-bold leading-none text-glow-gold ring-1 ring-glow-gold/50">

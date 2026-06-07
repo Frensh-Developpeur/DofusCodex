@@ -2,7 +2,8 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
-import { Trash2, AlertTriangle, Loader2 } from "./DofusIcons";
+import { AlertTriangle, Loader2 } from "./DofusIcons";
+import DofusIcon from "./DofusIcon";
 import { actions } from "../store/store";
 import { idbClearAll } from "../lib/guideDb";
 import { clearViewState } from "../lib/viewState";
@@ -45,7 +46,7 @@ export default function ClearCacheButton({ collapsed = false }: { collapsed?: bo
             : "no-drag mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-slate-400 transition hover:border-glow-rose/30 hover:bg-glow-rose/10 hover:text-glow-rose"
         }
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <DofusIcon name="closeRed" size={14} />
         {!collapsed && " Vider le cache"}
       </button>
 
@@ -103,7 +104,7 @@ export default function ClearCacheButton({ collapsed = false }: { collapsed?: bo
                     disabled={busy}
                     className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-glow-rose/40 bg-glow-rose/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-glow-rose/30 disabled:opacity-60"
                   >
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <DofusIcon name="closeRed" size={16} />}
                     Tout supprimer
                   </button>
                 </div>

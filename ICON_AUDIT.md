@@ -121,7 +121,72 @@ suppression corrigée : `AnimatePresence mode="popLayout"` + transition `layout`
 propre, cartes qui se ré-empilent). Même correctif appliqué à **Mes Skins**. Imports
 Plus/Trash2/ChevronRight nettoyés.
 
-### ⏳ À FAIRE (pages restantes)
-⚠️ **Guides + GuideDetail = EN DERNIER** (recoupent tout le site via les cross-links `guideMarkup`).
-Reste : Builder (éditeur), Hunt (revérifier), Almanax,
-Settings (revérifier), TitleBar, composants (ui, SlotPicker, DetailBack, etc.).
+### ✅ Builder (éditeur `Builder.tsx`) — TERMINÉ
+**Slots** : toutes silhouettes officielles distinctes (slotHat/slotCloak/slotAmulet/slotBelt/
+slotBoots/slotRing/slotShield/slotWeapon/slotPet/slotDofus). **Sorts & dégâts** → `spells` ;
+**Dofus & Trophées** → `dofus` (œuf, nouvelle clé) ; **Équipement** → `menuStuffs` (= sidebar
+Équipements). **Supprimer le build** : tête de mort (`Trash2`=danger)→`closeRed`. **Rotation
+perso** : swirl/blason `tour`→**flèches `ArrowLeft`/`ArrowRight`**. **Réinitialiser** : `tour`→
+**`reset`** (flèche circulaire, asset client btnIcon_reset extrait, recoloré bleu #22d3ee).
+**Auto-save retiré** → vrai bouton **Enregistrer** (`bank`). Croix **fermer modale Sorts** +
+**Retirer un item** → **`closeRed`**. Modale sorts : « Limitation par tour par cible » +
+« Utilisations par tour » → **`reset`** (bleu). Classe (sélecteur) → `emote` (fait avant).
+Imports lucide nettoyés (Trash2/Save/X/RotateCcw/RotateCw). Clés ajoutées : `dofus`, `reset`.
+Laissés tels quels (OK utilisateur) : Panoplies=`menuItemsets`, Bonus spéciaux=`etoile`,
+Dommages & Résistances=`weapon`, Soutien & divers=`pv`, retour=`ArrowLeft`, Variante=`Shuffle`.
+
+### ✅ Hunt (`Hunt.tsx`) — TERMINÉ (passe finale)
+Sac/coffre du SectionHeader (`right`) **retiré**. « Quel est votre indice ? » : `pip`(ogrine)→
+**`zoom`** (loupe bleue). Flèche distance « x map » (DistanceBadge) : violet→**vert `#34d399`**
+(via `tint`/masque). `DIR_ICON` mort retiré. Gardés : Position=`world`, Direction=`map`, Votre
+indice=`pp`, flèches directionnelles blanches, Continuer=`ChevronRight`, Données fiables=`BadgeCheck`.
+
+### ✅ Almanax (`Almanax.tsx` + `almanaxBonusStyle` meta.ts) — TERMINÉ
+Icônes de bonus refondues pour cohérence : loot/quality→**`reward`**, récolte/nature/pêche→
+**`resources`**, craft/forgemagie→**`job`** (outils, nouvelle clé job.png), montures/amour→
+**`mount`**. Gardés : xp, challenge=`epeesCroisees`, poverty=`kama`, music=`sagesse`, temporel=
+`sablier`, défaut=`etoile`. **Carte principale** : pastille type de bonus (à droite des kamas)
+`cadeau` statique → **`BonusIcon` dynamique**. « Aujourd'hui » (retour) `RotateCcw`(swirl)→
+**`reset`**. Fermer calendrier `X`→**`closeRed`**. Imports lucide nettoyés (Coins/RotateCcw/X).
+Clé ajoutée : `job`.
+
+### ✅ Settings (`Settings.tsx` + `ClearCacheButton.tsx`) — TERMINÉ
+« À propos » : `ShieldCheck`(blason)→**`info`**. « Mes données » : `workbenchOff`→`bank`→
+**`inventory`**. Guides (stat + téléchargés) : `questGroup`→**`book`** (= sidebar). « Vérifier les
+MAJ » : `RefreshCw`→**`reset`** (spinner Loader2 gardé). « Exporter mes données » : `Download`
+(=cadeau !)→**`bank`**. **Vider le cache** (Settings + sidebar) + **Tout supprimer** (modale) :
+`Trash2`(tête de mort)→**`closeRed`**. Sources « Données live » : icône `Github`→**`world`**,
+ouverture **navigateur externe** (`target="_blank"`→setWindowOpenHandler), **Barbofus ajouté**.
+Imports nettoyés (Download/ShieldCheck/Github/RefreshCw/Trash2). Laissés : Import=`Upload`,
+spinner=`Loader2`, stats (etoile/dungeon/success/characteristic/character).
+
+### ✅ Composants partagés (SlotPicker, DetailBack, ui.tsx) — VÉRIFIÉS
+SlotPicker (Search=loupe, X=close, tris=flèches vertes), DetailBack (ArrowLeft=flèche verte),
+ui.tsx (erreur=`AlertTriangle` triangle). **Fix** : `SearchX` (état vide « aucun résultat »)
+`warning`→**`search`** (loupe) → un état vide ne ressemble plus à une erreur. Reste OK.
+
+### ✅ TitleBar — RIEN À CHANGER
+Barre de fenêtre maison : logo CodexMark (SVG marque) + nom + badges Dofus3/version. Aucune
+icône générique/lucide.
+
+### ✅ Guides (liste + GuideDetail + guideMarkup + GuideTabs/SyncBar) — TERMINÉ
+Guides.tsx : « Tous »=`areaCross`→**`book`**, « En cours »=`tour`→**`sablier`** (+ badge carte),
+« Principal »=`questGroup`→**`crown`** (doré), « Guide »=`questGroup`→**`book`**, avertissement→
+**`book`**. guideCategory : Principal→`crown`, Guide→`book`. GuidesSyncBar : `questGroup`→**`book`**.
+GuideTabs : « Liste »=`areaCross`→**`grid`** (asset btnIcon_grid). GuideDetail : Réinitialiser
+`RotateCcw`(swirl)→**`reset`**, plein écran `Maximize2`/`Minimize2`→**`zoom`/`closeRed`**, +
+overlay plein écran en **createPortal** (z-[60], top-10 sous TitleBar mac) + **GuideTabs** dedans
+pour switcher. guideMarkup : position `MapPin`(ping=chapeau)→**`pin`** (btnIcon_pin cyan).
+
+### ✅ PASSE GLOBALE DE COHÉRENCE (alias DofusIcons)
+- `RefreshCw`/`RotateCcw`/`RotateCw` : `tour`(swirl/blason)→**`reset`** (flèche circulaire).
+- `Download` : `cadeau`→**`download`** (btnIcon_update, vraie flèche de téléchargement).
+- `SearchX` : `warning`→**`search`** (loupe ≠ erreur). `LayoutGrid` : `areaCross`→**`grid`**.
+- `X` (toutes les croix de fermeture) : `close`(sombre)→**`closeRed`** → croix uniformes/visibles.
+- `MapPin` : `ping`→**`pin`**.
+**Assets extraits du client Dofus 3** (recolorés) : btnIcon_reset (bleu), btnIcon_update (slate),
+btnIcon_grid (slate), btnIcon_pin (cyan) ; tx_crown recoloré doré.
+Clés DofusIcon ajoutées sur l'ensemble de l'audit : bank, lightning, emote, dofus, reset, job,
+download, grid, pin (+ celles des sessions précédentes).
+
+## 🎉 AUDIT DES ICÔNES — TERMINÉ (toutes les pages + composants + passe globale).

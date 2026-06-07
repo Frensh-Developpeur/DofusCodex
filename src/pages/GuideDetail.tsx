@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,9 +13,6 @@ import {
   Download,
   BadgeCheck,
   CheckCircle2,
-  RotateCcw,
-  Maximize2,
-  Minimize2,
 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
 import { STATUS_LABEL, type GuideStatus } from "../api/ganymede";
@@ -169,7 +167,7 @@ export default function GuideDetail() {
               title="Réinitialiser la progression"
               className="no-drag rounded-lg bg-white/5 p-2 text-slate-400 transition hover:bg-white/10 hover:text-white"
             >
-              <RotateCcw className="h-4 w-4" />
+              <DofusIcon name="reset" size={16} />
             </button>
           </div>
         </div>
@@ -256,7 +254,7 @@ export default function GuideDetail() {
                   title="Mode lecture plein écran"
                   className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
                 >
-                  <Maximize2 className="h-3.5 w-3.5" />
+                  <DofusIcon name="zoom" size={14} />
                 </button>
               </div>
             </div>
@@ -315,18 +313,25 @@ export default function GuideDetail() {
         </div>
       </div>
 
-      {/* Mode lecture plein écran */}
-      <AnimatePresence>
+      {/* Mode lecture plein écran — en portal sur <body> pour échapper au stacking
+          context du <main> (z-10) qui plafonnait l'overlay sous la Sidebar/TitleBar. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
         {focus && current && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col bg-void-900/95 backdrop-blur-xl"
+            className="fixed inset-x-0 bottom-0 top-10 z-[60] flex flex-col bg-void-900/95 backdrop-blur-xl"
           >
             <div
               className={`pointer-events-none absolute -top-24 left-1/2 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-gradient-to-br ${cat.tile} opacity-30 blur-3xl`}
             />
+            {/* Onglets des guides ouverts : switcher sans quitter le plein écran. */}
+            <div className="relative px-6 pt-3">
+              <GuideTabs activeId={guideId} />
+            </div>
             <div className="relative flex items-center justify-between gap-3 border-b border-white/5 px-6 py-4">
               <div className="min-w-0">
                 <p className={`text-[11px] font-bold uppercase tracking-wider ${cat.text}`}>{cat.label}</p>
@@ -350,7 +355,7 @@ export default function GuideDetail() {
                   title="Quitter (Échap)"
                   className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
                 >
-                  <Minimize2 className="h-4 w-4" />
+                  <DofusIcon name="closeRed" size={16} />
                 </button>
               </div>
             </div>
@@ -402,7 +407,9 @@ export default function GuideDetail() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }

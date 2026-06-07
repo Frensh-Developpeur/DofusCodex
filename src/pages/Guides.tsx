@@ -25,18 +25,18 @@ import GuidesSyncBar from "../components/GuidesSyncBar";
 
 // Un seul jeu d'onglets : progression (perso) puis catégories (type de guide).
 const CATEGORIES: { label: string; Icon: DofusUiIcon }[] = [
-  { label: "Tous", Icon: dofusUiIcon("areaCross") },
-  { label: "Principal", Icon: dofusUiIcon("questGroup") },
+  { label: "Tous", Icon: dofusUiIcon("book") },
+  { label: "Principal", Icon: dofusUiIcon("crown") },
   { label: "Quête", Icon: dofusUiIcon("dofusQuest") },
   { label: "Donjon", Icon: dofusUiIcon("dungeon") },
   { label: "Succès", Icon: dofusUiIcon("trophy") },
   { label: "Frigost", Icon: dofusUiIcon("eau") },
-  { label: "Guide", Icon: dofusUiIcon("questGroup") },
+  { label: "Guide", Icon: dofusUiIcon("book") },
 ];
 
 // Filtres de progression (état perso) — en tête, mis en avant.
 const PROGRESS: { label: string; Icon: DofusUiIcon }[] = [
-  { label: "En cours", Icon: dofusUiIcon("tour") },
+  { label: "En cours", Icon: dofusUiIcon("sablier") },
   { label: "Favoris", Icon: dofusUiIcon("starFilled") },
 ];
 
@@ -137,7 +137,7 @@ export default function Guides() {
 
       {/* Avertissement compact — guides communautaires (Ganymède) */}
       <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-glow-gold/20 bg-glow-gold/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300">
-        <DofusIcon name="questGroup" size={16} />
+        <DofusIcon name="book" size={16} />
         <span>
           <span className="font-semibold text-glow-gold">Guides communautaires (Ganymède)</span> — qualité et
           exactitude variables selon l'auteur ; certains peuvent être incomplets ou datés.
@@ -303,7 +303,7 @@ function GuideCard({
               <CheckCircle2 className="h-5 w-5 text-glow-emerald" />
             ) : inProgress ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-glow-cyan/15 px-2 py-0.5 text-[10px] font-bold text-glow-cyan">
-                <DofusIcon name="tour" size={12} /> {currentStep + 1}
+                <DofusIcon name="sablier" size={12} /> {currentStep + 1}
               </span>
             ) : null}
             <button

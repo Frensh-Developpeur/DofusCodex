@@ -19,11 +19,11 @@ const TrophyIcon = dofusUiIcon("slotTrophy");
 const WeaponIcon = dofusUiIcon("weaponColored");
 
 const AlmanaxXpIcon = dofusUiIcon("xp");
-const AlmanaxLootIcon = dofusUiIcon("cadeau");
-const AlmanaxHarvestIcon = dofusUiIcon("recoltable");
-const AlmanaxCraftIcon = dofusUiIcon("weaponSmith");
+const AlmanaxLootIcon = dofusUiIcon("reward");
+const AlmanaxHarvestIcon = dofusUiIcon("resources");
+const AlmanaxCraftIcon = dofusUiIcon("job");
 const AlmanaxChallengeIcon = dofusUiIcon("epeesCroisees");
-const AlmanaxMountIcon = dofusUiIcon("familier");
+const AlmanaxMountIcon = dofusUiIcon("mount");
 const AlmanaxKamaIcon = dofusUiIcon("kama");
 const AlmanaxKnowledgeIcon = dofusUiIcon("sagesse");
 const AlmanaxTimeIcon = dofusUiIcon("sablier");

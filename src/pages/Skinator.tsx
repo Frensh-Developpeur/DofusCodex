@@ -11,7 +11,6 @@ import {
   Info,
   Loader2,
   Search,
-  Trash2,
   dofusUiIcon,
 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
@@ -408,7 +407,7 @@ export default function Skinator() {
                 </button>
               ))}
               <button onClick={() => selectCosmetic(null)} className={choiceButton(false)}>
-                <Trash2 className="h-4 w-4" /> Vider
+                <DofusIcon name="closeRed" size={16} /> Vider
               </button>
             </div>
 
@@ -509,7 +508,7 @@ export default function Skinator() {
                           className="no-drag rounded-lg border border-white/10 bg-white/5 p-2 text-slate-500 transition hover:border-glow-rose/30 hover:text-glow-rose"
                           title="Supprimer"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <DofusIcon name="closeRed" size={16} />
                         </button>
                       </div>
                     </motion.div>

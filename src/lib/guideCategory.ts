@@ -8,12 +8,12 @@ export interface GuideCategory {
   text: string; // couleur d'accent
 }
 
-const PrincipalIcon = dofusUiIcon("questGroup");
+const PrincipalIcon = dofusUiIcon("crown");
 const DungeonIcon = dofusUiIcon("dungeon");
 const TrophyIcon = dofusUiIcon("trophy");
 const FrigostIcon = dofusUiIcon("eau");
 const QuestIcon = dofusUiIcon("dofusQuest");
-const GuideIcon = dofusUiIcon("questGroup");
+const GuideIcon = dofusUiIcon("book");
 
 export function categoryOf(name: string): GuideCategory {
   const n = name.toLowerCase();

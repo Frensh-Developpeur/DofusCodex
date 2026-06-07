@@ -49,7 +49,7 @@ export default function GuidesSyncBar({ total }: { total: number }) {
       <div className="glass mb-4 rounded-2xl p-4">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="inline-flex items-center gap-2 font-medium text-white">
-            <DofusIcon name="questGroup" size={16} className="animate-pulse" />
+            <DofusIcon name="book" size={16} className="animate-pulse" />
             Téléchargement des guides…
           </span>
           <span className="text-xs text-slate-400">
@@ -90,7 +90,7 @@ export default function GuidesSyncBar({ total }: { total: number }) {
     <div className="glass mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-glow-purple/20 bg-glow-purple/[0.04] px-4 py-3">
       <div className="min-w-0">
         <p className="flex items-center gap-2 text-sm font-semibold text-white">
-          <DofusIcon name="questGroup" size={16} /> Pré-télécharger les guides
+          <DofusIcon name="book" size={16} /> Pré-télécharger les guides
         </p>
         <p className="mt-0.5 text-xs text-slate-400">
           Téléchargez tous les guides une fois pour une navigation instantanée (zéro chargement à

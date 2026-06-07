@@ -7,10 +7,7 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
-  Coins,
-  RotateCcw,
   Timer,
-  X,
   BadgeCheck,
 } from "../components/DofusIcons";
 import { getAlmanaxDay, getAlmanaxRange, type AlmanaxDay } from "../api/dofusdude";
@@ -290,7 +287,7 @@ function FeaturedDay({
               onClick={onResetToday}
               className="no-drag flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300 transition hover:bg-white/10"
             >
-              <RotateCcw className="h-3 w-3" /> Aujourd'hui
+              <DofusIcon name="reset" size={12} /> Aujourd'hui
             </button>
           )}
         </div>
@@ -343,7 +340,7 @@ function FeaturedDay({
               <DofusIcon name="kama" size={14} /> +{day.reward_kamas.toLocaleString("fr-FR")} kamas
             </Pill>
             <Pill tone={bonus.tone}>
-              <DofusIcon name="cadeau" size={14} /> {day.bonus.type.name}
+              <BonusIcon className="h-3.5 w-3.5" /> {day.bonus.type.name}
             </Pill>
           </div>
         </div>
@@ -474,7 +471,7 @@ function CalendarModal({
               <ChevronRight className="h-4 w-4" />
             </button>
             <button onClick={onClose} className={`${navBtn} ml-1`} aria-label="Fermer">
-              <X className="h-4 w-4" />
+              <DofusIcon name="closeRed" size={16} />
             </button>
           </div>
         </div>

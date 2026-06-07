@@ -8,7 +8,7 @@ import {
   BadgeCheck,
   dofusUiIcon,
 } from "../components/DofusIcons";
-import DofusIcon from "../components/DofusIcon";
+import DofusIcon, { type DofusIconName } from "../components/DofusIcon";
 
 // Flèches de chasse authentiques du client Dofus 3 (0=droite 2=bas 4=gauche 6=haut).
 // Les sprites sont gris foncé (faits pour un parchemin clair) → on les éclaircit en blanc.
@@ -32,13 +32,6 @@ const DIRS: { dir: HuntDirection; label: string; icon: typeof ArrowUp; grid: str
   { dir: 0, label: "Droite", icon: ArrowRight, grid: "col-start-3 row-start-2" },
   { dir: 2, label: "Bas", icon: ArrowDown, grid: "col-start-2 row-start-3" },
 ];
-
-const DIR_ICON: Record<HuntDirection, typeof ArrowUp> = {
-  6: ArrowUp,
-  4: ArrowLeft,
-  0: ArrowRight,
-  2: ArrowDown,
-};
 
 const ALL_DIRS: HuntDirection[] = [0, 2, 4, 6];
 
@@ -185,7 +178,6 @@ export default function Hunt() {
         eyebrow="Outil"
         title="Chasse au trésor"
         subtitle="Entrez votre position de départ, choisissez la direction de la flèche, puis cherchez votre indice : la case exacte et sa map s'affichent."
-        right={<DofusIcon name="chest" size={48} title="Chasse au trésor" />}
       />
 
       {/* Note compacte — données fiables (live) */}
@@ -291,7 +283,7 @@ export default function Hunt() {
               {uniqueClues.length > 0 && (
                 <div className="glass rounded-2xl p-5">
                   <h3 className="flex items-center gap-2 font-display font-bold text-white">
-                    <DofusIcon name="pip" size={16} /> Quel est votre indice ?
+                    <DofusIcon name="zoom" size={16} /> Quel est votre indice ?
                   </h3>
                   <p className="mb-3 mt-1 text-xs text-slate-500">
                     {uniqueClues.length} indice{uniqueClues.length > 1 ? "s" : ""} sur le chemin dans
@@ -462,11 +454,17 @@ function Badge({ accent, children }: { accent: Accent; children: ReactNode }) {
   );
 }
 
+const DIR_ICON_NAME: Record<HuntDirection, DofusIconName> = {
+  6: "huntArrowUp",
+  4: "huntArrowLeft",
+  0: "huntArrowRight",
+  2: "huntArrowDown",
+};
+
 function DistanceBadge({ map, direction }: { map: HuntMap; direction: HuntDirection }) {
-  const Icon = DIR_ICON[direction];
   return (
     <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-void-900/75 px-2.5 py-1 text-sm font-semibold text-slate-200 backdrop-blur">
-      <Icon className="h-4 w-4 text-glow-violet" />
+      <DofusIcon name={DIR_ICON_NAME[direction]} size={16} tint="#34d399" />
       {map.distance} map{map.distance > 1 ? "s" : ""}
     </span>
   );

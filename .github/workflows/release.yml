@@ -36,15 +36,22 @@ jobs:
 
       - run: npm ci
 
-      # vite build + electron-builder --publish always (cible = l'OS du runner).
-      # Les deux jobs publient dans la MÊME release (basée sur la version de package.json).
-      - name: Build & publish
+      - name: Build renderer
+        run: npm run build
+
+      - name: Package app
         env:
-          # Le code est dans un repo privé, les releases dans un repo PUBLIC séparé
-          # (DofusCodex-releases) → il faut un token personnel (PAT) ayant accès en écriture
-          # à ce repo public, ajouté ici en secret « GH_RELEASE_TOKEN » du repo privé.
-          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
           # Pas de signature mac sans certificat Apple → on désactive la découverte auto
-          # (le build réussit ; l'auto-update mac nécessitera une signature).
+          # (le build réussit ; la signature pourra être ajoutée plus tard).
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npm run release
+        run: npx electron-builder --publish never
+
+      - name: Scan release artifacts with VirusTotal
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: node scripts/virustotal-scan.mjs
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+        run: npx electron-builder --publish always

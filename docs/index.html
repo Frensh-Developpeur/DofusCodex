@@ -16,21 +16,60 @@
       <section class="buttons">
         <p>Télécharger la dernière version :</p>
         <div class="btns">
-          <a class="btn primary" href="https://github.com/Frensh-Developpeur/DofusCodex-releases/releases/latest" target="_blank" rel="noopener">Voir les releases</a>
-          <a class="btn" href="https://github.com/Frensh-Developpeur/DofusCodex-releases/releases/latest" target="_blank" rel="noopener">Windows / macOS</a>
+          <a id="btn-win" class="btn primary" href="#">Télécharger Windows</a>
+          <a id="btn-mac" class="btn" href="#">Télécharger macOS</a>
         </div>
-      </section>
-
-      <section class="notes">
-        <h2>Informations</h2>
-        <ul>
-          <li>Les installeurs sont publiés dans le dépôt <strong>DofusCodex-releases</strong> (GitHub Releases).</li>
-          <li>Si vous êtes l'auteur : configurez le secret <code>GH_RELEASE_TOKEN</code> pour publier automatiquement.</li>
-          <li>Page hébergée via GitHub Pages (dossier <code>docs/</code>).</li>
-        </ul>
+        <p id="status" class="tag" style="margin-top:10px;color:var(--muted)">Récupération de la dernière release…</p>
       </section>
 
       <footer class="foot">© DofusCodex</footer>
+    </main>
+
+    <script>
+      (function(){
+        const owner = 'Frensh-Developpeur';
+        const repo = 'DofusCodex-releases';
+        const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+        const status = document.getElementById('status');
+        const btnWin = document.getElementById('btn-win');
+        const btnMac = document.getElementById('btn-mac');
+
+        function setFallback() {
+          const url = `https://github.com/${owner}/${repo}/releases/latest`;
+          btnWin.href = url; btnMac.href = url;
+          status.textContent = 'Impossible de récupérer automatiquement les assets — ouvre la page des releases.';
+        }
+
+        fetch(api)
+          .then(r => { if(!r.ok) throw new Error(r.status); return r.json(); })
+          .then(data => {
+            const assets = data.assets || [];
+            const winAsset = assets.find(a => /\.exe$|\.msi$|nsis|installer/i.test(a.name));
+            const macAsset = assets.find(a => /\.dmg$|\.zip$|\.pkg$|\.app\.zip/i.test(a.name));
+
+            if (winAsset) {
+              btnWin.href = winAsset.browser_download_url;
+              btnWin.textContent = `Télécharger Windows — ${winAsset.name}`;
+              btnWin.target = '_blank';
+            }
+            if (macAsset) {
+              btnMac.href = macAsset.browser_download_url;
+              btnMac.textContent = `Télécharger macOS — ${macAsset.name}`;
+              btnMac.target = '_blank';
+            }
+
+            if (!winAsset && !macAsset) {
+              setFallback();
+            } else {
+              status.textContent = `Dernière release : ${data.name || data.tag_name}`;
+            }
+          })
+          .catch(err => {
+            console.error('Release fetch error', err);
+            setFallback();
+          });
+      })();
+    </script>
     </main>
   </body>
 </html>

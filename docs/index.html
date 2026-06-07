@@ -3,41 +3,114 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>DofusCodex — Téléchargements</title>
+    <title>DofusCodex — Guide nouvelle génération pour Dofus 3</title>
     <link rel="stylesheet" href="/docs/styles.css" />
   </head>
   <body>
-    <main class="wrap">
-      <header class="hero">
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="container">
+        <span class="logo">📖 DofusCodex</span>
+        <a href="#download" class="nav-link">Télécharger</a>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-content">
         <h1>DofusCodex</h1>
-        <p class="tag">Guide nouvelle génération pour Dofus 3 — Installeurs & mises à jour</p>
-      </header>
-
-      <section class="buttons">
-        <p>Télécharger la dernière version :</p>
-        <div class="btns">
-          <a id="btn-win" class="btn primary" href="#">Télécharger Windows</a>
-          <a id="btn-mac" class="btn" href="#">Télécharger macOS</a>
+        <p class="hero-subtitle">Le guide nouvelle génération pour <strong>Dofus 3</strong></p>
+        <p class="hero-desc">Donjons animés, Stuffinator, quêtes interactives, almanax en direct — tout ce qu'il vous faut, gratuitement.</p>
+        <div class="hero-buttons">
+          <a id="btn-win" class="btn btn-primary" href="#">Télécharger pour Windows</a>
+          <a id="btn-mac" class="btn btn-secondary" href="#">Télécharger pour macOS</a>
         </div>
-        <p id="status" class="tag" style="margin-top:10px;color:var(--muted)">Récupération de la dernière release…</p>
-      </section>
+        <p id="status" class="hero-status">Récupération de la dernière version…</p>
+      </div>
+    </section>
 
-      <footer class="foot">© DofusCodex</footer>
-    </main>
+    <!-- Features -->
+    <section class="features">
+      <div class="container">
+        <h2>Fonctionnalités</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <h3>Donjons Animés</h3>
+            <p>Guides visuels et interactifs pour maîtriser chaque donjon. Mécaniques de boss, stratégies, et indices en direct.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚔️</div>
+            <h3>Stuffinator</h3>
+            <p>Builder d'équipement complet. Simulez des builds, comparez les stats, et optimisez vos sets en temps réel.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📜</div>
+            <h3>Quêtes & Almanax</h3>
+            <p>Suivi des quêtes, indications de localisation, et calendrier almanax avec récompenses mises à jour quotidiennement.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Ressources & Monstres</h3>
+            <p>Base de données exhaustive des monstres, ressources, et drops. Recherche rapide et filtres avancés.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>Skinator</h3>
+            <p>Visualisez tous les skins d'équipement. Prévisualisation en direct et galerie complète.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Mise à Jour Auto</h3>
+            <p>Mises à jour automatiques et données live. Pas d'installation manuelle, lancez et explorez.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="download">
+      <div class="container">
+        <h2>Téléchargez DofusCodex</h2>
+        <p class="download-subtitle">Disponible sur Windows et macOS • Gratuit • Mises à jour incluses</p>
+        <div class="download-buttons">
+          <a id="btn-win-footer" class="btn btn-primary btn-large" href="#">
+            <span class="btn-label">Windows</span>
+            <span class="btn-info">10 ou plus</span>
+          </a>
+          <a id="btn-mac-footer" class="btn btn-secondary btn-large" href="#">
+            <span class="btn-label">macOS</span>
+            <span class="btn-info">11 ou plus</span>
+          </a>
+        </div>
+        <p id="status-footer" class="version-info"></p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 DofusCodex • Code source sur <a href="https://github.com/Frensh-Developpeur/DofusCodex" target="_blank">GitHub</a></p>
+        <p class="footer-credits">Fan-made guide • Non affilié à Ankama</p>
+      </div>
+    </footer>
 
     <script>
       (function(){
         const owner = 'Frensh-Developpeur';
         const repo = 'DofusCodex-releases';
         const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
-        const status = document.getElementById('status');
         const btnWin = document.getElementById('btn-win');
         const btnMac = document.getElementById('btn-mac');
+        const btnWinFooter = document.getElementById('btn-win-footer');
+        const btnMacFooter = document.getElementById('btn-mac-footer');
+        const status = document.getElementById('status');
+        const statusFooter = document.getElementById('status-footer');
 
         function setFallback() {
           const url = `https://github.com/${owner}/${repo}/releases/latest`;
-          btnWin.href = url; btnMac.href = url;
-          status.textContent = 'Impossible de récupérer automatiquement les assets — ouvre la page des releases.';
+          [btnWin, btnMac, btnWinFooter, btnMacFooter].forEach(b => { b.href = url; b.target = '_blank'; });
+          statusFooter.textContent = 'Impossible de récupérer les versions — ouvre la page des releases.';
         }
 
         fetch(api)
@@ -48,28 +121,25 @@
             const macAsset = assets.find(a => /\.dmg$|\.zip$|\.pkg$|\.app\.zip/i.test(a.name));
 
             if (winAsset) {
-              btnWin.href = winAsset.browser_download_url;
-              btnWin.textContent = `Télécharger Windows — ${winAsset.name}`;
-              btnWin.target = '_blank';
+              [btnWin, btnWinFooter].forEach(b => { b.href = winAsset.browser_download_url; b.target = '_blank'; });
             }
             if (macAsset) {
-              btnMac.href = macAsset.browser_download_url;
-              btnMac.textContent = `Télécharger macOS — ${macAsset.name}`;
-              btnMac.target = '_blank';
+              [btnMac, btnMacFooter].forEach(b => { b.href = macAsset.browser_download_url; b.target = '_blank'; });
             }
 
             if (!winAsset && !macAsset) {
               setFallback();
             } else {
-              status.textContent = `Dernière release : ${data.name || data.tag_name}`;
+              statusFooter.textContent = `Dernière version : ${data.name || data.tag_name}`;
             }
+            status.textContent = '';
           })
           .catch(err => {
             console.error('Release fetch error', err);
+            status.textContent = '';
             setFallback();
           });
       })();
     </script>
-    </main>
   </body>
 </html>

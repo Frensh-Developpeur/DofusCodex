@@ -383,7 +383,133 @@ body::before {
   line-height: 1.6;
   font-size: 15px;
 }
+/* Trust Section */
+.trust {
+  padding: 120px 0;
+  position: relative;
+  z-index: 1;
+  background: rgba(11, 20, 44, 0.5);
+}
 
+.trust h2 {
+  font-size: 48px;
+  text-align: center;
+  margin: 0 0 20px;
+  background: linear-gradient(135deg, var(--glow-cyan) 0%, var(--glow-violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+.trust > .container::after {
+  content: '';
+  display: block;
+  text-align: center;
+  margin: 0 0 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.2), transparent);
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.trust-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-radius: 16px;
+  padding: 28px;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+.trust-card:nth-child(1) { animation-delay: 0.1s; }
+.trust-card:nth-child(2) { animation-delay: 0.2s; }
+.trust-card:nth-child(3) { animation-delay: 0.3s; }
+.trust-card:nth-child(4) { animation-delay: 0.4s; }
+.trust-card:nth-child(5) { animation-delay: 0.5s; }
+.trust-card:nth-child(6) { animation-delay: 0.6s; }
+
+.trust-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(139, 92, 246, 0.05));
+  opacity: 0;
+  transition: opacity 0.4s;
+  z-index: -1;
+}
+
+.trust-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--glow-cyan);
+  transform: translateY(-8px);
+  box-shadow: 0 16px 40px rgba(34, 211, 238, 0.15);
+}
+
+.trust-card:hover::before {
+  opacity: 1;
+}
+
+.trust-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.trust-card h3 {
+  font-size: 18px;
+  margin: 12px 0 10px;
+  color: var(--slate-200);
+  font-weight: 700;
+}
+
+.trust-card p {
+  color: var(--slate-400);
+  margin: 0 0 12px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.trust-card strong {
+  color: var(--glow-cyan);
+  font-weight: 600;
+}
+
+.trust-link {
+  display: inline-block;
+  color: var(--glow-cyan);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.trust-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--glow-cyan);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s;
+}
+
+.trust-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
 /* Download Section */
 .download {
   padding: 120px 0;

@@ -24,7 +24,10 @@ const CLS =
 export default function DetailBack() {
   const location = useLocation();
   const navigate = useNavigate();
-  const fromSection = (location.state as { fromSection?: boolean } | null)?.fromSection;
+  const navState = location.state as { fromSection?: boolean; returnTo?: string; returnLabel?: string } | null;
+  const fromSection = navState?.fromSection;
+  const returnTo = navState?.returnTo;
+  const returnLabel = navState?.returnLabel ?? "Retour";
 
   // Fiche objet : la section dépend du type réel (même cache que la page : ["item-equip", id]).
   const itemMatch = location.pathname.match(/^\/objets\/(\d+)/);
@@ -41,6 +44,14 @@ export default function DetailBack() {
         ? { to: "/stuffinator", label: "Équipements" }
         : { to: "/objets", label: "Objets & Ressources" }
       : SECTIONS.find((s) => location.pathname.startsWith(s.prefix));
+
+  if (returnTo) {
+    return (
+      <Link to={returnTo} className={CLS}>
+        <ArrowLeft className="h-4 w-4" /> {returnLabel}
+      </Link>
+    );
+  }
 
   if (fromSection && section) {
     return (

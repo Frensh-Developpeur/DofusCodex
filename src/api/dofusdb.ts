@@ -303,6 +303,87 @@ export async function getMonster(id: number, signal?: AbortSignal): Promise<Mons
   return data.data[0] ?? null;
 }
 
+export interface MonsterResolveHint {
+  typeId?: number;
+  levelMin?: number;
+  levelMax?: number;
+}
+
+type MonsterResolveCandidate = Pick<Monster, "id" | "name" | "isBoss" | "grades">;
+
+const MONSTER_RESOLVE_SELECT =
+  "&$select[]=id&$select[]=name&$select[]=isBoss&$select[]=grades";
+
+function comparableName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levelRange(grades?: MonsterGrade[]): { min: number; max: number } | null {
+  const levels = (grades ?? []).map((g) => g.level).filter((level) => level > 0);
+  if (levels.length === 0) return null;
+  return { min: Math.min(...levels), max: Math.max(...levels) };
+}
+
+function resolveScore(candidate: MonsterResolveCandidate, wantedName: string, hint: MonsterResolveHint): number {
+  const wanted = comparableName(wantedName);
+  const actual = comparableName(candidate.name.fr ?? "");
+  let score = actual === wanted ? 1000 : actual.includes(wanted) ? 400 : 0;
+
+  if (hint.typeId === 2) score += candidate.isBoss ? 90 : -90;
+  if (hint.typeId === 1 || hint.typeId === 3) score += candidate.isBoss ? -30 : 15;
+
+  const wantedMin = hint.levelMin ?? hint.levelMax;
+  const wantedMax = hint.levelMax ?? hint.levelMin;
+  const range = levelRange(candidate.grades);
+  if (range && wantedMin != null && wantedMax != null) {
+    if (range.min === wantedMin && range.max === wantedMax) {
+      score += 160;
+    } else {
+      const overlaps = range.min <= wantedMax && range.max >= wantedMin;
+      if (overlaps) score += 70;
+      score -= Math.min(80, Math.abs(range.min - wantedMin) + Math.abs(range.max - wantedMax));
+    }
+  }
+
+  return score;
+}
+
+export async function resolveMonsterIdByName(
+  name: string,
+  hint: MonsterResolveHint = {},
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const term = name.trim();
+  if (!term) return null;
+
+  const exactUrl = `${BASE}/monsters${qs({
+    lang: "fr",
+    $limit: 20,
+    "$sort[id]": 1,
+    "name.fr": term,
+  })}${MONSTER_RESOLVE_SELECT}`;
+  const exact = await getJson<FeathersList<MonsterResolveCandidate>>(exactUrl, signal);
+  let candidates = exact.data;
+
+  if (candidates.length === 0) {
+    const searchUrl = `${BASE}/monsters${qs({
+      lang: "fr",
+      $limit: 20,
+      "$sort[id]": 1,
+    })}${searchClause(term)}${MONSTER_RESOLVE_SELECT}`;
+    const fuzzy = await getJson<FeathersList<MonsterResolveCandidate>>(searchUrl, signal);
+    candidates = fuzzy.data;
+  }
+
+  if (candidates.length === 0) return null;
+  return [...candidates].sort((a, b) => resolveScore(b, term, hint) - resolveScore(a, term, hint) || a.id - b.id)[0].id;
+}
+
 // Monstres de la même famille (race). Léger (id/nom/img), plafonné à 50 (limite DofusDB).
 export async function getMonstersByRace(raceId: number, signal?: AbortSignal): Promise<MonsterLite[]> {
   if (raceId == null) return [];

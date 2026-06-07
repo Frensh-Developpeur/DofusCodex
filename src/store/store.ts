@@ -56,6 +56,14 @@ export interface BarbofusSkin {
   updatedAt?: number;
 }
 
+// Connexion au compte Metamob (suivi de capture d'archimonstres). Clé Bearer générée
+// par l'utilisateur dans ses réglages metamob.fr — stockée localement (jamais envoyée ailleurs).
+export interface MetamobAuth {
+  pseudo: string;
+  apiKey: string;
+  slug?: string; // quête (chasse) sélectionnée, si l'utilisateur en a plusieurs
+}
+
 export interface AppState {
   favoriteDungeons: number[];
   doneDungeons: number[];
@@ -63,6 +71,7 @@ export interface AppState {
   builds: Build[];
   // Suivi des guides Ganymède.
   guideStep: Record<number, number>; // guideId -> index de l'étape en cours
+  guideTotalSteps: Record<number, number>; // guideId -> nombre total d'étapes
   guideChecks: Record<string, boolean>; // clé "guideId:stepIdx:cbIdx" -> coché
   doneGuides: number[]; // guides marqués terminés
   favoriteGuides: number[]; // guides mis en favori
@@ -70,6 +79,7 @@ export interface AppState {
   skinDesigns: SkinDesign[];
   barbofusSkins: BarbofusSkin[]; // skins Barbofus sauvegardés (page « Mes Skins »)
   sidebarCollapsed: boolean; // navbar repliée (icônes seules)
+  metamob: MetamobAuth | null; // connexion au compte Metamob (null = non connecté)
 }
 
 const STORAGE_KEY = "dofuscodex.state.v1";
@@ -80,6 +90,7 @@ const DEFAULT_STATE: AppState = {
   doneQuests: [],
   builds: [],
   guideStep: {},
+  guideTotalSteps: {},
   guideChecks: {},
   doneGuides: [],
   favoriteGuides: [],
@@ -87,6 +98,7 @@ const DEFAULT_STATE: AppState = {
   skinDesigns: [],
   barbofusSkins: [],
   sidebarCollapsed: false,
+  metamob: null,
 };
 
 // ---- Tiny external store (useSyncExternalStore) ----
@@ -260,6 +272,16 @@ export const actions = {
   toggleSidebar() {
     setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }));
   },
+  // ---- Compte Metamob ----
+  setMetamobAuth(auth: MetamobAuth) {
+    setState((s) => ({ ...s, metamob: auth }));
+  },
+  setMetamobSlug(slug: string) {
+    setState((s) => (s.metamob ? { ...s, metamob: { ...s.metamob, slug } } : s));
+  },
+  clearMetamob() {
+    setState((s) => ({ ...s, metamob: null }));
+  },
   // ---- Sauvegarde / restauration (export-import JSON) ----
   exportData(): string {
     return JSON.stringify(state, null, 2);
@@ -290,6 +312,27 @@ export const actions = {
   setGuideStep(id: number, step: number) {
     setState((s) => ({ ...s, guideStep: { ...s.guideStep, [id]: step } }));
   },
+  setGuideTotalSteps(id: number, total: number) {
+    setState((s) => {
+      if (s.guideTotalSteps[id] === total) return s;
+      return { ...s, guideTotalSteps: { ...s.guideTotalSteps, [id]: total } };
+    });
+  },
+  // Fusionne en masse les totaux d'étapes (depuis le cache IndexedDB des guides API).
+  mergeGuideTotalSteps(counts: Record<number, number>) {
+    setState((s) => {
+      let changed = false;
+      const guideTotalSteps = { ...s.guideTotalSteps };
+      for (const [id, total] of Object.entries(counts)) {
+        const k = Number(id);
+        if (guideTotalSteps[k] !== total) {
+          guideTotalSteps[k] = total;
+          changed = true;
+        }
+      }
+      return changed ? { ...s, guideTotalSteps } : s;
+    });
+  },
   toggleGuideCheck(key: string) {
     setState((s) => {
       const next = { ...s.guideChecks };
@@ -312,6 +355,33 @@ export const actions = {
   },
   closeRecentGuide(id: number) {
     setState((s) => ({ ...s, recentGuides: s.recentGuides.filter((g) => g !== id) }));
+  },
+  // Import depuis l'app Ganymède : on ne reprend QUE l'avancement (étape courante +
+  // cases cochées). La complétude est ensuite déduite (étape courante == dernière étape),
+  // le contenu des guides venant toujours de l'API.
+  importGanymedeProgress(
+    progresses: Array<{ id: number; currentStep: number; steps: Record<string, { checkboxes: number[] }> }>,
+  ): number {
+    let count = 0;
+    setState((s) => {
+      const guideStep = { ...s.guideStep };
+      const guideChecks = { ...s.guideChecks };
+      for (const p of progresses) {
+        if (!Number.isFinite(p.id) || !Number.isFinite(p.currentStep)) continue;
+        if (p.currentStep > (guideStep[p.id] ?? -1)) {
+          guideStep[p.id] = p.currentStep;
+          count++;
+        }
+        for (const [stepIdx, stepData] of Object.entries(p.steps ?? {})) {
+          for (const cbIdx of stepData.checkboxes ?? []) {
+            const key = `${p.id}:${stepIdx}:${cbIdx}`;
+            if (!guideChecks[key]) guideChecks[key] = true;
+          }
+        }
+      }
+      return { ...s, guideStep, guideChecks };
+    });
+    return count;
   },
   resetGuide(id: number) {
     setState((s) => {

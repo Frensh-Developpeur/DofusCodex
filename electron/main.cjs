@@ -1,6 +1,8 @@
 const { app, BrowserWindow, shell, session, ipcMain } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
+const fs = require("node:fs");
+const os = require("node:os");
 
 const isDev = process.env.NODE_ENV === "development";
 const DEV_URL = "http://localhost:5173";
@@ -18,7 +20,7 @@ try {
 
 // Hosts the renderer is allowed to talk to.
 const API_HOSTS =
-  "https://api.dofusdu.de https://api.dofusdb.fr https://*.dofusdb.fr https://ganymede-app.com https://barbofus.com https://skinator.barbofus.com";
+  "https://api.dofusdu.de https://api.dofusdb.fr https://*.dofusdb.fr https://ganymede-app.com https://barbofus.com https://skinator.barbofus.com https://www.metamob.fr";
 const FONT_CSS = "https://fonts.googleapis.com";
 const FONT_FILES = "https://fonts.gstatic.com";
 
@@ -107,6 +109,27 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:platform", () => process.platform);
+
+  // Lit le conf.json de l'app Ganymède locale pour importer la progression du profil actif.
+  // Chemin standard sur macOS et Windows. Renvoie null si Ganymède n'est pas installé / erreur.
+  ipcMain.handle("ganymede:read-progress", async () => {
+    try {
+      const appData = process.platform === "darwin"
+        ? path.join(os.homedir(), "Library", "Application Support", "com.ganymede.ganymede-app")
+        : path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), "com.ganymede.ganymede-app");
+      const confPath = path.join(appData, "conf.json");
+      const raw = await fs.promises.readFile(confPath, "utf8");
+      const conf = JSON.parse(raw);
+      const activeId = conf.profileInUse;
+      const profile =
+        conf.profiles?.find((p) => p.id === activeId) || conf.profiles?.[0];
+      if (!profile) return null;
+      const progresses = Array.isArray(profile.progresses) ? profile.progresses : [];
+      return { profileName: profile.name || "Profil", progresses };
+    } catch {
+      return null;
+    }
+  });
   ipcMain.handle("app:version", () => app.getVersion());
 
   // Maj : on lance l'installeur AVEC son UI (isSilent=false) → l'utilisateur voit la barre de
@@ -222,6 +245,68 @@ app.whenReady().then(() => {
         resolve(null);
       });
       req.write(body);
+      req.end();
+    }),
+  );
+
+  // Proxy de l'API Metamob depuis le process principal. L'API metamob.fr n'envoie AUCUN
+  // en-tête CORS → un fetch depuis le renderer est bloqué (« Failed to fetch »). On relaie
+  // donc la requête côté Node (pas de CORS). Hôte figé (www.metamob.fr), méthode/chemin/clé
+  // fournis par le renderer. Renvoie { ok, status, data } (jamais de rejet).
+  ipcMain.handle("metamob:request", (_e, opts) =>
+    new Promise((resolve) => {
+      const method = String(opts?.method || "GET").toUpperCase();
+      const apiKey = typeof opts?.apiKey === "string" ? opts.apiKey : "";
+      let reqPath = typeof opts?.path === "string" ? opts.path : "";
+      // Sécurité : chemin relatif simple uniquement (pas de saut d'hôte / d'en-tête).
+      if (!reqPath.startsWith("/") || /[\s\r\n]/.test(reqPath)) {
+        return resolve({ ok: false, status: 0, error: "Chemin invalide." });
+      }
+      let payload = null;
+      if (opts?.body != null) {
+        try {
+          payload = JSON.stringify(opts.body);
+        } catch {
+          return resolve({ ok: false, status: 0, error: "Corps invalide." });
+        }
+      }
+      const req = https.request(
+        {
+          hostname: "www.metamob.fr",
+          path: `/api/v1${reqPath}`,
+          method,
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${apiKey}`,
+            "User-Agent": "DofusCodex",
+            ...(payload
+              ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+              : {}),
+          },
+          timeout: 15000,
+        },
+        (res) => {
+          const chunks = [];
+          res.on("data", (c) => chunks.push(c));
+          res.on("end", () => {
+            const text = Buffer.concat(chunks).toString("utf8");
+            let data = null;
+            try {
+              data = text ? JSON.parse(text) : null;
+            } catch {
+              data = null;
+            }
+            const status = res.statusCode || 0;
+            resolve({ ok: status >= 200 && status < 300, status, data });
+          });
+        },
+      );
+      req.on("error", (err) => resolve({ ok: false, status: 0, error: String(err?.message || err) }));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve({ ok: false, status: 0, error: "timeout" });
+      });
+      if (payload) req.write(payload);
       req.end();
     }),
   );

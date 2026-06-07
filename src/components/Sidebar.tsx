@@ -54,6 +54,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     items: [
       { to: "/builder", label: "Builder", dofus: "characteristic" },
       { to: "/chasse", label: "Chasse au trésor", dofus: "map" },
+      { to: "/metamob", label: "Metamob", dofus: "archmonster" },
       { to: "/almanax", label: "Almanax", dofus: "calendar" },
     ],
   },

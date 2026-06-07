@@ -30,6 +30,7 @@ import Achievements from "./pages/Achievements";
 import Settings from "./pages/Settings";
 import Stuffinator from "./pages/Stuffinator";
 import ItemDetail from "./pages/ItemDetail";
+import Metamob from "./pages/Metamob";
 
 const SHELL = "app-page-shell mx-auto max-w-6xl px-8 py-8";
 
@@ -45,6 +46,7 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/builder", <BuildGallery />],
   ["/mes-skins", <SkinatorSkins />],
   ["/chasse", <Hunt />],
+  ["/metamob", <Metamob />],
   ["/monstres", <Monsters />],
   ["/panoplies", <Sets />],
   ["/classes", <Classes />],

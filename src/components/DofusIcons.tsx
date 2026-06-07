@@ -88,6 +88,8 @@ const ALIASES: Record<string, Alias> = {
   Palette: { icon: "fm" },
   PlayCircle: { icon: "tour" },
   Power: { icon: "energie" },
+  LogIn: { icon: "character" },
+  LogOut: { icon: "dungeonDoor" },
   ScrollText: { icon: "dofusQuest" },
   Shield: { icon: "shield" },
   ShieldAlert: { icon: "warning" },
@@ -222,6 +224,8 @@ export const LayoutDashboard = icon("LayoutDashboard");
 export const LayoutGrid = icon("LayoutGrid");
 export const Lightbulb = icon("Lightbulb");
 export const Loader2 = icon("Loader2");
+export const LogIn = icon("LogIn");
+export const LogOut = icon("LogOut");
 export const MapPin = icon("MapPin");
 export const Maximize2 = icon("Maximize2");
 export const Minimize2 = icon("Minimize2");

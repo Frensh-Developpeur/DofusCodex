@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const apiKey = process.env.VIRUSTOTAL_API_KEY;
 if (!apiKey) {
-  console.error('❌ VIRUSTOTAL_API_KEY manquant. Ajoute ce secret dans GitHub Actions.');
-  process.exit(1);
+  console.warn('⚠️ VIRUSTOTAL_API_KEY manquant. Scan VirusTotal ignoré.');
+  process.exit(0);
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

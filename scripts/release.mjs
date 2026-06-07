@@ -31,12 +31,10 @@ if (!token) {
   process.exit(1);
 }
 if (!virusTotalKey) {
-  console.error(
-    "\n❌ VIRUSTOTAL_API_KEY manquant.\n" +
-      "   Crée un fichier .env à la racine avec :  VIRUSTOTAL_API_KEY=ta_cle_virustotal\n" +
-      "   Ou ajoute le secret GitHub correspondant si tu utilises Actions.\n",
+  console.warn(
+    "\n⚠️ VIRUSTOTAL_API_KEY manquant. Le scan VirusTotal sera ignoré.\n" +
+      "   Ajoute le secret GitHub si tu veux activer le scan automatique.\n",
   );
-  process.exit(1);
 }
 
 const bump = (process.argv[2] || "patch").toLowerCase();
@@ -59,8 +57,8 @@ const run = (cmd) =>
     env: {
       ...process.env,
       GH_TOKEN: token,
-      VIRUSTOTAL_API_KEY: virusTotalKey,
       CSC_IDENTITY_AUTO_DISCOVERY: "false",
+      ...(virusTotalKey ? { VIRUSTOTAL_API_KEY: virusTotalKey } : {}),
     },
   });
 

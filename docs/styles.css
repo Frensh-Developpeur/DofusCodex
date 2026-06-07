@@ -1,0 +1,18 @@
+:root{
+  --bg:#0f1724; --card:#0b1220; --accent:#7c3aed; --muted:#9ba4b2; --text:#e6eef6;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#071029);color:var(--text);min-height:100vh}
+.wrap{max-width:880px;margin:40px auto;padding:28px;background:rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+.hero{text-align:center;margin-bottom:18px}
+.hero h1{font-size:42px;margin:0;color:var(--accent);letter-spacing:0.5px}
+.tag{color:var(--muted);margin-top:6px}
+.buttons{display:flex;flex-direction:column;gap:12px;align-items:center;margin:18px 0}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{padding:12px 18px;border-radius:10px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.06);text-decoration:none}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#4f46e5);box-shadow:0 6px 18px rgba(79,70,229,0.18);border:none;color:white}
+.notes{margin-top:18px;color:var(--muted)}
+.notes h2{color:var(--text);margin-bottom:6px}
+.foot{text-align:center;margin-top:20px;color:rgba(255,255,255,0.25)}
+
+@media(min-width:640px){.buttons{flex-direction:row;justify-content:space-between}}

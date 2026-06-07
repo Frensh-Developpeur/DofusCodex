@@ -25,7 +25,8 @@
           <a id="btn-win" class="btn btn-primary" href="#">Télécharger pour Windows</a>
           <a id="btn-mac" class="btn btn-secondary" href="#">Télécharger pour macOS</a>
         </div>
-        <p id="status" class="hero-status">Récupération de la dernière version…</p>
+        <p id="release-version" class="hero-status">Récupération de la dernière version…</p>
+        <p id="status" class="hero-status"></p>
       </div>
     </section>
 
@@ -150,7 +151,10 @@
         const btnMac = document.getElementById('btn-mac');
         const btnWinFooter = document.getElementById('btn-win-footer');
         const btnMacFooter = document.getElementById('btn-mac-footer');
+        const btnWinInfo = btnWin.querySelector('.btn-info');
+        const btnMacInfo = btnMac.querySelector('.btn-info');
         const status = document.getElementById('status');
+        const releaseVersion = document.getElementById('release-version');
         const statusFooter = document.getElementById('status-footer');
         const vtReportLink = document.getElementById('vt-report-link');
 
@@ -162,6 +166,9 @@
             vtReportLink.textContent = 'Voir la page de release';
             vtReportLink.target = '_blank';
           }
+          if (releaseVersion) {
+            releaseVersion.textContent = 'Version non disponible — ouvre la page de release';
+          }
           statusFooter.textContent = 'Impossible de récupérer les versions — ouvre la page des releases.';
         }
 
@@ -172,11 +179,21 @@
             const winAsset = assets.find(a => /\.exe$|\.msi$|nsis|installer/i.test(a.name));
             const macAsset = assets.find(a => /\.dmg$|\.zip$|\.pkg$|\.app\.zip/i.test(a.name));
 
+            const releaseName = data.name || data.tag_name;
+            if (releaseVersion) {
+              releaseVersion.textContent = `Dernière version : ${releaseName}`;
+            }
             if (winAsset) {
               [btnWin, btnWinFooter].forEach(b => { b.href = winAsset.browser_download_url; b.target = '_blank'; });
             }
             if (macAsset) {
               [btnMac, btnMacFooter].forEach(b => { b.href = macAsset.browser_download_url; b.target = '_blank'; });
+            }
+            if (btnWinInfo) {
+              btnWinInfo.textContent = releaseName;
+            }
+            if (btnMacInfo) {
+              btnMacInfo.textContent = releaseName;
             }
             if (vtReportLink) {
               vtReportLink.href = data.html_url;
@@ -186,7 +203,7 @@
             if (!winAsset && !macAsset) {
               setFallback();
             } else {
-              statusFooter.textContent = `Dernière version : ${data.name || data.tag_name}`;
+              statusFooter.textContent = `Dernière version : ${releaseName}`;
             }
             status.textContent = '';
           })

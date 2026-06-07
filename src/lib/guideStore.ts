@@ -9,6 +9,7 @@ import {
   idbGetList,
   idbSetMeta,
   idbGetMeta,
+  idbGetStepCounts,
 } from "./guideDb";
 
 // Guides FR exploitables (la liste brute contient toutes les langues + brouillons).
@@ -106,6 +107,34 @@ export async function syncGuides(opts: {
   });
 
   await idbSetMeta("lastSync", Date.now());
+  return { downloaded: total };
+}
+
+// Télécharge (et persiste) le détail de guides précis qui ne sont pas déjà en local.
+// Utilisé après un import Ganymède : on récupère le contenu API des guides importés pour
+// connaître leur nombre d'étapes (→ « X / Y » + détection de complétude sur les cards).
+export async function ensureGuidesDownloaded(
+  ids: number[],
+  opts: { onProgress?: (p: SyncProgress) => void; signal?: AbortSignal } = {},
+): Promise<{ downloaded: number }> {
+  const existing = await idbGetStepCounts().catch(() => ({}) as Record<number, number>);
+  const todo = [...new Set(ids)].filter((id) => Number.isFinite(id) && existing[id] == null);
+
+  let done = 0;
+  const total = todo.length;
+  opts.onProgress?.({ done, total });
+
+  await pool(todo, 6, async (id) => {
+    try {
+      const detail = await getGuide(id, opts.signal);
+      await idbPutGuides([detail]);
+    } catch {
+      /* un guide qui échoue ne bloque pas le lot */
+    }
+    done += 1;
+    opts.onProgress?.({ done, total });
+  });
+
   return { downloaded: total };
 }
 

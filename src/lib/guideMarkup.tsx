@@ -295,18 +295,18 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
   }
 }
 
-// Lien interne vers un autre guide (ou une autre étape du même guide). On écrit
-// l'étape cible dans le store AVANT de naviguer : ainsi un « Retour » (ou le
-// rechargement du guide) reprend toujours à la bonne étape.
+// Lien interne vers un autre guide. On ne touche au store que si le step cible
+// est SUPÉRIEUR à la progression actuelle — la progression n'est jamais reculée.
 function GuideLink({ guideId, step, children }: { guideId: number; step: number; children: ReactNode }) {
   const navigate = useNavigate();
+  const savedStep = useStore((s) => s.guideStep[guideId] ?? 0);
   return (
     <a
       href={`#/guides/${guideId}`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        actions.setGuideStep(guideId, step);
+        if (step > savedStep) actions.setGuideStep(guideId, step);
         navigate(`/guides/${guideId}`);
       }}
       className="no-drag cursor-pointer font-medium text-glow-violet underline decoration-glow-violet/40 underline-offset-2 hover:text-glow-cyan"

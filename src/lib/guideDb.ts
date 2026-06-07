@@ -70,6 +70,28 @@ export async function idbCountGuides(): Promise<number> {
   return tx<number>(GUIDES, "readonly", (s) => s.count());
 }
 
+// Nombre d'étapes par guide (id -> steps.length), lu via curseur : chaque détail est
+// chargé puis relâché un à un → empreinte mémoire minime, même sur ~700 guides.
+export async function idbGetStepCounts(): Promise<Record<number, number>> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const counts: Record<number, number> = {};
+    const t = db.transaction(GUIDES, "readonly");
+    const req = t.objectStore(GUIDES).openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        const g = cursor.value as GuideDetail;
+        if (Array.isArray(g.steps)) counts[g.id] = g.steps.length;
+        cursor.continue();
+      } else {
+        resolve(counts);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
 // Écrit plusieurs guides dans une seule transaction (rapide pour les gros lots).
 export async function idbPutGuides(guides: GuideDetail[]): Promise<void> {
   if (!guides.length) return;

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -14,6 +14,7 @@ import {
 import DofusIcon from "../components/DofusIcon";
 import { STATUS_LABEL, type GuideLight, type GuideStatus } from "../api/ganymede";
 import { getGuideListData, getGuideData } from "../lib/guideStore";
+import { idbGetStepCounts } from "../lib/guideDb";
 import { categoryOf } from "../lib/guideCategory";
 import { useDebounce } from "../hooks/useDebounce";
 import { useViewState } from "../lib/viewState";
@@ -37,6 +38,7 @@ const CATEGORIES: { label: string; Icon: DofusUiIcon }[] = [
 // Filtres de progression (état perso) — en tête, mis en avant.
 const PROGRESS: { label: string; Icon: DofusUiIcon }[] = [
   { label: "En cours", Icon: dofusUiIcon("sablier") },
+  { label: "Terminés", Icon: dofusUiIcon("tick") },
   { label: "Favoris", Icon: dofusUiIcon("starFilled") },
 ];
 
@@ -61,6 +63,7 @@ export default function Guides() {
   const debounced = useDebounce(search);
 
   const guideStep = useStore((s) => s.guideStep);
+  const guideTotalSteps = useStore((s) => s.guideTotalSteps);
   const doneGuides = useStore((s) => s.doneGuides);
   const favoriteGuides = useStore((s) => s.favoriteGuides);
 
@@ -69,6 +72,14 @@ export default function Guides() {
     queryFn: ({ signal }) => getGuideListData(signal), // local (IndexedDB) → réseau en repli
     staleTime: 1000 * 60 * 30,
   });
+
+  // Charge les totaux d'étapes depuis le cache local des guides (API) → permet aux cards
+  // d'afficher « étape X / Y » et de déduire la complétude, même sans les avoir ouverts.
+  useEffect(() => {
+    idbGetStepCounts()
+      .then((counts) => actions.mergeGuideTotalSteps(counts))
+      .catch(() => {});
+  }, [data]);
 
   // Base (FR, hors brouillons) filtrée par recherche — sert aussi aux compteurs d'onglets.
   const filtered = useMemo(() => {
@@ -90,21 +101,30 @@ export default function Guides() {
     return c;
   }, [filtered]);
 
+  // Terminé = marqué explicitement OU étape courante == dernière étape (total connu).
+  const isDoneGuide = (g: GuideLight) => {
+    if (doneGuides.includes(g.id)) return true;
+    const cur = guideStep[g.id];
+    const total = guideTotalSteps[g.id];
+    return cur != null && total != null && cur >= total - 1;
+  };
   // « En cours » = guide commencé (étape > 0) mais pas terminé.
-  const isInProgress = (g: GuideLight) => (guideStep[g.id] ?? 0) > 0 && !doneGuides.includes(g.id);
+  const isInProgress = (g: GuideLight) => (guideStep[g.id] ?? 0) > 0 && !isDoneGuide(g);
 
   // Compteurs des filtres de progression (sur la base filtrée statut + recherche).
   const progressCounts = useMemo(
     () => ({
       "En cours": filtered.filter(isInProgress).length,
+      "Terminés": filtered.filter(isDoneGuide).length,
       Favoris: filtered.filter((g) => favoriteGuides.includes(g.id)).length,
     }),
-    [filtered, guideStep, doneGuides, favoriteGuides],
+    [filtered, guideStep, guideTotalSteps, doneGuides, favoriteGuides],
   );
 
   const guides = useMemo(() => {
     let list: GuideLight[];
     if (category === "En cours") list = filtered.filter(isInProgress);
+    else if (category === "Terminés") list = filtered.filter(isDoneGuide);
     else if (category === "Favoris") list = filtered.filter((g) => favoriteGuides.includes(g.id));
     else if (category === "Tous") list = filtered;
     else list = filtered.filter((g) => categoryOf(g.name).label === category);
@@ -116,7 +136,7 @@ export default function Guides() {
     if (category !== "En cours")
       sorted.sort((a, b) => Number(isInProgress(b)) - Number(isInProgress(a)));
     return sorted;
-  }, [filtered, category, sort, guideStep, doneGuides, favoriteGuides]);
+  }, [filtered, category, sort, guideStep, guideTotalSteps, doneGuides, favoriteGuides]);
 
   const total = filtered.length;
   const frTotal = useMemo(
@@ -233,7 +253,8 @@ export default function Guides() {
               guide={g}
               index={i}
               currentStep={guideStep[g.id]}
-              done={doneGuides.includes(g.id)}
+              totalSteps={guideTotalSteps[g.id]}
+              done={isDoneGuide(g)}
               favorite={favoriteGuides.includes(g.id)}
             />
           ))}
@@ -247,17 +268,20 @@ function GuideCard({
   guide,
   index,
   currentStep,
+  totalSteps,
   done,
   favorite,
 }: {
   guide: GuideLight;
   index: number;
   currentStep?: number;
+  totalSteps?: number;
   done: boolean;
   favorite: boolean;
 }) {
   const excerpt = stripGuideMarkup(guide.description || guide.web_description || "");
   const inProgress = currentStep != null && currentStep > 0 && !done;
+  const pct = inProgress && totalSteps ? Math.round(((currentStep + 1) / totalSteps) * 100) : null;
   const cat = categoryOf(guide.name);
   const qc = useQueryClient();
 
@@ -303,7 +327,8 @@ function GuideCard({
               <CheckCircle2 className="h-5 w-5 text-glow-emerald" />
             ) : inProgress ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-glow-cyan/15 px-2 py-0.5 text-[10px] font-bold text-glow-cyan">
-                <DofusIcon name="sablier" size={12} /> {currentStep + 1}
+                <DofusIcon name="sablier" size={12} />
+                {totalSteps ? `${currentStep! + 1} / ${totalSteps}` : `étape ${currentStep! + 1}`}
               </span>
             ) : null}
             <button
@@ -329,11 +354,17 @@ function GuideCard({
         )}
 
         <div className="relative mt-auto flex items-center gap-3 pt-3 text-xs text-slate-500">
-          {guide.user && (
-            <span className="inline-flex min-w-0 items-center gap-1 truncate">
-              {guide.user.is_certified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-glow-purple" /> : null}
-              <span className="truncate">{guide.user.name}</span>
+          {done ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-glow-emerald">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Terminé
             </span>
+          ) : (
+            guide.user && (
+              <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                {guide.user.is_certified ? <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-glow-purple" /> : null}
+                <span className="truncate">{guide.user.name}</span>
+              </span>
+            )
           )}
           <span className="ml-auto inline-flex shrink-0 items-center gap-1">
             <ThumbsUp className="h-3.5 w-3.5" /> {guide.likes}
@@ -345,9 +376,17 @@ function GuideCard({
           )}
         </div>
 
-        {inProgress && (
-          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-glow-purple to-glow-cyan" />
-        )}
+        {/* Barre de progression en bas de la card */}
+        {done ? (
+          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-glow-emerald/60" />
+        ) : inProgress ? (
+          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-white/5">
+            <span
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-glow-purple to-glow-cyan transition-[width] duration-500"
+              style={{ width: pct != null ? `${pct}%` : "40%" }}
+            />
+          </span>
+        ) : null}
       </Link>
     </motion.div>
   );

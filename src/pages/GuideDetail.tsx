@@ -63,9 +63,11 @@ export default function GuideDetail() {
   const total = steps.length;
   const step = total ? Math.min(Math.max(savedStep, 0), total - 1) : 0;
 
-  // Mémorise le guide ouvert (reprise depuis le menu + onglets récents).
+  // Mémorise le guide ouvert et le total d'étapes (pour la barre de progression des cards).
   useEffect(() => {
-    if (data) actions.pushRecentGuide(guideId);
+    if (!data) return;
+    actions.pushRecentGuide(guideId);
+    if (data.steps?.length) actions.setGuideTotalSteps(guideId, data.steps.length);
   }, [data, guideId]);
 
   const setStep = useCallback(

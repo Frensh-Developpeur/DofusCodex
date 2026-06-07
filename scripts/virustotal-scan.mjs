@@ -37,12 +37,33 @@ async function waitForAnalysis(id) {
   throw new Error('Timeout : l’analyse VirusTotal n’a pas terminé à temps.');
 }
 
-async function scanFile(fileName) {
-  const filePath = path.join(releaseDir, fileName);
-  const sha256 = await computeSha256(filePath);
-  console.log(`\n🔎 Scan VirusTotal: ${fileName}`);
-  console.log(`   Hash SHA-256: ${sha256}`);
+const MAX_VT_UPLOAD_SIZE = 32 * 1024 * 1024;
 
+async function fetchJson(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: { message: `VirusTotal returned invalid JSON (${response.status})`, details: text.slice(0, 400) } };
+  }
+}
+
+async function getExistingAnalysis(sha256) {
+  const response = await fetch(`https://www.virustotal.com/api/v3/files/${sha256}`, {
+    method: 'GET',
+    headers: { 'x-apikey': apiKey },
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  const json = await fetchJson(response);
+  if (!response.ok) {
+    throw new Error(`VirusTotal hash lookup failed for ${sha256}: ${json.error?.message || response.statusText}`);
+  }
+  return json;
+}
+
+async function uploadAndScan(fileName, filePath, sha256) {
   const fileData = await fsPromises.readFile(filePath);
   const form = new FormData();
   form.append('file', new Blob([fileData]), fileName);
@@ -53,29 +74,66 @@ async function scanFile(fileName) {
     body: form,
   });
 
-  const json = await response.json();
+  if (response.status === 413) {
+    return null;
+  }
+
+  const json = await fetchJson(response);
   if (!response.ok) {
     throw new Error(`VirusTotal upload failed for ${fileName}: ${json.error?.message || response.statusText}`);
   }
 
-  const analysisId = json.data?.id;
+  return json.data?.id || null;
+}
+
+async function scanFile(fileName) {
+  const filePath = path.join(releaseDir, fileName);
+  const sha256 = await computeSha256(filePath);
+  const stats = await fsPromises.stat(filePath);
+
+  console.log(`\n🔎 Scan VirusTotal: ${fileName}`);
+  console.log(`   Hash SHA-256: ${sha256}`);
+  console.log(`   Taille : ${(stats.size / 1024 / 1024).toFixed(1)} Mo`);
+
+  if (stats.size > MAX_VT_UPLOAD_SIZE) {
+    console.warn('⚠️ Fichier trop volumineux pour upload direct sur VirusTotal. Recherche par hash...');
+    const existing = await getExistingAnalysis(sha256);
+    if (!existing) {
+      console.warn('⚠️ Aucun rapport VirusTotal existant pour ce hash. Scan ignoré.');
+      return;
+    }
+    const existingStats = existing.data?.attributes?.last_analysis_stats;
+    if (!existingStats) {
+      throw new Error(`Analyse VirusTotal incomplète pour ${fileName}.`);
+    }
+
+    console.log(`   Rapport public : https://www.virustotal.com/gui/file/${sha256}/detection`);
+    console.log(`   Résultat : ${existingStats.malicious} malveillant, ${existingStats.suspicious} suspect, ${existingStats.harmless} propres, ${existingStats.undetected} non détectés`);
+    if (existingStats.malicious > 0 || existingStats.suspicious > 0) {
+      throw new Error(`VirusTotal a trouvé un problème sur ${fileName} (${existingStats.malicious} malveillant, ${existingStats.suspicious} suspect).`);
+    }
+    return;
+  }
+
+  const analysisId = await uploadAndScan(fileName, filePath, sha256);
   if (!analysisId) {
-    throw new Error(`Impossible de récupérer l’ID d’analyse VirusTotal pour ${fileName}.`);
+    console.warn('⚠️ VirusTotal a refusé l’upload ou le fichier est trop volumineux. Scan ignoré.');
+    return;
   }
 
   console.log(`   Rapport public : https://www.virustotal.com/gui/file/${sha256}/detection`);
   console.log('   Attente de l’analyse…');
 
   const analysis = await waitForAnalysis(analysisId);
-  const stats = analysis.data?.attributes?.stats;
-  if (!stats) {
+  const analysisStats = analysis.data?.attributes?.stats;
+  if (!analysisStats) {
     throw new Error(`Analyse VirusTotal incomplète pour ${fileName}.`);
   }
 
-  console.log(`   Résultat : ${stats.malicious} malveillant, ${stats.suspicious} suspect, ${stats.harmless} propres, ${stats.undetected} non détectés`);
+  console.log(`   Résultat : ${analysisStats.malicious} malveillant, ${analysisStats.suspicious} suspect, ${analysisStats.harmless} propres, ${analysisStats.undetected} non détectés`);
 
-  if (stats.malicious > 0 || stats.suspicious > 0) {
-    throw new Error(`VirusTotal a trouvé un problème sur ${fileName} (${stats.malicious} malveillant, ${stats.suspicious} suspect).`);
+  if (analysisStats.malicious > 0 || analysisStats.suspicious > 0) {
+    throw new Error(`VirusTotal a trouvé un problème sur ${fileName} (${analysisStats.malicious} malveillant, ${analysisStats.suspicious} suspect).`);
   }
 }
 

@@ -1,8 +1,8 @@
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { fileFromSync } from 'node:stream/web';
 
 const apiKey = process.env.VIRUSTOTAL_API_KEY;
 if (!apiKey) {
@@ -15,7 +15,7 @@ const releaseDir = path.resolve(__dirname, '..', 'release');
 const allowedExtensions = ['.exe', '.msi', '.dmg', '.zip', '.nsis'];
 
 async function computeSha256(filePath) {
-  const data = await fs.readFile(filePath);
+  const data = await fsPromises.readFile(filePath);
   return crypto.createHash('sha256').update(data).digest('hex');
 }
 
@@ -43,8 +43,9 @@ async function scanFile(fileName) {
   console.log(`\n🔎 Scan VirusTotal: ${fileName}`);
   console.log(`   Hash SHA-256: ${sha256}`);
 
+  const fileData = await fsPromises.readFile(filePath);
   const form = new FormData();
-  form.set('file', fileFromSync(filePath));
+  form.append('file', new Blob([fileData]), fileName);
 
   const response = await fetch('https://www.virustotal.com/api/v3/files', {
     method: 'POST',
@@ -79,7 +80,7 @@ async function scanFile(fileName) {
 }
 
 async function main() {
-  const entries = await fs.readdir(releaseDir, { withFileTypes: true });
+  const entries = await fsPromises.readdir(releaseDir, { withFileTypes: true });
   const artifacts = entries
     .filter((entry) => entry.isFile() && allowedExtensions.includes(path.extname(entry.name).toLowerCase()))
     .map((entry) => entry.name);
@@ -97,6 +98,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('\n❌ Erreur de scan VirusTotal :', err.message || err);
+  console.error('\n❌ Erreur de scan VirusTotal :', err);
+  if (err && err.stack) {
+    console.error(err.stack);
+  }
   process.exit(1);
 });

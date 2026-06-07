@@ -79,7 +79,14 @@
             <p>Les installeurs sont automatiquement envoyés à VirusTotal après build. Rapport public disponible et aucune détection de malware.</p>
           </div>
           <div class="trust-card">
-            <div class="trust-icon">🚫</div>
+              <div class="trust-icon">📊</div>
+            <h3>Rapport public</h3>
+            <p>Le rapport VirusTotal est accessible sur la page de la release.
+              <a id="vt-report-link" class="trust-link" href="#">Voir le rapport</a>
+            </p>
+          </div>
+          <div class="trust-card">
+              <div class="trust-icon">🚫</div>
             <h3>Zéro Données Collectées</h3>
             <p>DofusCodex ne collecte <strong>aucune donnée personnelle</strong>. Pas de tracking, pas d'analytics, pas de compte.</p>
           </div>
@@ -145,10 +152,16 @@
         const btnMacFooter = document.getElementById('btn-mac-footer');
         const status = document.getElementById('status');
         const statusFooter = document.getElementById('status-footer');
+        const vtReportLink = document.getElementById('vt-report-link');
 
         function setFallback() {
           const url = `https://github.com/${owner}/${repo}/releases/latest`;
           [btnWin, btnMac, btnWinFooter, btnMacFooter].forEach(b => { b.href = url; b.target = '_blank'; });
+          if (vtReportLink) {
+            vtReportLink.href = url;
+            vtReportLink.textContent = 'Voir la page de release';
+            vtReportLink.target = '_blank';
+          }
           statusFooter.textContent = 'Impossible de récupérer les versions — ouvre la page des releases.';
         }
 
@@ -165,7 +178,11 @@
             if (macAsset) {
               [btnMac, btnMacFooter].forEach(b => { b.href = macAsset.browser_download_url; b.target = '_blank'; });
             }
-
+            if (vtReportLink) {
+              vtReportLink.href = data.html_url;
+              vtReportLink.textContent = 'Voir le rapport de la release';
+              vtReportLink.target = '_blank';
+            }
             if (!winAsset && !macAsset) {
               setFallback();
             } else {

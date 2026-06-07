@@ -10,21 +10,31 @@
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
-function readToken() {
-  if (process.env.GH_TOKEN) return process.env.GH_TOKEN.trim();
+function readEnv(name) {
+  if (process.env[name]) return process.env[name].trim();
   if (existsSync(".env")) {
-    const m = readFileSync(".env", "utf8").match(/^\s*GH_TOKEN\s*=\s*(.+)\s*$/m);
+    const re = new RegExp(`^\\s*${name}\\s*=\\s*(.+)\\s*$`, "m");
+    const m = readFileSync(".env", "utf8").match(re);
     if (m) return m[1].trim();
   }
   return null;
 }
 
-const token = readToken();
+const token = readEnv("GH_TOKEN");
+const virusTotalKey = readEnv("VIRUSTOTAL_API_KEY");
 if (!token) {
   console.error(
     "\n❌ GH_TOKEN manquant.\n" +
       "   Crée un fichier .env à la racine avec :  GH_TOKEN=ton_token_github\n" +
       "   (token : github.com → Settings → Developer settings → token classique, scope « repo »)\n",
+  );
+  process.exit(1);
+}
+if (!virusTotalKey) {
+  console.error(
+    "\n❌ VIRUSTOTAL_API_KEY manquant.\n" +
+      "   Crée un fichier .env à la racine avec :  VIRUSTOTAL_API_KEY=ta_cle_virustotal\n" +
+      "   Ou ajoute le secret GitHub correspondant si tu utilises Actions.\n",
   );
   process.exit(1);
 }
@@ -46,15 +56,22 @@ console.log(`\n📦 Version → ${pkg.version}\n`);
 const run = (cmd) =>
   execSync(cmd, {
     stdio: "inherit",
-    env: { ...process.env, GH_TOKEN: token, CSC_IDENTITY_AUTO_DISCOVERY: "false" },
+    env: {
+      ...process.env,
+      GH_TOKEN: token,
+      VIRUSTOTAL_API_KEY: virusTotalKey,
+      CSC_IDENTITY_AUTO_DISCOVERY: "false",
+    },
   });
 
-// Build du renderer puis build + publication de l'app (cible = l'OS courant).
+// Build du renderer puis paquetage, scan VirusTotal, et publication.
 run("npx vite build");
+run("npx electron-builder --publish never");
+run("node scripts/virustotal-scan.mjs");
 run("npx electron-builder --publish always");
 
 console.log(
-  `\n✅ Version ${pkg.version} compilée et envoyée.\n` +
+  `\n✅ Version ${pkg.version} compilée, scannée, et envoyée.\n` +
     "   → Sur GitHub (repo des releases), ouvre la release en brouillon et clique « Publish »\n" +
     "     pour déclencher la mise à jour chez les utilisateurs.\n",
 );

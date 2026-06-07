@@ -147,6 +147,25 @@ export async function getDungeon(id: number, signal?: AbortSignal): Promise<Dung
   return data.data[0] ?? null;
 }
 
+// Image d'une map (rendu DofusDB) — sert pour la « Map du boss » d'un donjon.
+export function dungeonMapImg(mapId: number, scale: "0.25" | "0.5" | "1" = "0.5"): string {
+  return `${BASE}/img/maps/${scale}/${mapId}.jpg`;
+}
+
+// Aire (région) d'un donjon depuis sa sous-zone : subarea → areaId → nom de l'aire.
+// Best-effort : renvoie null si indisponible (ne bloque jamais l'affichage).
+export async function getDungeonArea(subareaId: number, signal?: AbortSignal): Promise<string | null> {
+  try {
+    const s = await getJson<FeathersList<{ areaId?: number }>>(`${BASE}/subareas${qs({ id: subareaId })}`, signal);
+    const areaId = s.data[0]?.areaId;
+    if (!areaId) return null;
+    const a = await getJson<FeathersList<{ name?: Localized }>>(`${BASE}/areas${qs({ id: areaId, lang: "fr" })}`, signal);
+    return a.data[0]?.name?.fr ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ---- Monsters ----
 
 export async function getMonstersByIds(ids: number[], signal?: AbortSignal): Promise<Monster[]> {
@@ -334,20 +353,24 @@ export async function dungeonsWithMonster(monsterId: number, signal?: AbortSigna
 
 export async function getItemsByIds(ids: number[], signal?: AbortSignal): Promise<ItemLite[]> {
   if (!ids.length) return [];
-  const idParams = ids.map((i) => `id[$in][]=${i}`).join("&");
   // NB: `img` is a virtual field derived from iconId; with $select it would resolve to
   // ".../undefined.png", so we select iconId and build the URL ourselves.
-  const url = `${BASE}/items?lang=fr&$limit=${ids.length}&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level&${idParams}`;
-  const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number }>>(
-    url,
-    signal,
-  );
-  return data.data.map((it) => ({
-    id: it.id,
-    name: it.name,
-    level: it.level,
-    img: `${BASE}/img/items/${it.iconId}.png`,
-  }));
+  // DofusDB plafonne $limit à 50 → on pagine par lots de 50 (sinon les ids au-delà du
+  // 50ᵉ ne sont jamais renvoyés et s'affichent en « #id » sans nom ni image).
+  const out: ItemLite[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const url = `${BASE}/items?lang=fr&$limit=50&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level&${idParams}`;
+    const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number }>>(
+      url,
+      signal,
+    );
+    for (const it of data.data) {
+      out.push({ id: it.id, name: it.name, level: it.level, img: `${BASE}/img/items/${it.iconId}.png` });
+    }
+  }
+  return out;
 }
 
 // ---- Havre-sacs (thèmes) ----
@@ -586,6 +609,9 @@ export interface ClassSpell {
 
 const DMG_EFFECTS = new Set([96, 97, 98, 99, 100]); // dégâts directs
 const STEAL_EFFECTS = new Set([90, 91, 92, 93, 94, 95]); // vol de vie
+// Effets qui posent/retirent un état : leur template est « État #3 » / « Enlève l'état #3 »
+// / « Désactive l'état #3 », où #3 (= value) est un id d'état à résoudre en nom (/spell-states).
+const STATE_EFFECTS = new Set([950, 951, 952]);
 const hasLetters = (s: string) => /[a-zA-ZÀ-ÿ]/.test(s);
 
 // Codes de déclencheur DofusDB → texte. Sûrs (confirmés) : APA/MPA. Le reste → générique.
@@ -643,13 +669,20 @@ function decodeSpellDamage(effects: unknown): SpellDamage[] {
 // Rend un effet utilitaire (non-dégât) depuis son template Ankama.
 //  #1 = diceNum (min) · #2 = diceSide (max) · #3 = value
 //  {{~1 … }} = bloc affiché s'il y a une plage (min≠max) · {{~ps}} = pluriel sur #1
-function renderEffectTemplate(tpl: string, e: Record<string, any>, refNames: Map<number, string>): string {
+function renderEffectTemplate(
+  tpl: string,
+  e: Record<string, any>,
+  refNames: Map<number, string>,
+  stateNames: Map<number, string>,
+): string {
   const a = e.diceNum ?? 0;
   const b = e.diceSide ?? 0;
   const c = e.value ?? 0;
   const hasRange = b > 0 && b !== a;
   // Un grand nombre (≥1000) est en général un id de sort/monstre → on le remplace par son nom.
   const sub = (n: number) => (n >= 1000 ? refNames.get(n) : undefined) ?? String(n);
+  // Effets d'état (« État #3 »…) : #3 est un id d'état → on le remplace par son nom résolu.
+  const isState = STATE_EFFECTS.has(e.effectId);
   let s = tpl;
   s = s.replace(/\{\{~1([^{}]*)\}\}/g, (_m, inner) => (hasRange ? String(inner).replace(/~\d+/g, "") : ""));
   s = s.replace(/\{\{~ps\}\}/g, a > 1 ? "s" : "");
@@ -657,7 +690,7 @@ function renderEffectTemplate(tpl: string, e: Record<string, any>, refNames: Map
   s = s.replace(/<[^>]*>/g, ""); // balises (ex. <sprite name="erosion">) → retirées
   s = s.replace(/#1/g, sub(a));
   s = s.replace(/#2/g, hasRange ? sub(b) : "");
-  s = s.replace(/#3/g, sub(c));
+  s = s.replace(/#3/g, isState ? (stateNames.get(c) ?? `état ${c}`) : sub(c));
   s = s.replace(/\s+([%):.,])/g, "$1"); // espaces avant ponctuation
   s = s.replace(/\s+/g, " ").trim();
   return s + effectSuffix(e);
@@ -677,7 +710,12 @@ function effectSuffix(e: Record<string, any>): string {
 }
 
 // Effets non-dégâts d'un niveau, rendus en texte (téléporte, repousse, états, lance un sort…).
-function buildUtility(effects: unknown, tpl: Map<number, string>, refNames: Map<number, string>): string[] {
+function buildUtility(
+  effects: unknown,
+  tpl: Map<number, string>,
+  refNames: Map<number, string>,
+  stateNames: Map<number, string>,
+): string[] {
   const out: string[] = [];
   if (!Array.isArray(effects)) return out;
   for (const e of effects) {
@@ -693,7 +731,7 @@ function buildUtility(effects: unknown, tpl: Map<number, string>, refNames: Map<
       if (name) out.push(`Lance le sort ${name}${effectSuffix(eff)}${seg}`);
       continue;
     }
-    const s = renderEffectTemplate(t, eff, refNames);
+    const s = renderEffectTemplate(t, eff, refNames, stateNames);
     if (s && hasLetters(s)) out.push(s + seg);
   }
   return out;
@@ -719,6 +757,27 @@ function labelForCondition(condition: string, names: Map<number, string>): strin
   const ids = stateIdsOf(condition);
   if (!ids.length) return "";
   return ids.map((id) => names.get(id) ?? `État ${id}`).join(" + ");
+}
+
+// Résout des ids d'états → noms lisibles (via /spell-states, paginé par 50). Best-effort :
+// renvoie une map vide en cas d'échec (on retombera sur un libellé « état N »).
+async function resolveStateNames(ids: Set<number>, signal?: AbortSignal): Promise<Map<number, string>> {
+  const names = new Map<number, string>();
+  const arr = [...ids].filter((n) => n > 0);
+  for (let i = 0; i < arr.length; i += 50) {
+    const chunk = arr.slice(i, i + 50);
+    const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    try {
+      const data = await getJson<FeathersList<{ id: number; name?: Localized }>>(
+        `${BASE}/spell-states?lang=fr&$limit=50&${idParams}`,
+        signal,
+      );
+      for (const st of data.data ?? []) if (st.name?.fr) names.set(st.id, cleanStateName(st.name.fr));
+    } catch {
+      // pas de noms d'états → libellé générique
+    }
+  }
+  return names;
 }
 
 // Récupère TOUS les sorts d'une classe via les spell-variants : chaque variante
@@ -814,21 +873,7 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
     for (const lv of sp.levels)
       for (const d of [...lv.damage, ...lv.criticalDamage]) stateIdsOf(d.condition).forEach((id) => stateIds.add(id));
   if (stateIds.size) {
-    const stateNames = new Map<number, string>();
-    const sids = [...stateIds];
-    for (let i = 0; i < sids.length; i += 50) {
-      const chunk = sids.slice(i, i + 50);
-      const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
-      try {
-        const data = await getJson<FeathersList<{ id: number; name?: Localized }>>(
-          `${BASE}/spell-states?lang=fr&$limit=50&${idParams}`,
-          signal,
-        );
-        for (const st of data.data ?? []) if (st.name?.fr) stateNames.set(st.id, cleanStateName(st.name.fr));
-      } catch {
-        // pas de noms d'états → on retombera sur un libellé générique
-      }
-    }
+    const stateNames = await resolveStateNames(stateIds, signal);
     for (const sp of spells)
       for (const lv of sp.levels)
         for (const d of [...lv.damage, ...lv.criticalDamage]) d.conditionLabel = labelForCondition(d.condition, stateNames);
@@ -921,7 +966,24 @@ export async function getMonsterSpells(
     }
   }
 
-  return ordered.map((s, idx) => {
+  // États référencés par les sorts → noms lisibles (résolus dynamiquement via /spell-states,
+  // donc valable pour les 6000+ états du jeu) :
+  //  • effets qui posent/retirent un état (950/951/952) : id dans #3 (= value) ;
+  //  • états requis en condition de dégâts (targetMask, ex "*E244").
+  const stateIds = new Set<number>();
+  for (const l of levelById.values())
+    for (const e of [...(l.effects ?? []), ...(l.criticalEffect ?? [])]) {
+      if (STATE_EFFECTS.has(e?.effectId) && typeof e.value === "number") stateIds.add(e.value);
+      for (const tok of String(e?.targetMask ?? "").split(",")) {
+        if (/\d/.test(tok)) {
+          const n = Number(tok.replace(/\D/g, ""));
+          if (n > 0) stateIds.add(n);
+        }
+      }
+    }
+  const stateNames = await resolveStateNames(stateIds, signal);
+
+  const result = ordered.map((s, idx) => {
     const levelIdList: number[] = Array.isArray(s.spellLevels) ? s.spellLevels : [];
     const levels: SpellLevel[] = levelIdList
       .map((id) => levelById.get(id))
@@ -939,8 +1001,8 @@ export async function getMonsterSpells(
         castInLine: !!l.castInLine,
         castInDiagonal: !!l.castInDiagonal,
         losRequired: !!l.castTestLos,
-        utility: buildUtility(l.effects, tplById, refNames),
-        criticalUtility: buildUtility(l.criticalEffect, tplById, refNames),
+        utility: buildUtility(l.effects, tplById, refNames, stateNames),
+        criticalUtility: buildUtility(l.criticalEffect, tplById, refNames, stateNames),
         ...extractZone(l.effects),
       }))
       .sort((a, b) => a.grade - b.grade);
@@ -955,6 +1017,12 @@ export async function getMonsterSpells(
       auto: autoSet.has(s.id),
     };
   });
+
+  // Libellés de condition (« si <état> ») résolus, comme sur la fiche de classe.
+  for (const sp of result)
+    for (const lv of sp.levels)
+      for (const d of [...lv.damage, ...lv.criticalDamage]) d.conditionLabel = labelForCondition(d.condition, stateNames);
+  return result;
 }
 
 // Récupère la zone d'effet principale (1ʳᵉ qui a une forme/taille) parmi les effets.

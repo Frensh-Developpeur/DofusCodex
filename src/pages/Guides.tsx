@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -14,7 +14,7 @@ import {
 import DofusIcon from "../components/DofusIcon";
 import { STATUS_LABEL, type GuideLight, type GuideStatus } from "../api/ganymede";
 import { getGuideListData, getGuideData } from "../lib/guideStore";
-import { idbGetStepCounts } from "../lib/guideDb";
+import { idbGetStepCounts, idbGetThumbnails } from "../lib/guideDb";
 import { categoryOf } from "../lib/guideCategory";
 import { useDebounce } from "../hooks/useDebounce";
 import { useViewState } from "../lib/viewState";
@@ -66,6 +66,8 @@ export default function Guides() {
   const guideTotalSteps = useStore((s) => s.guideTotalSteps);
   const doneGuides = useStore((s) => s.doneGuides);
   const favoriteGuides = useStore((s) => s.favoriteGuides);
+  // Vignettes (1re image de chaque guide), extraites des guides téléchargés en local.
+  const [thumbs, setThumbs] = useState<Record<number, string>>({});
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["ganymede-guides"],
@@ -78,6 +80,9 @@ export default function Guides() {
   useEffect(() => {
     idbGetStepCounts()
       .then((counts) => actions.mergeGuideTotalSteps(counts))
+      .catch(() => {});
+    idbGetThumbnails()
+      .then(setThumbs)
       .catch(() => {});
   }, [data]);
 
@@ -252,6 +257,7 @@ export default function Guides() {
               key={g.id}
               guide={g}
               index={i}
+              thumb={thumbs[g.id]}
               currentStep={guideStep[g.id]}
               totalSteps={guideTotalSteps[g.id]}
               done={isDoneGuide(g)}
@@ -267,6 +273,7 @@ export default function Guides() {
 function GuideCard({
   guide,
   index,
+  thumb,
   currentStep,
   totalSteps,
   done,
@@ -274,6 +281,7 @@ function GuideCard({
 }: {
   guide: GuideLight;
   index: number;
+  thumb?: string;
   currentStep?: number;
   totalSteps?: number;
   done: boolean;
@@ -284,6 +292,9 @@ function GuideCard({
   const pct = inProgress && totalSteps ? Math.round(((currentStep + 1) / totalSteps) * 100) : null;
   const cat = categoryOf(guide.name);
   const qc = useQueryClient();
+  // Certaines images de guides (i.ibb.co…) peuvent être supprimées : on masque le bandeau si l'URL échoue.
+  const [thumbOk, setThumbOk] = useState(true);
+  const showThumb = !!thumb && thumbOk;
 
   return (
     <motion.div variants={fadeUp} custom={index % 16} whileHover={{ y: -4 }}>
@@ -304,6 +315,20 @@ function GuideCard({
         <div
           className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${cat.tile} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100`}
         />
+
+        {/* Bandeau : 1re image du guide (Ganymède), fondue dans le fond de la card. */}
+        {showThumb && (
+          <div className="relative -mx-4 -mt-4 mb-3 h-28 overflow-hidden">
+            <img
+              src={thumb}
+              alt=""
+              loading="lazy"
+              onError={() => setThumbOk(false)}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-void-900 via-void-900/30 to-transparent" />
+          </div>
+        )}
 
         <div className="relative mb-3 flex items-start gap-3">
           <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${cat.tile} ring-1 ring-white/10`}>

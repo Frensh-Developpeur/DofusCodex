@@ -24,7 +24,9 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     collapsible: true,
     items: [
       { to: "/donjons", label: "Donjons", dofus: "dungeon" },
+      { to: "/avis-de-recherche", label: "Avis de recherche", dofus: "teteDeMort" },
       { to: "/guides", label: "Guides", dofus: "book" },
+      { to: "/arbre", label: "Arbre des guides", dofus: "genealogy" },
     ],
   },
   {

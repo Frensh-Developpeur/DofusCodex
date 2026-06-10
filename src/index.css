@@ -53,6 +53,14 @@
 }
 
 @layer components {
+  /* Masque visuellement la barre de défilement (le scroll reste actif : molette/trackpad/drag). */
+  .no-scrollbar {
+    scrollbar-width: none; /* Firefox / Chromium récents */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* WebKit / Chromium (Electron) */
+  }
+
   /* Frosted-glass card used everywhere */
   .glass {
     @apply rounded-2xl border border-white/5 bg-white/[0.03] backdrop-blur-xl;

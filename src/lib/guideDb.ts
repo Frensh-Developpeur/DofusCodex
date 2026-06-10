@@ -1,7 +1,7 @@
 // Stockage local des guides Ganymède via IndexedDB (pas de limite pratique de taille,
 // contrairement à localStorage). Permet de TOUT télécharger une fois et de naviguer
 // hors-ligne ensuite, sans serveur à héberger.
-import type { GuideLight, GuideDetail } from "../api/ganymede";
+import { firstGuideImage, type GuideLight, type GuideDetail } from "../api/ganymede";
 
 const DB_NAME = "dofuscodex";
 const DB_VERSION = 1;
@@ -86,6 +86,29 @@ export async function idbGetStepCounts(): Promise<Record<number, number>> {
         cursor.continue();
       } else {
         resolve(counts);
+      }
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// Vignette (première image) par guide (id -> url), lue via curseur comme idbGetStepCounts :
+// chaque détail est chargé puis relâché un à un → empreinte mémoire minime sur ~700 guides.
+export async function idbGetThumbnails(): Promise<Record<number, string>> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const thumbs: Record<number, string> = {};
+    const t = db.transaction(GUIDES, "readonly");
+    const req = t.objectStore(GUIDES).openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        const g = cursor.value as GuideDetail;
+        const url = firstGuideImage(g.steps);
+        if (url) thumbs[g.id] = url;
+        cursor.continue();
+      } else {
+        resolve(thumbs);
       }
     };
     req.onerror = () => reject(req.error);

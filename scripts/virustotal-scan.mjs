@@ -86,6 +86,10 @@ async function uploadAndScan(fileName, filePath, sha256) {
   return json.data?.id || null;
 }
 
+let scannedCount = 0;
+let hashCheckedCount = 0;
+let skippedCount = 0;
+
 async function scanFile(fileName) {
   const filePath = path.join(releaseDir, fileName);
   const sha256 = await computeSha256(filePath);
@@ -100,6 +104,7 @@ async function scanFile(fileName) {
     const existing = await getExistingAnalysis(sha256);
     if (!existing) {
       console.warn('⚠️ Aucun rapport VirusTotal existant pour ce hash. Scan ignoré.');
+      skippedCount += 1;
       return;
     }
     const existingStats = existing.data?.attributes?.last_analysis_stats;
@@ -112,12 +117,14 @@ async function scanFile(fileName) {
     if (existingStats.malicious > 0 || existingStats.suspicious > 0) {
       throw new Error(`VirusTotal a trouvé un problème sur ${fileName} (${existingStats.malicious} malveillant, ${existingStats.suspicious} suspect).`);
     }
+    hashCheckedCount += 1;
     return;
   }
 
   const analysisId = await uploadAndScan(fileName, filePath, sha256);
   if (!analysisId) {
     console.warn('⚠️ VirusTotal a refusé l’upload ou le fichier est trop volumineux. Scan ignoré.');
+    skippedCount += 1;
     return;
   }
 
@@ -135,6 +142,7 @@ async function scanFile(fileName) {
   if (analysisStats.malicious > 0 || analysisStats.suspicious > 0) {
     throw new Error(`VirusTotal a trouvé un problème sur ${fileName} (${analysisStats.malicious} malveillant, ${analysisStats.suspicious} suspect).`);
   }
+  scannedCount += 1;
 }
 
 async function main() {
@@ -152,7 +160,12 @@ async function main() {
     await scanFile(artifact);
   }
 
-  console.log('\n✅ Tous les installeurs ont passé le scan VirusTotal.');
+  const parts = [];
+  if (scannedCount) parts.push(`${scannedCount} scan${scannedCount > 1 ? 's' : ''} direct${scannedCount > 1 ? 's' : ''}`);
+  if (hashCheckedCount) parts.push(`${hashCheckedCount} vérification${hashCheckedCount > 1 ? 's' : ''} par hash`);
+  if (skippedCount) parts.push(`${skippedCount} fichier${skippedCount > 1 ? 's' : ''} ignoré${skippedCount > 1 ? 's' : ''}`);
+
+  console.log(`\n✅ Analyse VirusTotal terminée : ${parts.join(', ')}.`);
 }
 
 main().catch((err) => {

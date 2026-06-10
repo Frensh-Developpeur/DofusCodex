@@ -18,10 +18,13 @@ import Skinator from "./pages/Skinator";
 import SkinatorSkins from "./pages/SkinatorSkins";
 import Guides from "./pages/Guides";
 import GuideDetail from "./pages/GuideDetail";
+import GuideTree from "./pages/GuideTree";
 import Almanax from "./pages/Almanax";
 import Hunt from "./pages/Hunt";
 import Monsters from "./pages/Monsters";
 import MonsterDetail from "./pages/MonsterDetail";
+import Wanted from "./pages/Wanted";
+import WantedDetail from "./pages/WantedDetail";
 import Sets, { SetDetail } from "./pages/Sets";
 import Classes, { ClassDetail } from "./pages/Classes";
 import Resources from "./pages/Resources";
@@ -48,12 +51,14 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/chasse", <Hunt />],
   ["/metamob", <Metamob />],
   ["/monstres", <Monsters />],
+  ["/avis-de-recherche", <Wanted />],
   ["/panoplies", <Sets />],
   ["/classes", <Classes />],
   ["/objets", <Resources />],
   ["/havre-sac", <Havenbags />],
   ["/succes", <Achievements />],
   ["/guides", <Guides />],
+  ["/arbre", <GuideTree />],
   ["/almanax", <Almanax />],
   ["/parametres", <Settings />],
   ["/skinator", <Skinator />],
@@ -62,7 +67,7 @@ const KEEP_MAP = new Map(KEEP_ALIVE);
 
 // Une page de détail = un chemin à segment(s) sous l'une de ces racines.
 const isDetailPath = (p: string) =>
-  /^\/(donjons|builder|monstres|guides|objets|panoplies|classes|havre-sac)\/[^/]+/.test(p);
+  /^\/(donjons|builder|monstres|avis-de-recherche|guides|objets|panoplies|classes|havre-sac)\/[^/]+/.test(p);
 
 export default function App() {
   const location = useLocation();
@@ -190,6 +195,7 @@ export default function App() {
                   <Route path="/donjons/:id" element={<DungeonDetail />} />
                   <Route path="/builder/:id" element={<Builder />} />
                   <Route path="/monstres/:id" element={<MonsterDetail />} />
+                  <Route path="/avis-de-recherche/:slug" element={<WantedDetail />} />
                   <Route path="/guides/:id" element={<GuideDetail />} />
                   <Route path="/objets/:id" element={<ItemDetail />} />
                   <Route path="/panoplies/:id" element={<SetDetail />} />

@@ -52,6 +52,18 @@ export function getGuide(id: number, signal?: AbortSignal) {
   return getJson<GuideDetail>(`${BASE}/guides/${id}`, signal);
 }
 
+// Première image (vignette) d'un guide : les images sont embarquées dans le markup des
+// étapes sous forme <image url="…"> (ou <img src="…">). On renvoie la première URL https
+// rencontrée. `\b(?:url|src)` évite de capturer le `imageurl=` des entités item/monstre.
+const GUIDE_IMG_RE = /<im(?:g|age)\b[^>]*?\b(?:url|src)\s*=\s*["']([^"']+)["']/i;
+export function firstGuideImage(steps?: GuideStep[]): string | undefined {
+  for (const s of steps ?? []) {
+    const m = (s.text || "").match(GUIDE_IMG_RE);
+    if (m && /^https?:\/\//i.test(m[1])) return m[1];
+  }
+  return undefined;
+}
+
 // Libellés FR des statuts Ganymède.
 export const STATUS_LABEL: Record<GuideStatus, string> = {
   gp: "Officiel",

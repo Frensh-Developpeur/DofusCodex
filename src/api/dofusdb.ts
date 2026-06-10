@@ -384,6 +384,23 @@ export async function resolveMonsterIdByName(
   return [...candidates].sort((a, b) => resolveScore(b, term, hint) - resolveScore(a, term, hint) || a.id - b.id)[0].id;
 }
 
+// Cherche un monstre par son nom (1er résultat, le plus petit id). Léger (id/nom/img/boss).
+// Sert aux avis de recherche : le criminel est un monstre DofusDB → portrait + lien /monstres/:id.
+export async function findMonsterByName(name: string, signal?: AbortSignal): Promise<MonsterLite | null> {
+  const term = name.trim();
+  if (!term) return null;
+  const url =
+    `${BASE}/monsters?lang=fr&$limit=1&$sort[id]=1` +
+    `&$select[]=id&$select[]=name&$select[]=gfxId&$select[]=isBoss${searchClause(term)}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; gfxId: number; isBoss?: boolean }>>(
+    url,
+    signal,
+  );
+  const m = data.data[0];
+  if (!m) return null;
+  return { id: m.id, name: m.name, isBoss: !!m.isBoss, img: `${BASE}/img/monsters/${m.gfxId}.png` };
+}
+
 // Monstres de la même famille (race). Léger (id/nom/img), plafonné à 50 (limite DofusDB).
 export async function getMonstersByRace(raceId: number, signal?: AbortSignal): Promise<MonsterLite[]> {
   if (raceId == null) return [];

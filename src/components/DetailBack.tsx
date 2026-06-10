@@ -11,6 +11,7 @@ const SECTIONS: { prefix: string; to: string; label: string }[] = [
   { prefix: "/havre-sac/", to: "/havre-sac", label: "Havre-Sacs" },
   { prefix: "/monstres/", to: "/monstres", label: "Monstres" },
   { prefix: "/donjons/", to: "/donjons", label: "Donjons" },
+  { prefix: "/avis-de-recherche/", to: "/avis-de-recherche", label: "Avis de recherche" },
   { prefix: "/guides/", to: "/guides", label: "Guides" },
 ];
 

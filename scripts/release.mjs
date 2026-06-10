@@ -64,9 +64,9 @@ const run = (cmd) =>
 
 // Build du renderer puis paquetage, scan VirusTotal, et publication.
 run("npx vite build");
-run("npx electron-builder --publish never");
+run("npx electron-builder --mac --win --publish never");
 run("node scripts/virustotal-scan.mjs");
-run("npx electron-builder --publish always");
+run("npx electron-builder --mac --win --publish always");
 
 console.log(
   `\n✅ Version ${pkg.version} compilée, scannée, et envoyée.\n` +

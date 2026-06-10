@@ -15,7 +15,7 @@ import {
   CheckCircle2,
 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
-import { STATUS_LABEL, type GuideStatus } from "../api/ganymede";
+import { STATUS_LABEL, firstGuideImage, type GuideStatus } from "../api/ganymede";
 import { getGuideData } from "../lib/guideStore";
 import { categoryOf } from "../lib/guideCategory";
 import { useStore, actions } from "../store/store";
@@ -42,6 +42,8 @@ export default function GuideDetail() {
 
   const [copied, setCopied] = useState(false);
   const [focus, setFocus] = useState(false);
+  // Image d'en-tête (1re image du guide) à la place de l'icône de catégorie ; repli si elle échoue.
+  const [headerImgOk, setHeaderImgOk] = useState(true);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["ganymede-guide", guideId],
@@ -56,6 +58,7 @@ export default function GuideDetail() {
   // modales/focus quand on bascule sur un autre guide.
   useEffect(() => {
     setCopied(false);
+    setHeaderImgOk(true);
     document.querySelector("main")?.scrollTo({ top: 0 });
   }, [guideId]);
 
@@ -108,6 +111,7 @@ export default function GuideDetail() {
   const hasPos =
     current && current.map && current.map !== "Nomap" && !(current.pos_x === 0 && current.pos_y === 0);
   const cat = categoryOf(data.name);
+  const headerImg = headerImgOk ? firstGuideImage(data.steps) : undefined;
 
   return (
     <div>
@@ -121,8 +125,22 @@ export default function GuideDetail() {
         />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 gap-3">
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${cat.tile} ring-1 ring-white/10`}>
-              <cat.Icon className={`h-6 w-6 ${cat.text}`} />
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl ring-1 ring-white/10 ${
+                headerImg ? "bg-void-900" : `bg-gradient-to-br ${cat.tile}`
+              }`}
+            >
+              {headerImg ? (
+                <img
+                  src={headerImg}
+                  alt=""
+                  loading="lazy"
+                  onError={() => setHeaderImgOk(false)}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <cat.Icon className={`h-6 w-6 ${cat.text}`} />
+              )}
             </div>
             <div className="min-w-0">
               <div className="mb-1 flex flex-wrap items-center gap-2">

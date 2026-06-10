@@ -158,11 +158,20 @@
         const statusFooter = document.getElementById('status-footer');
         const vtReportLink = document.getElementById('vt-report-link');
 
-        function setFallback() {
-          const url = `https://github.com/${owner}/${repo}/releases/latest`;
-          [btnWin, btnMac, btnWinFooter, btnMacFooter].forEach(b => { b.href = url; b.target = '_blank'; });
+        const releaseUrl = `https://github.com/${owner}/${repo}/releases/latest`;
+        function setFallback(buttons = []) {
+          buttons.forEach((b) => {
+            if (b) {
+              b.href = releaseUrl;
+              b.target = '_blank';
+            }
+          });
+        }
+
+        function setAllFallback() {
+          setFallback([btnWin, btnMac, btnWinFooter, btnMacFooter]);
           if (vtReportLink) {
-            vtReportLink.href = url;
+            vtReportLink.href = releaseUrl;
             vtReportLink.textContent = 'Voir la page de release';
             vtReportLink.target = '_blank';
           }
@@ -184,10 +193,15 @@
               releaseVersion.textContent = `Dernière version : ${releaseName}`;
             }
             if (winAsset) {
+              setFallback([btnWin, btnWinFooter]);
               [btnWin, btnWinFooter].forEach(b => { b.href = winAsset.browser_download_url; b.target = '_blank'; });
+            } else {
+              setFallback([btnWin, btnWinFooter]);
             }
             if (macAsset) {
               [btnMac, btnMacFooter].forEach(b => { b.href = macAsset.browser_download_url; b.target = '_blank'; });
+            } else {
+              setFallback([btnMac, btnMacFooter]);
             }
             if (btnWinInfo) {
               btnWinInfo.textContent = releaseName;
@@ -201,16 +215,19 @@
               vtReportLink.target = '_blank';
             }
             if (!winAsset && !macAsset) {
-              setFallback();
+              setAllFallback();
             } else {
               statusFooter.textContent = `Dernière version : ${releaseName}`;
+              if (!winAsset) {
+                statusFooter.textContent = `Dernière version : ${releaseName} — build Windows indisponible. Ouvre la page de release.`;
+              }
             }
             status.textContent = '';
           })
           .catch(err => {
             console.error('Release fetch error', err);
             status.textContent = '';
-            setFallback();
+            setAllFallback();
           });
       })();
     </script>

@@ -68,6 +68,7 @@ export interface AppState {
   favoriteDungeons: number[];
   doneDungeons: number[];
   doneQuests: number[];
+  doneWanted: string[]; // avis de recherche « capturés » (par slug)
   builds: Build[];
   // Suivi des guides Ganymède.
   guideStep: Record<number, number>; // guideId -> index de l'étape en cours
@@ -88,6 +89,7 @@ const DEFAULT_STATE: AppState = {
   favoriteDungeons: [],
   doneDungeons: [],
   doneQuests: [],
+  doneWanted: [],
   builds: [],
   guideStep: {},
   guideTotalSteps: {},
@@ -182,6 +184,14 @@ export const actions = {
   },
   toggleDoneQuest(id: number) {
     setState((s) => ({ ...s, doneQuests: toggle(s.doneQuests, id) }));
+  },
+  toggleDoneWanted(slug: string) {
+    setState((s) => ({
+      ...s,
+      doneWanted: s.doneWanted.includes(slug)
+        ? s.doneWanted.filter((x) => x !== slug)
+        : [...s.doneWanted, slug],
+    }));
   },
   saveBuild(name: string, slots: BuildSlots, extra?: Omit<Partial<Build>, "id" | "name" | "slots" | "createdAt">): string {
     const now = Date.now();

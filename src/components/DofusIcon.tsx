@@ -70,6 +70,7 @@ const PATHS = {
   workbenchOff: "workbench_off",
   workbenchOn: "workbench_on",
   world: "world",
+  genealogy: "world", // repli distant ; l'icône réelle est l'asset officiel ci-dessous
   calendar: "calendar",
   close: "close",
   closeRed: "close",
@@ -495,6 +496,7 @@ const OFFICIAL_PATHS: Partial<Record<DofusIconName, string>> = {
   share: "btnIcon_share.png",
   characteristic: "characteristic.png",
   character: "character.png",
+  genealogy: "genealogy.png", // arbre généalogique → icône « Arbre des guides »
   book: "encyclopedia.png",
   bestiary: "bestiary.png",
   boss: "iconBossSkull.png",

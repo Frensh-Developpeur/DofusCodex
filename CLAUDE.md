@@ -25,6 +25,7 @@ src/api/
 src/components/           # TitleBar, Sidebar (groupée), ItemModal, SlotPicker, ErrorBoundary, ui.tsx
 src/data/
   dungeonGuides.ts        # ★ guides de donjon rédigés (GUIDES) + générateur générique fallback
+  wantedPosters.ts        # ★ avis de recherche rédigés (WANTED_POSTERS, 81 criminels, source DofusPourLesNoobs)
   meta.ts                 # slots, couleurs d'effets, levelTone
 src/store/store.ts        # store persistant (favoris, progression, builds) via useSyncExternalStore
 src/lib/dedupe.ts         # dedupeById (garde-fou anti-doublons)
@@ -33,7 +34,8 @@ src/lib/guideMarkup.tsx   # renderer du markup Ganymède (cross-links donjon/ite
 src/lib/guideDb.ts        # stockage local des guides en IndexedDB (timeout + repli réseau)
 src/lib/guideStore.ts     # accès guides local-first + synchro « tout télécharger »/mise à jour
 src/pages/                # Dashboard, Dungeons, DungeonDetail, Stuffinator, Builder,
-                          # Guides, GuideDetail, Almanax, Hunt (chasse au trésor), Monsters
+                          # Guides, GuideDetail, Almanax, Hunt (chasse au trésor), Monsters,
+                          # Wanted + WantedDetail (avis de recherche : liste filtrable + fiche stratégie)
 ```
 
 ## APIs — règles & pièges (IMPORTANT)

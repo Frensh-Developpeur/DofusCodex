@@ -4,12 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "./store/store";
 import { getGuideListData, getGuideData, startGuideSync } from "./lib/guideStore";
 import { trackItemNav } from "./lib/itemNav";
-import { initCloudSync } from "./lib/cloudSync";
+import { initCloudSync, handleAuthDeepLink } from "./lib/cloudSync";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import SkinatorLeavePrompt from "./components/SkinatorLeavePrompt";
 import UpdateBanner from "./components/UpdateBanner";
+import RecoveryModal from "./components/RecoveryModal";
 import Dashboard from "./pages/Dashboard";
 import Dungeons from "./pages/Dungeons";
 import DungeonDetail from "./pages/DungeonDetail";
@@ -81,6 +82,12 @@ export default function App() {
   useEffect(() => {
     // Synchro cloud (compte) — no-op si Supabase non configuré ou utilisateur déconnecté.
     initCloudSync();
+    // Liens profonds dofuscodex:// (reset de mot de passe) : on écoute les liens reçus à chaud
+    // et on récupère celui éventuellement arrivé avant le montage (cold start via le lien).
+    const offDeepLink = window.dofusCodex?.onDeepLink?.((url) => handleAuthDeepLink(url));
+    window.dofusCodex?.peekDeepLink?.().then((url) => {
+      if (url) handleAuthDeepLink(url);
+    });
     qc.prefetchQuery({
       queryKey: ["ganymede-guides"],
       queryFn: ({ signal }) => getGuideListData(signal),
@@ -96,6 +103,7 @@ export default function App() {
     // Synchro des guides à CHAQUE lancement : 1er lancement → télécharge tout, ensuite →
     // ne récupère que les guides nouveaux/modifiés (diff). En tâche de fond, non bloquant.
     startGuideSync();
+    return () => offDeepLink?.();
     // au montage uniquement
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -210,6 +218,7 @@ export default function App() {
       {/* Choix plein écran quand on quitte le Skinator avec le moteur ouvert. */}
       <SkinatorLeavePrompt />
       <UpdateBanner />
+      <RecoveryModal />
     </div>
   );
 }

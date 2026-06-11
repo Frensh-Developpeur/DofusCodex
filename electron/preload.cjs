@@ -19,6 +19,14 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   openReleases: () => ipcRenderer.invoke("update:open"), // Mac : ouvre la page de téléchargement
   checkUpdate: () => ipcRenderer.invoke("update:check"), // vérification manuelle (page Paramètres)
   peekUpdate: () => ipcRenderer.invoke("update:peek"), // état de maj déjà détecté (au montage du renderer)
+  // ---- Liens profonds dofuscodex:// (reset de mot de passe) ----
+  // cb reçoit l'URL complète (ex. "dofuscodex://reset#access_token=…&type=recovery").
+  onDeepLink: (cb) => {
+    const handler = (_e, url) => cb(url);
+    ipcRenderer.on("deeplink", handler);
+    return () => ipcRenderer.removeListener("deeplink", handler);
+  },
+  peekDeepLink: () => ipcRenderer.invoke("deeplink:peek"), // lien reçu avant le montage du renderer
   // Lit la progression du profil actif dans l'app Ganymède locale (conf.json).
   // Renvoie { profileName, progresses } ou null (Ganymède non installé / erreur).
   readGanymedeProgress: () => ipcRenderer.invoke("ganymede:read-progress"),

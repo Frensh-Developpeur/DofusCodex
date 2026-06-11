@@ -9,6 +9,68 @@ const DEV_URL = "http://localhost:5173";
 
 let mainWindow = null;
 
+// ── Liens profonds dofuscodex:// (réinitialisation de mot de passe, etc.) ──────────────
+// L'e-mail de reset Supabase redirige vers `dofuscodex://reset#access_token=…` ; l'OS ouvre
+// alors l'app avec cette URL, qu'on transmet au renderer (cf. handleAuthDeepLink côté React).
+const PROTOCOL = "dofuscodex";
+let pendingDeepLink = null; // lien arrivé avant que le renderer soit prêt (cold start / course)
+
+const isDeepLink = (s) => typeof s === "string" && s.startsWith(`${PROTOCOL}://`);
+
+function focusMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
+function handleDeepLink(url) {
+  if (!isDeepLink(url)) return;
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    mainWindow.webContents.send("deeplink", url);
+    focusMainWindow();
+  } else {
+    pendingDeepLink = url; // récupéré au montage du renderer via deeplink:peek
+  }
+}
+
+// Une seule instance : sur Windows/Linux, le clic sur un lien profond relance l'exécutable avec
+// l'URL en argv → on la capte dans `second-instance` et on garde la fenêtre existante.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    const url = argv.find(isDeepLink);
+    if (url) handleDeepLink(url);
+    else focusMainWindow();
+  });
+}
+
+// macOS : le lien profond arrive via l'événement open-url (peut précéder la fenêtre).
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
+
+// Enregistre l'app comme gestionnaire du schéma. En dev (electron lancé via un script), il faut
+// préciser l'exécutable + le script ; en prod, l'appel simple suffit (Info.plist sur mac via
+// la config `protocols`, registre HKCU sur Windows au 1er lancement).
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+// Windows/Linux cold start : l'URL est passée dans argv au tout premier lancement.
+{
+  const initial = process.argv.find(isDeepLink);
+  if (initial) pendingDeepLink = initial;
+}
+
 // Page de téléchargement des releases (dérivée de la config publish de package.json).
 let RELEASES_URL = "https://github.com";
 try {
@@ -99,6 +161,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (!gotSingleInstanceLock) return; // 2e instance : la 1re a déjà reçu le lien profond
   session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
     cb({
       responseHeaders: {
@@ -138,6 +201,12 @@ app.whenReady().then(() => {
   ipcMain.handle("update:open", () => shell.openExternal(RELEASES_URL));
   // État de maj déjà détecté (rejoue l'event manqué si le renderer s'est monté après le check).
   ipcMain.handle("update:peek", () => lastUpdatePayload);
+  // Lien profond arrivé avant que le renderer soit prêt (cold start) → récupéré au montage.
+  ipcMain.handle("deeplink:peek", () => {
+    const u = pendingDeepLink;
+    pendingDeepLink = null;
+    return u;
+  });
 
   // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
   // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.

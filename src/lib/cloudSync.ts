@@ -21,6 +21,7 @@ export interface AccountState {
   syncing: boolean;
   syncedAt: number | null;
   error: string | null;
+  recovery: boolean; // session ouverte via un lien de reset → on demande un nouveau mot de passe
 }
 
 let account: AccountState = {
@@ -30,6 +31,7 @@ let account: AccountState = {
   syncing: false,
   syncedAt: null,
   error: null,
+  recovery: false,
 };
 const listeners = new Set<() => void>();
 function setAccount(patch: Partial<AccountState>) {
@@ -198,7 +200,7 @@ export function initCloudSync() {
       else setAccount({ email: user.email ?? null, pseudo });
     } else {
       teardown();
-      setAccount({ status: "signedOut", email: null, pseudo: null, syncing: false, syncedAt: null });
+      setAccount({ status: "signedOut", email: null, pseudo: null, syncing: false, syncedAt: null, recovery: false });
     }
   });
 }
@@ -221,12 +223,142 @@ export async function signUp(
     password,
     options: { data: { pseudo: pseudo?.trim() || null } }, // → user_metadata.pseudo
   });
-  return { error: error?.message ?? null, needsConfirmation: !!data.user && !data.session };
+  if (error) return { error: error.message, needsConfirmation: false };
+  // Session déjà ouverte (confirmation d'e-mail désactivée) → onAuthStateChange connecte direct.
+  if (data.session) return { error: null, needsConfirmation: false };
+  // Pas de session renvoyée : on tente une connexion immédiate pour logger l'utilisateur sans
+  // étape supplémentaire. Réussit tant que la confirmation d'e-mail est désactivée (cas actuel).
+  const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+  if (!signInErr) return { error: null, needsConfirmation: false };
+  // La connexion échoue uniquement si Supabase EXIGE une confirmation d'e-mail → on l'indique.
+  return { error: null, needsConfirmation: true };
 }
 
 export async function signOut() {
   if (!supabase) return;
   await supabase.auth.signOut();
+}
+
+// ---- Gestion du compte (mot de passe / pseudo) ----
+
+// Change le mot de passe d'un utilisateur connecté. On revérifie d'abord le mot de passe
+// actuel (re-connexion silencieuse) → une session laissée ouverte ne suffit pas à le changer.
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const email = account.email;
+  if (!email) return { error: "Tu dois être connecté." };
+  const { error: reauthErr } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (reauthErr) return { error: "Mot de passe actuel incorrect." };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: error?.message ?? null };
+}
+
+// Met à jour le pseudo (user_metadata) — reflété immédiatement dans l'état « compte ».
+export async function updatePseudo(pseudo: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const clean = pseudo.trim();
+  const { error } = await supabase.auth.updateUser({ data: { pseudo: clean || null } });
+  if (!error) setAccount({ pseudo: clean || null });
+  return { error: error?.message ?? null };
+}
+
+// URL de retour du lien de reset → ouvre l'app sur l'écran « nouveau mot de passe »
+// (doit figurer dans Supabase → Authentication → URL Configuration → Redirect URLs).
+const RECOVERY_REDIRECT = "dofuscodex://reset";
+
+// Mot de passe oublié — étape 1 : envoie un e-mail de réinitialisation (lien + code).
+export async function requestPasswordReset(email: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: RECOVERY_REDIRECT });
+  return { error: error?.message ?? null };
+}
+
+// Récupère le token d'un lien de réinitialisation collé (sinon null → on traite l'entrée comme un code).
+function extractRecoveryToken(input: string): string | null {
+  const s = input.trim();
+  if (!/^https?:\/\//i.test(s) && !/token/i.test(s)) return null;
+  try {
+    const url = new URL(s);
+    return url.searchParams.get("token_hash") || url.searchParams.get("token");
+  } catch {
+    const m = s.match(/token(?:_hash)?=([^&\s]+)/i);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+}
+
+// Mot de passe oublié — étape 2 : valide le code (OTP de type recovery) OU le lien collé,
+// puis fixe le nouveau mot de passe. verifyOtp ouvre une session → l'utilisateur est connecté.
+export async function confirmPasswordReset(
+  email: string,
+  codeOrLink: string,
+  newPassword: string,
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const tokenHash = extractRecoveryToken(codeOrLink);
+  const { error: otpErr } = tokenHash
+    ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
+    : await supabase.auth.verifyOtp({ email: email.trim(), token: codeOrLink.trim(), type: "recovery" });
+  if (otpErr) return { error: "Code ou lien invalide / expiré." };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error: error?.message ?? null };
+}
+
+// Traite un lien profond dofuscodex:// (clic sur le lien de reset reçu par e-mail). On ouvre la
+// session à partir des jetons de l'URL ; si c'est une récupération, on lève le drapeau `recovery`
+// → l'UI affiche l'écran « choisis un nouveau mot de passe ». detectSessionInUrl étant désactivé
+// (Electron), c'est nous qui posons la session manuellement.
+export async function handleAuthDeepLink(url: string): Promise<void> {
+  if (!supabase || !url) return;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return;
+  }
+  const hash = new URLSearchParams(parsed.hash.replace(/^#/, ""));
+  const get = (k: string) => hash.get(k) ?? parsed.searchParams.get(k);
+
+  const errDesc = get("error_description") || get("error");
+  if (errDesc) {
+    setAccount({ error: decodeURIComponent(errDesc.replace(/\+/g, " ")) });
+    return;
+  }
+
+  const accessToken = hash.get("access_token");
+  const refreshToken = hash.get("refresh_token");
+  const code = parsed.searchParams.get("code");
+  try {
+    if (accessToken && refreshToken) {
+      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) throw error;
+    } else if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+    } else {
+      return; // rien d'exploitable dans l'URL
+    }
+  } catch (e) {
+    setAccount({ error: errMsg(e) });
+    return;
+  }
+  // Session posée → onAuthStateChange hydrate le compte. Reset de mot de passe → on le demande.
+  if (get("type") === "recovery") setAccount({ recovery: true });
+}
+
+// Finalise une récupération : fixe le nouveau mot de passe puis lève le drapeau.
+export async function completePasswordRecovery(newPassword: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (!error) setAccount({ recovery: false });
+  return { error: error?.message ?? null };
+}
+
+// Ferme l'écran de récupération sans changer le mot de passe (l'utilisateur reste connecté).
+export function dismissRecovery() {
+  setAccount({ recovery: false });
 }
 
 // Force une synchro immédiate (bouton « Synchroniser maintenant »).

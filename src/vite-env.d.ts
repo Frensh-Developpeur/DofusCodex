@@ -30,6 +30,8 @@ interface Window {
     }) => Promise<{ ok: boolean; status: number; data: unknown; error?: string }>;
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;
     peekUpdate?: () => Promise<UpdateEvent | null>;
+    onDeepLink?: (cb: (url: string) => void) => () => void;
+    peekDeepLink?: () => Promise<string | null>;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
     checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;

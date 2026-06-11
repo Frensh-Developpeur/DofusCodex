@@ -38,7 +38,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
           <X className="h-4 w-4" />
         </button>
 
-        <div className="relative">
+        <div className="no-scrollbar relative max-h-[76vh] overflow-y-auto">
           <AccountForm onDone={onClose} />
         </div>
       </motion.div>

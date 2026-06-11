@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useStore } from "./store/store";
-import { getGuideListData, getGuideData, getSyncState, syncGuides, SYNC_REFRESH_MS } from "./lib/guideStore";
+import { getGuideListData, getGuideData, startGuideSync } from "./lib/guideStore";
 import { trackItemNav } from "./lib/itemNav";
+import { initCloudSync } from "./lib/cloudSync";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -78,6 +79,8 @@ export default function App() {
   // Au lancement : réchauffe le catalogue + les guides récents depuis le stockage local
   // (IndexedDB), et lance une mise à jour discrète si la dernière synchro est trop ancienne.
   useEffect(() => {
+    // Synchro cloud (compte) — no-op si Supabase non configuré ou utilisateur déconnecté.
+    initCloudSync();
     qc.prefetchQuery({
       queryKey: ["ganymede-guides"],
       queryFn: ({ signal }) => getGuideListData(signal),
@@ -90,13 +93,9 @@ export default function App() {
         staleTime: 1000 * 60 * 30,
       });
     }
-    getSyncState()
-      .then((st) => {
-        if (st.lastSync != null && Date.now() - st.lastSync > SYNC_REFRESH_MS) {
-          syncGuides().catch(() => {});
-        }
-      })
-      .catch(() => {});
+    // Synchro des guides à CHAQUE lancement : 1er lancement → télécharge tout, ensuite →
+    // ne récupère que les guides nouveaux/modifiés (diff). En tâche de fond, non bloquant.
+    startGuideSync();
     // au montage uniquement
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

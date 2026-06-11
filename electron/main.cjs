@@ -20,7 +20,7 @@ try {
 
 // Hosts the renderer is allowed to talk to.
 const API_HOSTS =
-  "https://api.dofusdu.de https://api.dofusdb.fr https://*.dofusdb.fr https://ganymede-app.com https://barbofus.com https://skinator.barbofus.com https://www.metamob.fr";
+  "https://api.dofusdu.de https://api.dofusdb.fr https://*.dofusdb.fr https://ganymede-app.com https://barbofus.com https://skinator.barbofus.com https://www.metamob.fr https://*.supabase.co wss://*.supabase.co";
 const FONT_CSS = "https://fonts.googleapis.com";
 const FONT_FILES = "https://fonts.gstatic.com";
 
@@ -136,6 +136,8 @@ app.whenReady().then(() => {
   // progression NSIS pendant la mise à jour, puis l'app se relance (isForceRunAfter=true).
   ipcMain.handle("update:install", () => autoUpdater?.quitAndInstall(false, true));
   ipcMain.handle("update:open", () => shell.openExternal(RELEASES_URL));
+  // État de maj déjà détecté (rejoue l'event manqué si le renderer s'est monté après le check).
+  ipcMain.handle("update:peek", () => lastUpdatePayload);
 
   // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
   // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.
@@ -325,10 +327,15 @@ app.whenReady().then(() => {
 //    bandeau « Nouvelle version dispo → Télécharger » qui ouvre la page des releases.
 let autoUpdater = null;
 const IS_MAC = process.platform === "darwin";
+// Dernier état de maj connu. Le check au démarrage peut émettre `update-available` AVANT que le
+// renderer ait enregistré son écouteur (course) → l'event serait perdu. On le mémorise donc, et
+// le renderer le récupère au montage via `update:peek` (cf. preload / UpdateBanner).
+let lastUpdatePayload = null;
 
 function sendUpdate(payload) {
+  lastUpdatePayload = { isMac: IS_MAC, ...payload };
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("update:event", { isMac: IS_MAC, ...payload });
+    mainWindow.webContents.send("update:event", lastUpdatePayload);
   }
 }
 

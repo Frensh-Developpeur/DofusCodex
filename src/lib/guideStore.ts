@@ -138,5 +138,42 @@ export async function ensureGuidesDownloaded(
   return { downloaded: total };
 }
 
-// Délai au-delà duquel on revérifie les mises à jour en tâche de fond (3 jours).
-export const SYNC_REFRESH_MS = 1000 * 60 * 60 * 24 * 3;
+// ---- Contrôleur de synchro global (automatique au lancement + observable par l'UI) ----
+// Permet à App.tsx de lancer la synchro à chaque démarrage et à GuidesSyncBar d'en afficher
+// la progression, sans double exécution (un seul run concurrent).
+export interface GuideSyncSnapshot {
+  running: boolean;
+  progress: SyncProgress | null;
+}
+let syncSnapshot: GuideSyncSnapshot = { running: false, progress: null };
+const syncSubs = new Set<() => void>();
+function setSyncSnapshot(next: GuideSyncSnapshot) {
+  syncSnapshot = next;
+  for (const cb of syncSubs) cb();
+}
+export const guideSync = {
+  getSnapshot: (): GuideSyncSnapshot => syncSnapshot,
+  subscribe(cb: () => void) {
+    syncSubs.add(cb);
+    return () => syncSubs.delete(cb);
+  },
+};
+
+let syncPromise: Promise<void> | null = null;
+// Lance une synchro globale (idempotente). 1er lancement → télécharge tout ; ensuite →
+// ne récupère que les guides nouveaux/modifiés (diff par updated_at dans syncGuides).
+export function startGuideSync(): Promise<void> {
+  if (syncPromise) return syncPromise;
+  syncPromise = (async () => {
+    setSyncSnapshot({ running: true, progress: { done: 0, total: 0 } });
+    try {
+      await syncGuides({ onProgress: (p) => setSyncSnapshot({ running: true, progress: p }) });
+    } catch {
+      /* réseau indisponible → nouvel essai au prochain lancement */
+    } finally {
+      setSyncSnapshot({ running: false, progress: null });
+      syncPromise = null;
+    }
+  })();
+  return syncPromise;
+}

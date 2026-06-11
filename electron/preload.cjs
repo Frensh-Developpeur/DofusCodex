@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   installUpdate: () => ipcRenderer.invoke("update:install"), // Windows : redémarre + installe
   openReleases: () => ipcRenderer.invoke("update:open"), // Mac : ouvre la page de téléchargement
   checkUpdate: () => ipcRenderer.invoke("update:check"), // vérification manuelle (page Paramètres)
+  peekUpdate: () => ipcRenderer.invoke("update:peek"), // état de maj déjà détecté (au montage du renderer)
   // Lit la progression du profil actif dans l'app Ganymède locale (conf.json).
   // Renvoie { profileName, progresses } ou null (Ganymède non installé / erreur).
   readGanymedeProgress: () => ipcRenderer.invoke("ganymede:read-progress"),

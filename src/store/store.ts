@@ -145,6 +145,13 @@ function getSnapshot() {
   return state;
 }
 
+// API bas-niveau du store, pour les couches non-React (ex. synchro cloud) :
+// lire l'état courant et s'abonner aux changements.
+export const storeApi = {
+  getState: getSnapshot,
+  subscribe,
+};
+
 function shallowEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
@@ -307,6 +314,11 @@ export const actions = {
     } catch {
       return false;
     }
+  },
+  // Remplace tout l'état (fusionné avec les défauts → tolérant). Utilisé par la synchro cloud
+  // pour appliquer l'état fusionné local+distant. Persiste et notifie comme un setState normal.
+  replaceAll(next: Partial<AppState>) {
+    setState(() => ({ ...DEFAULT_STATE, ...next }));
   },
   // Réinitialise TOUTES les données locales (favoris, progression, builds, suivi guides, skins…).
   resetAll() {

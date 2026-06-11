@@ -12,6 +12,7 @@ import {
 } from "./DofusIcons";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
+import AccountButton from "./AccountButton";
 
 type Item = { to: string; label: string; end?: boolean; dofus: DofusIconName };
 
@@ -231,6 +232,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto border-t border-white/5 p-3">
+        <AccountButton collapsed={collapsed} />
         <NavLink
           to="/parametres"
           state={{ fromSidebar: true }}

@@ -1,5 +1,14 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  // Compte cloud (Supabase) — clé anon publique, protégée par RLS côté serveur.
+  readonly VITE_SUPABASE_URL?: string;
+  readonly VITE_SUPABASE_ANON_KEY?: string;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 interface UpdateEvent {
   state: "available" | "downloading" | "downloaded";
   version?: string;
@@ -20,6 +29,7 @@ interface Window {
       body?: unknown;
     }) => Promise<{ ok: boolean; status: number; data: unknown; error?: string }>;
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;
+    peekUpdate?: () => Promise<UpdateEvent | null>;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
     checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;

@@ -22,6 +22,14 @@ export default function UpdateBanner() {
       setEvt(p);
       setDismissed(false);
     });
+    // Rattrape un event émis avant le montage du renderer (course au démarrage) :
+    // le main mémorise le dernier état, on le récupère ici.
+    window.dofusCodex?.peekUpdate?.().then((p) => {
+      if (p) {
+        setEvt((cur) => cur ?? p);
+        setDismissed(false);
+      }
+    });
     return off;
   }, []);
 

@@ -37,6 +37,12 @@ jobs:
       - run: npm ci
 
       - name: Build renderer
+        env:
+          # Config compte cloud (Supabase). Clé anon PUBLIQUE (protégée par RLS) → des
+          # « Variables » de dépôt suffisent (Settings → Secrets and variables → Actions →
+          # Variables). Vides si non définies → la fonctionnalité « compte » reste masquée.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Package app

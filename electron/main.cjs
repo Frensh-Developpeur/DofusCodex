@@ -1,8 +1,9 @@
-const { app, BrowserWindow, shell, session, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, session, ipcMain, screen } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const fs = require("node:fs");
 const os = require("node:os");
+const { exec } = require("node:child_process");
 
 const isDev = process.env.NODE_ENV === "development";
 const DEV_URL = "http://localhost:5173";
@@ -14,6 +15,205 @@ let mainWindow = null;
 // alors l'app avec cette URL, qu'on transmet au renderer (cf. handleAuthDeepLink côté React).
 const PROTOCOL = "dofuscodex";
 let pendingDeepLink = null; // lien arrivé avant que le renderer soit prêt (cold start / course)
+
+// Mode overlay = fenêtre DÉDIÉE transparente, flottante au-dessus du jeu (la fenêtre principale
+// reste intacte, juste masquée). Dimensions/position persistées sur disque.
+const OVERLAY_MIN = { width: 180, height: 120 };
+let overlayWin = null;
+let overlayBounds = null; // dernières dimensions/position de l'overlay
+let saveBoundsTimer = null;
+let overlayTimer = null; // boucle : ré-impose le premier plan (+ accroche Dofus si activée)
+let snapMode = false; // accroche à la fenêtre Dofus activée ?
+
+const overlayBoundsFile = () => path.join(app.getPath("userData"), "overlay-bounds.json");
+function loadOverlayBounds() {
+  try {
+    overlayBounds = JSON.parse(fs.readFileSync(overlayBoundsFile(), "utf8"));
+  } catch {
+    overlayBounds = null;
+  }
+}
+function saveOverlayBoundsDebounced() {
+  if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
+  saveBoundsTimer = setTimeout(() => {
+    try {
+      if (overlayBounds) fs.writeFileSync(overlayBoundsFile(), JSON.stringify(overlayBounds));
+    } catch {
+      /* best-effort */
+    }
+  }, 600);
+}
+
+// Maintient la fenêtre overlay au premier plan, y compris au-dessus d'un jeu en plein écran
+// fenêtré. Re-appliqué au blur car perdre le focus la ferait sinon repasser derrière.
+function enforceOverlayOnTop() {
+  if (!overlayWin || overlayWin.isDestroyed()) return;
+  overlayWin.setAlwaysOnTop(true, "screen-saver");
+  if (process.platform === "darwin") {
+    // CanJoinAllSpaces + FullScreenAuxiliary → la fenêtre apparaît AUSSI par-dessus un jeu en
+    // plein écran natif (qui vit dans un Espace dédié). skipTransformProcessType : garde l'app
+    // « normale » (sinon l'icône du Dock peut sauter).
+    overlayWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  }
+}
+
+// Position par défaut : coin haut-droit de l'écran de la fenêtre principale.
+function defaultOverlayBounds() {
+  const ref = mainWindow && !mainWindow.isDestroyed() ? mainWindow.getBounds() : screen.getPrimaryDisplay().bounds;
+  const wa = screen.getDisplayMatching(ref).workArea;
+  const width = 380;
+  const height = 600;
+  const margin = 16;
+  return { x: wa.x + wa.width - width - margin, y: wa.y + margin, width, height };
+}
+
+function openOverlayWindow(guideId) {
+  if (overlayWin && !overlayWin.isDestroyed()) {
+    overlayWin.focus();
+    return;
+  }
+  const b = overlayBounds || defaultOverlayBounds();
+  overlayWin = new BrowserWindow({
+    x: b.x,
+    y: b.y,
+    width: b.width,
+    height: b.height,
+    minWidth: OVERLAY_MIN.width,
+    minHeight: OVERLAY_MIN.height,
+    frame: false,
+    transparent: true,
+    resizable: true,
+    hasShadow: false,
+    backgroundColor: "#00000000",
+    alwaysOnTop: true,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      spellcheck: false,
+    },
+  });
+  startOverlayLoop();
+  overlayWin.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://")) shell.openExternal(url);
+    return { action: "deny" };
+  });
+  if (isDev) {
+    overlayWin.loadURL(`${DEV_URL}/?overlay=1#/guides/${guideId}`);
+  } else {
+    overlayWin.loadFile(path.join(__dirname, "..", "dist", "index.html"), {
+      query: { overlay: "1" },
+      hash: `/guides/${guideId}`,
+    });
+  }
+  overlayWin.on("blur", enforceOverlayOnTop);
+  const remember = () => {
+    if (overlayWin && !overlayWin.isDestroyed()) {
+      overlayBounds = overlayWin.getBounds();
+      saveOverlayBoundsDebounced();
+    }
+  };
+  overlayWin.on("resize", remember);
+  overlayWin.on("move", remember);
+  overlayWin.on("closed", () => {
+    stopOverlayLoop();
+    snapMode = false;
+    overlayWin = null;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+  });
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+}
+
+function closeOverlayWindow() {
+  if (overlayWin && !overlayWin.isDestroyed()) overlayWin.close(); // 'closed' réaffiche la principale
+  else if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+}
+
+// Détecte si un process Dofus tourne (sans module natif ni permission : simple liste de process).
+function detectDofus() {
+  return new Promise((resolve) => {
+    const cmd = process.platform === "win32" ? "tasklist /FO CSV /NH" : "ps -axo comm";
+    exec(cmd, { timeout: 4000, windowsHide: true, maxBuffer: 1024 * 1024 }, (err, stdout) => {
+      if (err || !stdout) return resolve({ running: false });
+      resolve({ running: /dofus/i.test(stdout) });
+    });
+  });
+}
+
+// Position/taille de la fenêtre Dofus, SANS module natif :
+//  • macOS : osascript (System Events) → nécessite l'autorisation « Accessibilité » (sinon erreur).
+//  • Windows : PowerShell + GetWindowRect (EncodedCommand → pas de souci d'échappement).
+// Renvoie {x,y,width,height} ou null (→ repli sur le coin de l'écran).
+function getDofusBounds() {
+  return new Promise((resolve) => {
+    const parse = (out) => {
+      const n = (String(out || "").match(/-?\d+/g) || []).map(Number);
+      if (n.length >= 4 && n[2] > 0 && n[3] > 0) resolve({ x: n[0], y: n[1], width: n[2], height: n[3] });
+      else resolve(null);
+    };
+    if (process.platform === "darwin") {
+      const osa =
+        'tell application "System Events" to tell (first process whose name contains "Dofus") to get {position, size} of window 1';
+      exec(`osascript -e '${osa}'`, { timeout: 4000 }, (err, stdout) => (err ? resolve(null) : parse(stdout)));
+    } else if (process.platform === "win32") {
+      const ps = [
+        'Add-Type @"',
+        "using System;using System.Runtime.InteropServices;",
+        "public struct RECT { public int Left, Top, Right, Bottom; }",
+        'public class Win { [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r); }',
+        '"@',
+        "$p = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 -and $_.ProcessName -match 'dofus' } | Select-Object -First 1",
+        "if ($p) { $r = New-Object RECT; [void][Win]::GetWindowRect($p.MainWindowHandle, [ref]$r); \"$($r.Left),$($r.Top),$($r.Right-$r.Left),$($r.Bottom-$r.Top)\" }",
+      ].join("\n");
+      const encoded = Buffer.from(ps, "utf16le").toString("base64");
+      exec(
+        `powershell -NoProfile -NonInteractive -EncodedCommand ${encoded}`,
+        { timeout: 5000, windowsHide: true },
+        (err, stdout) => (err ? resolve(null) : parse(stdout)),
+      );
+    } else {
+      resolve(null);
+    }
+  });
+}
+
+// Accroche = SUIVRE la fenêtre Dofus en conservant la position choisie par l'utilisateur. On
+// applique à l'overlay le même déplacement que celui de la fenêtre Dofus (delta), donc on reste
+// libre de placer l'overlay où on veut sur le jeu — il se contente de suivre. Si Dofus est
+// introuvable (process absent / permission refusée), on ne bouge rien (placement totalement libre).
+let lastDofusBounds = null;
+async function dockOverlay() {
+  if (!overlayWin || overlayWin.isDestroyed()) return;
+  const db = await getDofusBounds();
+  if (!db) {
+    lastDofusBounds = null;
+    return;
+  }
+  if (lastDofusBounds) {
+    const dx = db.x - lastDofusBounds.x;
+    const dy = db.y - lastDofusBounds.y;
+    if (dx !== 0 || dy !== 0) {
+      const b = overlayWin.getBounds();
+      overlayWin.setPosition(Math.round(b.x + dx), Math.round(b.y + dy));
+    }
+  }
+  lastDofusBounds = db;
+}
+// Boucle active tant que l'overlay est ouvert : ré-impose le premier plan (clé pour réapparaître
+// quand Dofus bascule en plein écran), et suit la fenêtre Dofus si l'accroche est activée.
+function startOverlayLoop() {
+  stopOverlayLoop();
+  enforceOverlayOnTop();
+  overlayTimer = setInterval(() => {
+    enforceOverlayOnTop();
+    if (snapMode) dockOverlay();
+  }, 1500);
+}
+function stopOverlayLoop() {
+  if (overlayTimer) clearInterval(overlayTimer);
+  overlayTimer = null;
+}
 
 const isDeepLink = (s) => typeof s === "string" && s.startsWith(`${PROTOCOL}://`);
 
@@ -162,6 +362,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   if (!gotSingleInstanceLock) return; // 2e instance : la 1re a déjà reçu le lien profond
+  loadOverlayBounds(); // dimensions/position mémorisées de l'overlay
   session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
     cb({
       responseHeaders: {
@@ -207,6 +408,22 @@ app.whenReady().then(() => {
     pendingDeepLink = null;
     return u;
   });
+
+  // ── Mode overlay : fenêtre dédiée transparente au-dessus du jeu ───────────────────────
+  ipcMain.handle("overlay:open", (_e, guideId) => openOverlayWindow(Number(guideId)));
+  ipcMain.handle("overlay:close", () => closeOverlayWindow());
+  ipcMain.handle("overlay:resize", (_e, size) => {
+    if (!overlayWin || overlayWin.isDestroyed() || !size) return;
+    const w = Math.max(OVERLAY_MIN.width, Math.round(Number(size.width) || OVERLAY_MIN.width));
+    const h = Math.max(OVERLAY_MIN.height, Math.round(Number(size.height) || OVERLAY_MIN.height));
+    overlayWin.setSize(w, h);
+  });
+  ipcMain.handle("overlay:snap-mode", (_e, on) => {
+    snapMode = !!on;
+    lastDofusBounds = null; // re-base le suivi (pas de saut au prochain tick)
+    if (snapMode) dockOverlay();
+  });
+  ipcMain.handle("dofus:detect", () => detectDofus());
 
   // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
   // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.

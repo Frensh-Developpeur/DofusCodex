@@ -1,7 +1,8 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { LogOut, Loader2, CheckCircle2, RefreshCw, ChevronDown, ArrowLeft } from "./DofusIcons";
 import DofusIcon, { type DofusIconName } from "./DofusIcon";
+import SecretQuestionPicker from "./SecretQuestionPicker";
 import {
   useAccount,
   signIn,
@@ -10,16 +11,17 @@ import {
   syncNow,
   changePassword,
   updatePseudo,
-  requestPasswordReset,
-  confirmPasswordReset,
+  setSecurityQuestion,
+  getSecurityQuestion,
+  resetPasswordWithAnswer,
   type AccountState,
 } from "../lib/cloudSync";
 
 const SPRING = { type: "spring", stiffness: 420, damping: 34 } as const;
 
 // Contenu « compte » (utilisé dans la modale de la sidebar). Local-first.
-//  • connecté   → statut de synchro, gestion (mot de passe / pseudo), déconnexion
-//  • déconnecté → connexion / inscription / mot de passe oublié
+//  • connecté   → statut de synchro, gestion (mdp / pseudo / question secrète), déconnexion
+//  • déconnecté → connexion / inscription / mot de passe oublié (par question secrète)
 export default function AccountForm({ onDone }: { onDone?: () => void }) {
   const account = useAccount();
   if (account.status === "signedIn") return <LoggedIn account={account} onDone={onDone} />;
@@ -28,9 +30,9 @@ export default function AccountForm({ onDone }: { onDone?: () => void }) {
 
 // ───────────────────────── Vue « connecté » ─────────────────────────
 function LoggedIn({ account, onDone }: { account: AccountState; onDone?: () => void }) {
-  const [panel, setPanel] = useState<null | "password" | "pseudo">(null);
+  const [panel, setPanel] = useState<null | "password" | "pseudo" | "question">(null);
   const initial = (account.pseudo || account.email || "?").trim().charAt(0).toUpperCase();
-  const toggle = (p: "password" | "pseudo") => setPanel((cur) => (cur === p ? null : p));
+  const toggle = (p: "password" | "pseudo" | "question") => setPanel((cur) => (cur === p ? null : p));
 
   return (
     <div className="text-center">
@@ -75,6 +77,13 @@ function LoggedIn({ account, onDone }: { account: AccountState; onDone?: () => v
           onClick={() => toggle("password")}
         />
         {panel === "password" && <ChangePasswordForm onSaved={() => setPanel(null)} />}
+        <ExpandRow
+          label="Question secrète"
+          icon="info"
+          open={panel === "question"}
+          onClick={() => toggle("question")}
+        />
+        {panel === "question" && <SecurityQuestionForm email={account.email} onSaved={() => setPanel(null)} />}
       </div>
 
       <button
@@ -192,6 +201,64 @@ function ChangePasswordForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
+function SecurityQuestionForm({ email, onSaved }: { email: string | null; onSaved: () => void }) {
+  const [question, setQuestion] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [answer, setAnswer] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+
+  // Pré-remplit la question actuelle (la réponse, hachée, n'est jamais renvoyée).
+  useEffect(() => {
+    let alive = true;
+    if (!email) {
+      setLoaded(true);
+      return;
+    }
+    getSecurityQuestion(email).then(({ question }) => {
+      if (!alive) return;
+      if (question) setQuestion(question);
+      setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [email]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (question.trim().length < 3) return setError("Choisis ou écris une question.");
+    if (!answer.trim()) return setError("Indique une réponse.");
+    setBusy(true);
+    const { error } = await setSecurityQuestion(question, answer);
+    setBusy(false);
+    if (error) setError(error);
+    else {
+      setOk(true);
+      setAnswer("");
+      setTimeout(onSaved, 1000);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-2.5 rounded-xl border border-white/10 bg-void-900/40 p-3">
+      <p className="text-[11px] leading-relaxed text-slate-500">
+        Sert à récupérer ton compte si tu oublies ton mot de passe. Choisis une réponse dont tu te
+        souviendras (la casse et les espaces sont ignorés).
+      </p>
+      {loaded && <SecretQuestionPicker value={question} onChange={setQuestion} />}
+      <Field label="Réponse secrète" value={answer} onChange={setAnswer} type="text" placeholder="Ta réponse" autoComplete="off" />
+      <Note tone="error">{error}</Note>
+      <Note tone="ok">{ok ? "Question secrète enregistrée ✓" : null}</Note>
+      <SubmitBtn busy={busy} disabled={busy || !answer.trim()}>
+        Enregistrer
+      </SubmitBtn>
+    </form>
+  );
+}
+
 // ───────────────────────── Vue « déconnecté » ─────────────────────────
 function LoggedOut({ onDone }: { onDone?: () => void }) {
   const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
@@ -213,6 +280,8 @@ function AuthForm({
   const [pseudo, setPseudo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -220,9 +289,10 @@ function AuthForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
-    setBusy(true);
     setError(null);
     setInfo(null);
+    if (mode === "signup" && !answer.trim()) return setError("Renseigne une question et une réponse secrètes.");
+    setBusy(true);
     if (mode === "signin") {
       const { error } = await signIn(email.trim(), password);
       if (error) setError(error);
@@ -231,7 +301,7 @@ function AuthForm({
         onDone?.();
       }
     } else {
-      const { error, needsConfirmation } = await signUp(email.trim(), password, pseudo);
+      const { error, needsConfirmation } = await signUp(email.trim(), password, pseudo, question, answer);
       if (error) setError(error);
       else if (needsConfirmation)
         setInfo("Compte créé ! Vérifie tes mails pour confirmer ton adresse, puis connecte-toi.");
@@ -300,6 +370,16 @@ function AuthForm({
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
         />
 
+        {mode === "signup" && (
+          <>
+            <SecretQuestionPicker value={question} onChange={setQuestion} />
+            <Field label="Réponse secrète" value={answer} onChange={setAnswer} type="text" placeholder="Ta réponse" autoComplete="off" />
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              Ta question secrète te permettra de récupérer ton compte si tu oublies ton mot de passe.
+            </p>
+          </>
+        )}
+
         <Note tone="error">{error}</Note>
         <Note tone="ok">{info}</Note>
 
@@ -331,34 +411,40 @@ function AuthForm({
 }
 
 function ResetFlow({ onBack, onDone }: { onBack: () => void; onDone?: () => void }) {
-  const [step, setStep] = useState<"request" | "confirm">("request");
+  const [step, setStep] = useState<"email" | "answer">("email");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sendCode = async (e: FormEvent) => {
+  const findQuestion = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
     setBusy(true);
     setError(null);
-    const { error } = await requestPasswordReset(email.trim());
+    const { question, error } = await getSecurityQuestion(email.trim());
     setBusy(false);
     if (error) setError(error);
-    else setStep("confirm");
+    else if (!question)
+      setError("Aucune question secrète pour ce compte (ou e-mail inconnu). Tu peux la définir une fois connecté.");
+    else {
+      setQuestion(question);
+      setStep("answer");
+    }
   };
 
   const reset = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!code.trim()) return setError("Saisis le code (ou colle le lien) reçu par e-mail.");
+    if (!answer.trim()) return setError("Réponds à ta question secrète.");
     if (password.length < 6) return setError("Le mot de passe doit faire 6 caractères minimum.");
     setBusy(true);
-    const { error } = await confirmPasswordReset(email.trim(), code, password);
+    const { error } = await resetPasswordWithAnswer(email.trim(), answer, password);
     setBusy(false);
     if (error) setError(error);
-    else onDone?.(); // verifyOtp a ouvert une session → on est connecté
+    else onDone?.(); // mot de passe changé + connecté
   };
 
   return (
@@ -369,23 +455,27 @@ function ResetFlow({ onBack, onDone }: { onBack: () => void; onDone?: () => void
         </div>
         <h3 className="mt-3 font-display text-xl font-bold text-white">Mot de passe oublié</h3>
         <p className="mx-auto mt-1 max-w-[19rem] text-xs leading-relaxed text-slate-400">
-          {step === "request"
-            ? "Indique ton e-mail : on t'envoie un code de réinitialisation."
-            : `On a envoyé un code à ${email}. Saisis-le ci-dessous (ou colle le lien du mail) avec ton nouveau mot de passe.`}
+          {step === "email"
+            ? "Indique ton e-mail : on te montrera ta question secrète."
+            : "Réponds à ta question secrète et choisis un nouveau mot de passe."}
         </p>
       </div>
 
-      {step === "request" ? (
-        <form onSubmit={sendCode} className="mt-5 space-y-2.5">
+      {step === "email" ? (
+        <form onSubmit={findQuestion} className="mt-5 space-y-2.5">
           <Field label="E-mail" value={email} onChange={setEmail} type="email" placeholder="toi@exemple.com" autoComplete="email" />
           <Note tone="error">{error}</Note>
           <SubmitBtn busy={busy} disabled={busy || !email.trim()} primary>
-            Envoyer le code
+            Continuer
           </SubmitBtn>
         </form>
       ) : (
         <form onSubmit={reset} className="mt-5 space-y-2.5">
-          <Field label="Code reçu (ou lien)" value={code} onChange={setCode} type="text" placeholder="123456" autoComplete="one-time-code" />
+          <div className="rounded-xl border border-white/10 bg-void-900/40 px-3 py-2.5">
+            <span className="block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ta question secrète</span>
+            <span className="mt-0.5 block text-sm text-slate-200">{question}</span>
+          </div>
+          <Field label="Réponse" value={answer} onChange={setAnswer} type="text" placeholder="Ta réponse" autoComplete="off" />
           <Field
             label="Nouveau mot de passe"
             value={password}
@@ -398,16 +488,6 @@ function ResetFlow({ onBack, onDone }: { onBack: () => void; onDone?: () => void
           <SubmitBtn busy={busy} disabled={busy} primary>
             Réinitialiser et se connecter
           </SubmitBtn>
-          <button
-            type="button"
-            onClick={() => {
-              setStep("request");
-              setError(null);
-            }}
-            className="no-drag mx-auto block text-[11px] text-slate-500 transition hover:text-slate-300"
-          >
-            Je n'ai pas reçu de code
-          </button>
         </form>
       )}
 

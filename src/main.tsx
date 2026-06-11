@@ -7,6 +7,12 @@ import ConnectionGate from "./components/ConnectionGate";
 import UpdateFinishSplash from "./components/UpdateFinishSplash";
 import "./index.css";
 
+// Fenêtre overlay (transparente) : on marque le <html> AVANT le rendu pour que les fonds passent
+// transparents dès le premier paint (cf. index.css → html.overlay-win).
+if (new URLSearchParams(window.location.search).get("overlay") === "1") {
+  document.documentElement.classList.add("overlay-win");
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -22,6 +22,7 @@ export interface AccountState {
   syncedAt: number | null;
   error: string | null;
   recovery: boolean; // session ouverte via un lien de reset → on demande un nouveau mot de passe
+  needsSecurityQuestion: boolean; // connecté sans question secrète → on force le choix
 }
 
 let account: AccountState = {
@@ -32,6 +33,7 @@ let account: AccountState = {
   syncedAt: null,
   error: null,
   recovery: false,
+  needsSecurityQuestion: false,
 };
 const listeners = new Set<() => void>();
 function setAccount(patch: Partial<AccountState>) {
@@ -171,6 +173,24 @@ async function hydrate(userId: string, email: string | null, pseudo: string | nu
       if (!applyingRemote) schedulePush();
     });
   }
+  // Vérifie qu'une question secrète existe (sinon on forcera le choix). Sauté juste après une
+  // inscription (la question vient d'être posée) pour éviter une fausse alerte / un flash.
+  void refreshSecurityQuestionFlag(email);
+}
+
+// Une question secrète est-elle définie ? Sinon → on lèvera needsSecurityQuestion. Tolérant aux
+// erreurs (SQL non déployé / réseau) : en cas de doute on NE force PAS (pas de blocage).
+let skipNextSecurityCheck = false;
+async function refreshSecurityQuestionFlag(email: string | null) {
+  if (skipNextSecurityCheck) {
+    skipNextSecurityCheck = false;
+    setAccount({ needsSecurityQuestion: false });
+    return;
+  }
+  if (!supabase || !email) return;
+  const { question, error } = await getSecurityQuestion(email);
+  if (error) return; // indéterminé → on ne force pas
+  setAccount({ needsSecurityQuestion: question === null });
 }
 
 function teardown() {
@@ -200,7 +220,15 @@ export function initCloudSync() {
       else setAccount({ email: user.email ?? null, pseudo });
     } else {
       teardown();
-      setAccount({ status: "signedOut", email: null, pseudo: null, syncing: false, syncedAt: null, recovery: false });
+      setAccount({
+        status: "signedOut",
+        email: null,
+        pseudo: null,
+        syncing: false,
+        syncedAt: null,
+        recovery: false,
+        needsSecurityQuestion: false,
+      });
     }
   });
 }
@@ -216,22 +244,84 @@ export async function signUp(
   email: string,
   password: string,
   pseudo?: string,
+  question?: string,
+  answer?: string,
 ): Promise<{ error: string | null; needsConfirmation: boolean }> {
   if (!supabase) return { error: "Compte indisponible (Supabase non configuré).", needsConfirmation: false };
+  // L'hydratation déclenchée par l'inscription ne doit pas lever « pas de question secrète »
+  // (on la pose juste après) → on neutralise la vérification pour cette session.
+  skipNextSecurityCheck = true;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { pseudo: pseudo?.trim() || null } }, // → user_metadata.pseudo
   });
-  if (error) return { error: error.message, needsConfirmation: false };
-  // Session déjà ouverte (confirmation d'e-mail désactivée) → onAuthStateChange connecte direct.
-  if (data.session) return { error: null, needsConfirmation: false };
-  // Pas de session renvoyée : on tente une connexion immédiate pour logger l'utilisateur sans
-  // étape supplémentaire. Réussit tant que la confirmation d'e-mail est désactivée (cas actuel).
-  const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-  if (!signInErr) return { error: null, needsConfirmation: false };
-  // La connexion échoue uniquement si Supabase EXIGE une confirmation d'e-mail → on l'indique.
-  return { error: null, needsConfirmation: true };
+  if (error) {
+    skipNextSecurityCheck = false;
+    return { error: error.message, needsConfirmation: false };
+  }
+  // Session déjà ouverte (confirmation d'e-mail désactivée) → onAuthStateChange connecte direct ;
+  // sinon on tente une connexion immédiate pour logger l'utilisateur sans étape supplémentaire.
+  let loggedIn = !!data.session;
+  if (!loggedIn) {
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    loggedIn = !signInErr;
+  }
+  if (!loggedIn) skipNextSecurityCheck = false; // pas de session → aucune hydratation à neutraliser
+  // Enregistre la question secrète (best-effort : ne bloque jamais l'inscription).
+  if (loggedIn && question?.trim() && answer?.trim()) {
+    const { error: qErr } = await supabase.rpc("set_security_question", {
+      p_question: question.trim(),
+      p_answer: answer,
+    });
+    if (qErr) console.warn("[security-question] enregistrement impossible:", qErr.message);
+  }
+  // needsConfirmation = true uniquement si Supabase EXIGE une confirmation d'e-mail.
+  return { error: null, needsConfirmation: !loggedIn };
+}
+
+// ---- Récupération par question secrète (sans e-mail — cf. supabase/recovery.sql) ----
+
+// Définit / met à jour sa question secrète (utilisateur connecté).
+export async function setSecurityQuestion(question: string, answer: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const { error } = await supabase.rpc("set_security_question", {
+    p_question: question.trim(),
+    p_answer: answer,
+  });
+  if (!error) setAccount({ needsSecurityQuestion: false });
+  return { error: error?.message ?? null };
+}
+
+// Ferme la modale « définis ta question secrète » sans l'enregistrer (réapparaît à la prochaine
+// connexion tant qu'aucune question n'est définie).
+export function dismissSecurityPrompt() {
+  setAccount({ needsSecurityQuestion: false });
+}
+
+// Renvoie la question secrète associée à un e-mail (null si compte inconnu / pas de question).
+export async function getSecurityQuestion(email: string): Promise<{ question: string | null; error: string | null }> {
+  if (!supabase) return { question: null, error: "Compte indisponible." };
+  const { data, error } = await supabase.rpc("get_security_question", { p_email: email.trim() });
+  return { question: (data as string | null) ?? null, error: error?.message ?? null };
+}
+
+// Vérifie la réponse, réinitialise le mot de passe côté serveur, puis connecte l'utilisateur.
+export async function resetPasswordWithAnswer(
+  email: string,
+  answer: string,
+  newPassword: string,
+): Promise<{ error: string | null }> {
+  if (!supabase) return { error: "Compte indisponible." };
+  const { data, error } = await supabase.rpc("reset_password_with_answer", {
+    p_email: email.trim(),
+    p_answer: answer,
+    p_new_password: newPassword,
+  });
+  if (error) return { error: error.message };
+  if (data !== true) return { error: "Réponse incorrecte." };
+  const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password: newPassword });
+  return { error: signInErr?.message ?? null };
 }
 
 export async function signOut() {

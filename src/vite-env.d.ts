@@ -32,6 +32,11 @@ interface Window {
     peekUpdate?: () => Promise<UpdateEvent | null>;
     onDeepLink?: (cb: (url: string) => void) => () => void;
     peekDeepLink?: () => Promise<string | null>;
+    overlayOpen?: (guideId: number) => Promise<void>;
+    overlayClose?: () => Promise<void>;
+    overlayResize?: (size: { width: number; height: number }) => Promise<void>;
+    overlaySnapMode?: (on: boolean) => Promise<void>;
+    detectDofus?: () => Promise<{ running: boolean }>;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
     checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;

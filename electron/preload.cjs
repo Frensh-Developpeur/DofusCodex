@@ -27,6 +27,12 @@ contextBridge.exposeInMainWorld("dofusCodex", {
     return () => ipcRenderer.removeListener("deeplink", handler);
   },
   peekDeepLink: () => ipcRenderer.invoke("deeplink:peek"), // lien reçu avant le montage du renderer
+  // ---- Mode overlay (fenêtre dédiée transparente au-dessus du jeu) ----
+  overlayOpen: (guideId) => ipcRenderer.invoke("overlay:open", guideId), // (fenêtre principale) ouvre l'overlay
+  overlayClose: () => ipcRenderer.invoke("overlay:close"), // (fenêtre overlay) ferme + réaffiche la principale
+  overlayResize: (size) => ipcRenderer.invoke("overlay:resize", size), // redimensionnement custom {width,height}
+  overlaySnapMode: (on) => ipcRenderer.invoke("overlay:snap-mode", on), // accroche+suit la fenêtre Dofus
+  detectDofus: () => ipcRenderer.invoke("dofus:detect"), // { running } — process Dofus présent ?
   // Lit la progression du profil actif dans l'app Ganymède locale (conf.json).
   // Renvoie { profileName, progresses } ou null (Ganymède non installé / erreur).
   readGanymedeProgress: () => ipcRenderer.invoke("ganymede:read-progress"),

@@ -13,8 +13,10 @@ import {
   Download,
   BadgeCheck,
   CheckCircle2,
+  ArrowUpRight,
 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
+import { openOverlay, overlaySupported, isOverlayWindow } from "../lib/overlay";
 import { STATUS_LABEL, firstGuideImage, type GuideStatus } from "../api/ganymede";
 import { getGuideData } from "../lib/guideStore";
 import { categoryOf } from "../lib/guideCategory";
@@ -39,6 +41,7 @@ export default function GuideDetail() {
   // page donjon/objet, ou un lien interne, reprend toujours au bon endroit.
   const savedStep = useStore((s) => s.guideStep[guideId] ?? 0);
   const done = useStore((s) => s.doneGuides.includes(guideId));
+  const ov = isOverlayWindow; // affichage compact dans la fenêtre overlay
 
   const [copied, setCopied] = useState(false);
   const [focus, setFocus] = useState(false);
@@ -118,7 +121,7 @@ export default function GuideDetail() {
       <GuideTabs activeId={guideId} />
 
       {/* En-tête */}
-      <div className="glass relative mb-4 overflow-hidden rounded-2xl p-5">
+      <div className={`glass relative mb-4 overflow-hidden rounded-2xl ${ov ? "p-3" : "p-5"}`}>
         {/* halo de catégorie */}
         <div
           className={`pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gradient-to-br ${cat.tile} opacity-40 blur-3xl`}
@@ -163,7 +166,11 @@ export default function GuideDetail() {
                   </span>
                 )}
               </div>
-              <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight text-white">
+              <h1
+                className={`font-display font-extrabold leading-tight tracking-tight text-white ${
+                  ov ? "text-base" : "text-2xl"
+                }`}
+              >
                 {data.name}
               </h1>
             </div>
@@ -179,6 +186,15 @@ export default function GuideDetail() {
             >
               <CheckCircle2 className="h-4 w-4" /> {done ? "Terminé" : "Marquer terminé"}
             </button>
+            {overlaySupported && !ov && (
+              <button
+                onClick={() => openOverlay(guideId)}
+                title="Mode overlay : petite fenêtre flottante au-dessus du jeu"
+                className="no-drag inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
+              >
+                <ArrowUpRight className="h-4 w-4" /> Overlay
+              </button>
+            )}
             <button
               onClick={() => {
                 actions.resetGuide(guideId);
@@ -211,8 +227,12 @@ export default function GuideDetail() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
-        {/* Sommaire des étapes */}
-        <aside className="glass sticky top-4 hidden max-h-[78vh] self-start overflow-y-auto rounded-2xl p-2 lg:block">
+        {/* Sommaire des étapes (visible aussi en overlay malgré la fenêtre étroite) */}
+        <aside
+          className={`glass self-start overflow-y-auto rounded-2xl p-2 ${
+            ov ? "block max-h-44" : "sticky top-4 hidden max-h-[78vh] lg:block"
+          }`}
+        >
           <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             Étapes ({total})
           </p>
@@ -269,13 +289,15 @@ export default function GuideDetail() {
                     {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
                 )}
-                <button
-                  onClick={() => setFocus(true)}
-                  title="Mode lecture plein écran"
-                  className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <DofusIcon name="zoom" size={14} />
-                </button>
+                {!ov && (
+                  <button
+                    onClick={() => setFocus(true)}
+                    title="Mode lecture plein écran"
+                    className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <DofusIcon name="zoom" size={14} />
+                  </button>
+                )}
               </div>
             </div>
 

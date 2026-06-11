@@ -33,6 +33,20 @@
       radial-gradient(40rem 40rem at 50% 120%, rgba(255, 120, 73, 0.08), transparent 60%);
   }
 
+  /* Fenêtre overlay : fonds transparents pour laisser voir le jeu derrière (le texte/les cartes
+     restent opaques ; une couche translucide réglable est ajoutée par App). */
+  html.overlay-win,
+  html.overlay-win body,
+  html.overlay-win #root {
+    background: transparent !important;
+  }
+  html.overlay-win body::before {
+    display: none !important;
+  }
+  html.overlay-win #app-loader {
+    background: transparent !important;
+  }
+
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;

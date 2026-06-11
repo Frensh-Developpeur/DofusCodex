@@ -145,6 +145,22 @@ function getSnapshot() {
   return state;
 }
 
+// Synchro entre fenêtres du même origin (ex. la fenêtre overlay) : quand une AUTRE fenêtre
+// modifie la sauvegarde, on relit l'état et on notifie — SANS réécrire (l'event `storage` ne se
+// déclenche que dans les autres fenêtres → pas de boucle). Garde la progression cohérente entre
+// la fenêtre principale et l'overlay.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== STORAGE_KEY || e.newValue == null) return;
+    try {
+      state = { ...DEFAULT_STATE, ...(JSON.parse(e.newValue) as Partial<AppState>) };
+      emit();
+    } catch {
+      /* sauvegarde illisible → on ignore */
+    }
+  });
+}
+
 // API bas-niveau du store, pour les couches non-React (ex. synchro cloud) :
 // lire l'état courant et s'abonner aux changements.
 export const storeApi = {

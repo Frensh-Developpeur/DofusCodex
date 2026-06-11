@@ -5,12 +5,16 @@ import { useStore } from "./store/store";
 import { getGuideListData, getGuideData, startGuideSync } from "./lib/guideStore";
 import { trackItemNav } from "./lib/itemNav";
 import { initCloudSync, handleAuthDeepLink } from "./lib/cloudSync";
+import { isOverlayWindow, useOverlayAlpha } from "./lib/overlay";
+import OverlayBar from "./components/OverlayBar";
+import OverlayResizeHandle from "./components/OverlayResizeHandle";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import SkinatorLeavePrompt from "./components/SkinatorLeavePrompt";
 import UpdateBanner from "./components/UpdateBanner";
 import RecoveryModal from "./components/RecoveryModal";
+import SecurityQuestionPrompt from "./components/SecurityQuestionPrompt";
 import Dashboard from "./pages/Dashboard";
 import Dungeons from "./pages/Dungeons";
 import DungeonDetail from "./pages/DungeonDetail";
@@ -38,6 +42,8 @@ import ItemDetail from "./pages/ItemDetail";
 import Metamob from "./pages/Metamob";
 
 const SHELL = "app-page-shell mx-auto max-w-6xl px-8 py-8";
+// En mode overlay (fenêtre compacte), on réduit fortement les marges et on prend toute la largeur.
+const OVERLAY_SHELL = "app-page-shell w-full px-3 py-3";
 
 // ── Keep-alive : pages « persistantes ». Montées une fois (à la 1re visite) puis
 // simplement masquées quand on navigue ailleurs → état local, scroll, abonnements
@@ -76,10 +82,14 @@ export default function App() {
   const navigationType = useNavigationType();
   const qc = useQueryClient();
   const recentGuides = useStore((s) => s.recentGuides);
+  const overlayAlpha = useOverlayAlpha();
 
   // Au lancement : réchauffe le catalogue + les guides récents depuis le stockage local
   // (IndexedDB), et lance une mise à jour discrète si la dernière synchro est trop ancienne.
   useEffect(() => {
+    // La fenêtre overlay est une 2e instance (lecture seule de la progression) : pas de synchro
+    // cloud ni de synchro des guides ici, c'est la fenêtre principale qui s'en charge.
+    if (isOverlayWindow) return;
     // Synchro cloud (compte) — no-op si Supabase non configuré ou utilisateur déconnecté.
     initCloudSync();
     // Liens profonds dofuscodex:// (reset de mot de passe) : on écoute les liens reçus à chaud
@@ -181,22 +191,36 @@ export default function App() {
     return () => cancelAnimationFrame(raf);
   }, [scrollKey, detail]);
 
+  // Fenêtre overlay : même app routée mais en chrome COMPACT (barre fine au lieu de la TitleBar,
+  // Sidebar masquée, marges réduites) et FOND TRANSPARENT — une couche translucide réglable laisse
+  // voir le jeu derrière, le texte restant opaque. On garde le contenu routé tel quel → toutes les
+  // redirections, icônes et onglets fonctionnent.
+  const ov = isOverlayWindow;
+  const shellClass = ov ? OVERLAY_SHELL : SHELL;
+
   return (
     <div className="relative flex h-screen flex-col">
-      <TitleBar />
+      {/* Fond translucide réglable (overlay uniquement) : opacité sur le FOND, pas sur le texte. */}
+      {ov && (
+        <div
+          className="pointer-events-none fixed inset-0 -z-10 bg-void-900 transition-opacity"
+          style={{ opacity: overlayAlpha }}
+        />
+      )}
+      {ov ? <OverlayBar /> : <TitleBar />}
       <div className="relative flex flex-1 overflow-hidden">
-        <Sidebar />
+        {!ov && <Sidebar />}
         <main ref={mainRef} className="relative z-10 min-w-0 flex-1 overflow-y-auto">
           {/* Pages keep-alive : toutes montées une fois visitées, seule l'active est affichée. */}
           {mounted.map((key) => (
-            <div key={key} className={key === activeKey ? SHELL : "hidden"}>
+            <div key={key} className={key === activeKey ? shellClass : "hidden"}>
               <ErrorBoundary>{KEEP_MAP.get(key)}</ErrorBoundary>
             </div>
           ))}
 
           {/* Pages de détail : montées/démontées normalement (dépendent d'un :id). */}
           {detail && (
-            <div className={SHELL}>
+            <div className={shellClass}>
               <ErrorBoundary>
                 <Routes location={location}>
                   <Route path="/donjons/:id" element={<DungeonDetail />} />
@@ -219,6 +243,8 @@ export default function App() {
       <SkinatorLeavePrompt />
       <UpdateBanner />
       <RecoveryModal />
+      <SecurityQuestionPrompt />
+      {ov && <OverlayResizeHandle />}
     </div>
   );
 }

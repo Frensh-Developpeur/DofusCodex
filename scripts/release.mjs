@@ -62,14 +62,16 @@ const run = (cmd) =>
     },
   });
 
-// Build du renderer puis paquetage, scan VirusTotal, et publication.
+// Build du renderer puis paquetage pour macOS seulement (Windows se fera via GitHub Actions).
+// Le tag git déclenchera le workflow GitHub qui buildéra les deux plateformes.
 run("npx vite build");
-run("npx electron-builder --mac --win --publish never");
+run("npx electron-builder --mac --publish never");
 run("node scripts/virustotal-scan.mjs");
-run("npx electron-builder --mac --win --publish always");
+run("npx electron-builder --mac --publish always");
 
 console.log(
-  `\n✅ Version ${pkg.version} compilée, scannée, et envoyée.\n` +
-    "   → Sur GitHub (repo des releases), ouvre la release en brouillon et clique « Publish »\n" +
-    "     pour déclencher la mise à jour chez les utilisateurs.\n",
+  `\n✅ Version ${pkg.version} compilée pour macOS et uploadée.\n` +
+    "   → Le tag v${pkg.version} a été créé automatiquement.\n" +
+    "   → GitHub Actions buildéra la version Windows et publiera la release complète.\n" +
+    "   → Vérifiez les actions sur https://github.com/Frensh-Developpeur/DofusCodex/actions\n",
 );

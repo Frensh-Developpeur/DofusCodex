@@ -6,10 +6,13 @@
   "private": true,
   "main": "electron/main.cjs",
   "type": "module",
+  "electronmon": {
+    "patterns": ["electron/**", "!src/**", "!dist/**", "!release/**", "!docs/**", "!scripts/**"]
+  },
   "scripts": {
     "dev": "concurrently -k -n VITE,ELECTRON -c cyan,magenta \"npm:dev:vite\" \"npm:dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
+    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electronmon .",
     "build": "vite build",
     "preview": "vite preview",
     "dist": "vite build && electron-builder",
@@ -39,6 +42,7 @@
     "cross-env": "^7.0.3",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3",
+    "electronmon": "^2.0.4",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",

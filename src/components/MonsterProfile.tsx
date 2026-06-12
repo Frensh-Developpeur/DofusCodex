@@ -160,6 +160,15 @@ export default function MonsterProfile({ monsterId, embedded = false }: { monste
                       <DofusIcon name="boss" size={12} /> Boss
                     </Pill>
                   )}
+                  {!embedded && (
+                    <Link
+                      to={`/carte?monster=${monsterId}`}
+                      state={{ fromSection: true }}
+                      className="no-drag inline-flex items-center gap-1.5 rounded-lg border border-glow-cyan/30 bg-glow-cyan/10 px-2.5 py-1 text-xs font-semibold text-glow-cyan transition hover:bg-glow-cyan/20"
+                    >
+                      <DofusIcon name="map" size={12} /> Voir sur la carte
+                    </Link>
+                  )}
                 </div>
                 {/* Sélecteur de niveau (grades) */}
                 {grades.length > 1 && (

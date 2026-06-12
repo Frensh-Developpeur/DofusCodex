@@ -554,6 +554,17 @@ export async function browseItems(p: BrowseItemsParams, signal?: AbortSignal): P
   }));
 }
 
+// Recherche libre d'objets par nom (sert au sélecteur de ressource de la carte).
+export async function searchItems(term: string, limit = 24, signal?: AbortSignal): Promise<ItemLite[]> {
+  const t = term.trim();
+  if (t.length < 2) return [];
+  const url =
+    `${BASE}/items?lang=fr&$limit=${Math.min(limit, 50)}&$sort[level]=-1&$sort[id]=1` +
+    `&$select[]=id&$select[]=name&$select[]=level&$select[]=iconId&name.fr[$regex]=(?i)${encodeURIComponent(t)}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; level: number; iconId: number }>>(url, signal);
+  return data.data.map((it) => ({ id: it.id, name: it.name, level: it.level, img: `${BASE}/img/items/${it.iconId}.png` }));
+}
+
 // Item générique (DofusDB connaît tout : ressources, suiveurs, consommables, objets
 // de quête… contrairement à l'endpoint « equipment » de DofusDude qui renvoie 404).
 // Sert de repli quand un <item> d'un guide n'est pas un équipement.
@@ -1381,4 +1392,379 @@ export async function getAchievementsByIds(ids: number[], signal?: AbortSignal):
   // Même ordre que DofusDB : tri par `order` (regroupe par donjon/thème), puis id.
   out.sort((a, b) => a._order - b._order || a.id - b.id);
   return out.map(({ _order, ...a }) => a);
+}
+
+// ============================================================================
+// Métiers & recettes de craft
+// ============================================================================
+
+export interface Job {
+  id: number;
+  name: Localized;
+}
+
+// 23 métiers ; on exclut l'id 1 « Base » (pseudo-métier sans recettes propres).
+export async function listJobs(signal?: AbortSignal): Promise<Job[]> {
+  const url = `${BASE}/jobs?lang=fr&$limit=50&$sort[id]=1&$select[]=id&$select[]=name`;
+  const data = await getJson<FeathersList<Job>>(url, signal);
+  return (data.data ?? []).filter((j) => j.id !== 1 && j.name?.fr);
+}
+
+export interface Recipe {
+  id: number;
+  resultId: number;
+  resultLevel: number;
+  jobId: number;
+  ingredientIds: number[];
+  quantities: number[];
+}
+
+export interface RecipeQuery {
+  jobId?: number;
+  resultId?: number;
+  ingredientId?: number; // reverse : recettes utilisant cet ingrédient
+  skip?: number;
+  limit?: number;
+}
+
+export async function listRecipes(q: RecipeQuery, signal?: AbortSignal): Promise<FeathersList<Recipe>> {
+  const limit = Math.min(q.limit ?? 50, 50); // $limit plafonné à 50
+  const parts = [
+    "lang=fr",
+    `$limit=${limit}`,
+    `$skip=${q.skip ?? 0}`,
+    "$sort[resultLevel]=-1",
+    "$sort[id]=1",
+    "$select[]=id",
+    "$select[]=resultId",
+    "$select[]=resultLevel",
+    "$select[]=jobId",
+    "$select[]=ingredientIds",
+    "$select[]=quantities",
+  ];
+  if (q.jobId != null) parts.push(`jobId=${q.jobId}`);
+  if (q.resultId != null) parts.push(`resultId=${q.resultId}`);
+  if (q.ingredientId != null) parts.push(`ingredientIds[$in][]=${q.ingredientId}`);
+  const url = `${BASE}/recipes?${parts.join("&")}`;
+  return getJson<FeathersList<Recipe>>(url, signal);
+}
+
+// Recette(s) produisant un objet (sert à l'arbre de craft + fiche objet).
+export async function getRecipesForResult(itemId: number, signal?: AbortSignal): Promise<Recipe[]> {
+  const data = await listRecipes({ resultId: itemId, limit: 50 }, signal);
+  return data.data;
+}
+
+// Recettes qui consomment un objet (« permet de crafter »).
+export async function recipesUsingIngredient(itemId: number, limit = 30, signal?: AbortSignal): Promise<Recipe[]> {
+  const data = await listRecipes({ ingredientId: itemId, limit }, signal);
+  return data.data;
+}
+
+// ============================================================================
+// Carte du monde — géométrie, grille de maps, ressources, sous-zones
+// ============================================================================
+
+// Niveau de zoom de la pyramide de tuiles : `name` = dossier des tuiles, `x`/`y` = facteur d'échelle.
+export interface WorldScaleLevel {
+  x: number;
+  y: number;
+  name: string;
+}
+
+export interface WorldGeometry {
+  id: number;
+  name: Localized;
+  origineX: number;
+  origineY: number;
+  mapWidth: number;
+  mapHeight: number;
+  totalWidth: number;
+  totalHeight: number;
+  minScale: number;
+  maxScale: number;
+  startScale: number;
+  zoom: number[];
+  customScales: WorldScaleLevel[]; // pyramide de tuiles (cf. carte DofusDB)
+  visibleOnMap?: boolean;
+}
+
+// URL d'une tuile de la worldmap pré-assemblée (pyramide façon DofusDB) :
+// `/img/worlds/{worldId}/{scaleName}/{index}.jpg` où index = ty*columns + tx + 1 (1-based, row-major).
+export function worldPyramidTileImg(worldId: number, scaleName: string, index: number): string {
+  return `${BASE}/img/worlds/${worldId}/${scaleName}/${index}.jpg`;
+}
+
+// 35 mondes ; on ne garde que ceux affichables sur la carte (exclut intérieurs/donjons).
+export async function getWorlds(signal?: AbortSignal): Promise<WorldGeometry[]> {
+  const url = `${BASE}/worlds?lang=fr&$limit=50&$sort[id]=1`;
+  const data = await getJson<FeathersList<WorldGeometry>>(url, signal);
+  return (data.data ?? []).filter((w) => w.visibleOnMap !== false && w.name?.fr);
+}
+
+export interface MapCell {
+  id: number;
+  posX: number;
+  posY: number;
+  subAreaId: number;
+}
+
+export interface WorldGrid {
+  worldId: number;
+  byKey: Map<string, MapCell>;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+export function gridKey(posX: number, posY: number): string {
+  return `${posX},${posY}`;
+}
+
+// Tuile de map (rendu DofusDB) pour la worldmap. Échelles 0.25 / 0.5 / 1.
+export type WorldScale = "0.25" | "0.5" | "1";
+export function worldMapTileImg(mapId: number, scale: WorldScale): string {
+  return `${BASE}/img/maps/${scale}/${mapId}.jpg`;
+}
+
+// Grille complète d'un monde : la carte n'affiche QUE les maps `hasPriorityOnWorldmap`
+// (la map canonique de chaque cellule ; sinon ~1789 intérieurs s'empilent sur (0,0)).
+// ~4669 cellules pour le Monde des Douze → pagination $limit 50 mais en VAGUES PARALLÈLES
+// (latence ~0.1 s → ~2-4 s, mis en cache pour la session). Tri stable par id.
+export async function getWorldGrid(worldId: number, signal?: AbortSignal): Promise<WorldGrid> {
+  type Raw = { id: number; posX: number; posY: number; subAreaId: number };
+  const base =
+    `${BASE}/map-positions?worldMap=${worldId}&hasPriorityOnWorldmap=true&$sort[id]=1` +
+    `&$select[]=id&$select[]=posX&$select[]=posY&$select[]=subAreaId`;
+  const first = await getJson<FeathersList<Raw>>(`${base}&$limit=50&$skip=0`, signal);
+  const rows: Raw[] = [...first.data];
+  const skips: number[] = [];
+  for (let s = 50; s < first.total; s += 50) skips.push(s);
+  const CONC = 8; // cap de concurrence (le navigateur plafonne ~6/hôte de toute façon)
+  for (let i = 0; i < skips.length; i += CONC) {
+    const batch = skips.slice(i, i + CONC);
+    const pages = await Promise.all(
+      batch.map((s) => getJson<FeathersList<Raw>>(`${base}&$limit=50&$skip=${s}`, signal)),
+    );
+    for (const p of pages) rows.push(...p.data);
+  }
+  const byKey = new Map<string, MapCell>();
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  for (const m of rows) {
+    const key = gridKey(m.posX, m.posY);
+    if (!byKey.has(key)) byKey.set(key, { id: m.id, posX: m.posX, posY: m.posY, subAreaId: m.subAreaId });
+    if (m.posX < minX) minX = m.posX;
+    if (m.posX > maxX) maxX = m.posX;
+    if (m.posY < minY) minY = m.posY;
+    if (m.posY > maxY) maxY = m.posY;
+  }
+  if (!byKey.size) return { worldId, byKey, minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  return { worldId, byKey, minX, maxX, minY, maxY };
+}
+
+// Cellules d'un monde DANS une plage de coords (chargement à la demande par viewport — bien
+// plus rapide que de précharger les 4669 cellules avant le 1er affichage). Pagination $limit 50.
+export async function getWorldGridRange(
+  worldId: number,
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  signal?: AbortSignal,
+): Promise<MapCell[]> {
+  type Raw = { id: number; posX: number; posY: number; subAreaId: number };
+  const out: MapCell[] = [];
+  let skip = 0;
+  for (;;) {
+    const url =
+      `${BASE}/map-positions?worldMap=${worldId}&hasPriorityOnWorldmap=true` +
+      `&posX[$gte]=${minX}&posX[$lte]=${maxX}&posY[$gte]=${minY}&posY[$lte]=${maxY}` +
+      `&$sort[id]=1&$limit=50&$skip=${skip}` +
+      `&$select[]=id&$select[]=posX&$select[]=posY&$select[]=subAreaId`;
+    const data = await getJson<FeathersList<Raw>>(url, signal);
+    for (const m of data.data) out.push({ id: m.id, posX: m.posX, posY: m.posY, subAreaId: m.subAreaId });
+    skip += 50;
+    if (skip >= data.total || data.data.length === 0) break;
+  }
+  return out;
+}
+
+// Cellule worldmap à une coordonnée précise (clic sur la carte, même quand on est dézoomé et
+// que la grille n'est pas préchargée). Renvoie la map prioritaire de la worldmap à (posX,posY).
+export async function getMapCellAt(
+  worldId: number,
+  posX: number,
+  posY: number,
+  signal?: AbortSignal,
+): Promise<MapCell | null> {
+  const url =
+    `${BASE}/map-positions?worldMap=${worldId}&posX=${posX}&posY=${posY}&hasPriorityOnWorldmap=true&$limit=1` +
+    `&$select[]=id&$select[]=posX&$select[]=posY&$select[]=subAreaId`;
+  const data = await getJson<FeathersList<{ id: number; posX: number; posY: number; subAreaId: number }>>(url, signal);
+  const m = data.data[0];
+  return m ? { id: m.id, posX: m.posX, posY: m.posY, subAreaId: m.subAreaId } : null;
+}
+
+// Positions (posX,posY,worldMap,subAreaId) de maps par ids — ex. entrées de donjon pour localiser
+// un boss de donjon sur la worldmap. Chunks de 50.
+export async function getMapPositionsByIds(
+  ids: number[],
+  signal?: AbortSignal,
+): Promise<{ id: number; posX: number; posY: number; worldMap: number; subAreaId: number }[]> {
+  const uniq = [...new Set(ids)].filter((n) => Number.isFinite(n));
+  const out: { id: number; posX: number; posY: number; worldMap: number; subAreaId: number }[] = [];
+  for (let i = 0; i < uniq.length; i += 50) {
+    const idParams = uniq.slice(i, i + 50).map((id) => `id[$in][]=${id}`).join("&");
+    const url = `${BASE}/map-positions?$limit=50&$select[]=id&$select[]=posX&$select[]=posY&$select[]=worldMap&$select[]=subAreaId&${idParams}`;
+    const data = await getJson<FeathersList<{ id: number; posX: number; posY: number; worldMap: number; subAreaId: number }>>(url, signal);
+    out.push(...(data.data ?? []));
+  }
+  return out;
+}
+
+// Position « ancre » d'une sous-zone (1re map prioritaire) — sert à recadrer la carte sur une zone.
+export async function getSubareaAnchor(
+  subAreaId: number,
+  signal?: AbortSignal,
+): Promise<{ id: number; posX: number; posY: number; worldMap: number; subAreaId: number } | null> {
+  const url =
+    `${BASE}/map-positions?subAreaId=${subAreaId}&hasPriorityOnWorldmap=true&$limit=1` +
+    `&$select[]=id&$select[]=posX&$select[]=posY&$select[]=worldMap&$select[]=subAreaId`;
+  const data = await getJson<FeathersList<{ id: number; posX: number; posY: number; worldMap: number; subAreaId: number }>>(
+    url,
+    signal,
+  );
+  return data.data[0] ?? null;
+}
+
+export interface ResourcePin {
+  mapId: number;
+  posX: number;
+  posY: number;
+  subAreaId: number;
+  worldMap: number;
+  quantity: number;
+}
+
+// Maps qui donnent une ressource (source réelle de la carte DofusDB) : 1 pin par map.
+export async function getResourceMaps(itemId: number, signal?: AbortSignal): Promise<ResourcePin[]> {
+  type Raw = {
+    id: number;
+    quantities?: { item: number; quantity: number }[];
+    pos?: { posX: number; posY: number; subAreaId: number; worldMap: number };
+  };
+  // Plusieurs maps (intérieurs/étages) partagent une même coordonnée worldmap → on dédoublonne
+  // par coordonnée (worldMap,posX,posY) en gardant la quantité MAX (le meilleur spot du lieu).
+  const byCoord = new Map<string, ResourcePin>();
+  let skip = 0;
+  for (;;) {
+    const url = `${BASE}/recoltable?resources[$in][]=${itemId}&$limit=50&$skip=${skip}&$sort[id]=1`;
+    const data = await getJson<FeathersList<Raw>>(url, signal);
+    for (const r of data.data) {
+      if (!r.pos) continue;
+      const q = (r.quantities ?? []).find((x) => x.item === itemId)?.quantity ?? 1;
+      const key = `${r.pos.worldMap},${r.pos.posX},${r.pos.posY}`;
+      const prev = byCoord.get(key);
+      if (!prev || q > prev.quantity) {
+        byCoord.set(key, {
+          mapId: r.id,
+          posX: r.pos.posX,
+          posY: r.pos.posY,
+          subAreaId: r.pos.subAreaId,
+          worldMap: r.pos.worldMap,
+          quantity: q,
+        });
+      }
+    }
+    skip += 50;
+    if (skip >= data.total || data.data.length === 0) break;
+  }
+  return [...byCoord.values()];
+}
+
+export interface SubareaInfo {
+  id: number;
+  name: Localized;
+  level: number;
+  areaId: number;
+  mapIds: number[];
+  monsters: number[];
+  harvestables: number[];
+}
+
+// Noms de sous-zones en lot (pour grouper la liste des maps d'une ressource). Chunks de 50.
+export async function getSubareasByIds(ids: number[], signal?: AbortSignal): Promise<{ id: number; name: Localized }[]> {
+  const uniq = [...new Set(ids)].filter((n) => Number.isFinite(n));
+  const out: { id: number; name: Localized }[] = [];
+  for (let i = 0; i < uniq.length; i += 50) {
+    const chunk = uniq.slice(i, i + 50);
+    const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
+    const url = `${BASE}/subareas?lang=fr&$limit=50&$select[]=id&$select[]=name&${idParams}`;
+    const data = await getJson<FeathersList<{ id: number; name: Localized }>>(url, signal);
+    out.push(...(data.data ?? []));
+  }
+  return out;
+}
+
+export async function getSubarea(id: number, signal?: AbortSignal): Promise<SubareaInfo | null> {
+  const url =
+    `${BASE}/subareas?id=${id}&lang=fr&$limit=1` +
+    `&$select[]=id&$select[]=name&$select[]=level&$select[]=areaId` +
+    `&$select[]=mapIds&$select[]=monsters&$select[]=harvestables`;
+  const data = await getJson<FeathersList<SubareaInfo>>(url, signal);
+  return data.data[0] ?? null;
+}
+
+// Cases worldmap (posX,posY) appartenant à une/des sous-zone(s) d'un monde — pour surligner la
+// zone en bleu, INDÉPENDAMMENT du zoom (ne dépend pas de la grille préchargée du viewport).
+export async function getSubareaCells(
+  subAreaIds: number[],
+  worldId: number,
+  signal?: AbortSignal,
+): Promise<{ posX: number; posY: number }[]> {
+  const ids = [...new Set(subAreaIds)].filter((n) => Number.isFinite(n));
+  if (!ids.length) return [];
+  const idParams = ids.map((id) => `subAreaId[$in][]=${id}`).join("&");
+  const out: { posX: number; posY: number }[] = [];
+  let skip = 0;
+  for (;;) {
+    const url =
+      `${BASE}/map-positions?worldMap=${worldId}&hasPriorityOnWorldmap=true&${idParams}` +
+      `&$limit=50&$skip=${skip}&$sort[id]=1&$select[]=posX&$select[]=posY`;
+    const data = await getJson<FeathersList<{ posX: number; posY: number }>>(url, signal);
+    for (const m of data.data) out.push({ posX: m.posX, posY: m.posY });
+    skip += 50;
+    if (skip >= data.total || data.data.length === 0 || out.length >= 400) break;
+  }
+  return out;
+}
+
+export interface SubareaLite {
+  id: number;
+  name: Localized;
+  level: number;
+  areaId: number;
+  mapIds: number[];
+}
+
+// Sous-zones où récolter une ressource (fiche objet « Où récolter »).
+export async function subareasHarvesting(itemId: number, limit = 50, signal?: AbortSignal): Promise<SubareaLite[]> {
+  const url =
+    `${BASE}/subareas?harvestables[$in][]=${itemId}&lang=fr&$limit=${Math.min(limit, 50)}` +
+    `&$sort[level]=1&$sort[id]=1&$select[]=id&$select[]=name&$select[]=level&$select[]=areaId&$select[]=mapIds`;
+  const data = await getJson<FeathersList<SubareaLite>>(url, signal);
+  return data.data ?? [];
+}
+
+// Sous-zones où apparaît un monstre (highlight de zone sur la carte).
+export async function subareasWithMonster(monsterId: number, limit = 50, signal?: AbortSignal): Promise<SubareaLite[]> {
+  const url =
+    `${BASE}/subareas?monsters[$in][]=${monsterId}&lang=fr&$limit=${Math.min(limit, 50)}` +
+    `&$sort[level]=1&$sort[id]=1&$select[]=id&$select[]=name&$select[]=level&$select[]=areaId&$select[]=mapIds`;
+  const data = await getJson<FeathersList<SubareaLite>>(url, signal);
+  return data.data ?? [];
 }

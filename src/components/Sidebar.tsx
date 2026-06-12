@@ -31,6 +31,14 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     ],
   },
   {
+    title: "Monde",
+    collapsible: true,
+    items: [
+      { to: "/carte", label: "Carte du monde", dofus: "map" },
+      { to: "/metiers", label: "Métiers & Craft", dofus: "job" },
+    ],
+  },
+  {
     title: "Encyclopédie",
     collapsible: true,
     items: [

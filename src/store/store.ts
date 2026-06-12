@@ -64,6 +64,14 @@ export interface MetamobAuth {
   slug?: string; // quête (chasse) sélectionnée, si l'utilisateur en a plusieurs
 }
 
+// Liste de courses (calculateur de ressources) : items à fabriquer + quantités possédées.
+export interface ShoppingItem {
+  id: string;
+  itemId: number;
+  quantity: number;
+  createdAt: number;
+}
+
 export interface AppState {
   favoriteDungeons: number[];
   doneDungeons: number[];
@@ -81,6 +89,8 @@ export interface AppState {
   barbofusSkins: BarbofusSkin[]; // skins Barbofus sauvegardés (page « Mes Skins »)
   sidebarCollapsed: boolean; // navbar repliée (icônes seules)
   metamob: MetamobAuth | null; // connexion au compte Metamob (null = non connecté)
+  shoppingList: ShoppingItem[]; // liste de courses (items à fabriquer)
+  resourceOwned: Record<number, number>; // resourceId -> quantité possédée (suivi de récolte)
 }
 
 const STORAGE_KEY = "dofuscodex.state.v1";
@@ -101,6 +111,8 @@ const DEFAULT_STATE: AppState = {
   barbofusSkins: [],
   sidebarCollapsed: false,
   metamob: null,
+  shoppingList: [],
+  resourceOwned: {},
 };
 
 // ---- Tiny external store (useSyncExternalStore) ----
@@ -234,6 +246,45 @@ export const actions = {
   },
   deleteBuild(id: string) {
     setState((s) => ({ ...s, builds: s.builds.filter((b) => b.id !== id) }));
+  },
+  // ---- Liste de courses (calculateur de ressources) ----
+  addShoppingItem(itemId: number, quantity = 1) {
+    setState((s) => {
+      // Si déjà présent, on cumule la quantité plutôt que de dupliquer.
+      const existing = s.shoppingList.find((it) => it.itemId === itemId);
+      if (existing) {
+        return {
+          ...s,
+          shoppingList: s.shoppingList.map((it) =>
+            it.itemId === itemId ? { ...it, quantity: it.quantity + quantity } : it,
+          ),
+        };
+      }
+      const id = `sl_${Date.now().toString(36)}`;
+      return { ...s, shoppingList: [{ id, itemId, quantity, createdAt: Date.now() }, ...s.shoppingList] };
+    });
+  },
+  removeShoppingItem(id: string) {
+    setState((s) => ({ ...s, shoppingList: s.shoppingList.filter((it) => it.id !== id) }));
+  },
+  updateShoppingQuantity(id: string, quantity: number) {
+    const q = Math.max(1, Math.floor(quantity) || 1);
+    setState((s) => ({
+      ...s,
+      shoppingList: s.shoppingList.map((it) => (it.id === id ? { ...it, quantity: q } : it)),
+    }));
+  },
+  clearShoppingList() {
+    setState((s) => ({ ...s, shoppingList: [] }));
+  },
+  setResourceOwned(resourceId: number, quantity: number) {
+    const q = Math.max(0, Math.floor(quantity) || 0);
+    setState((s) => {
+      const next = { ...s.resourceOwned };
+      if (q <= 0) delete next[resourceId];
+      else next[resourceId] = q;
+      return { ...s, resourceOwned: next };
+    });
   },
   saveSkinDesign(design: Omit<SkinDesign, "id" | "createdAt" | "updatedAt">): string {
     const now = Date.now();

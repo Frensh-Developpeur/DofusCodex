@@ -36,6 +36,7 @@ const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
     items: [
       { to: "/carte", label: "Carte du monde", dofus: "map" },
       { to: "/metiers", label: "Métiers & Craft", dofus: "job" },
+      { to: "/liste-courses", label: "Liste de courses", dofus: "cupboard" },
     ],
   },
   {

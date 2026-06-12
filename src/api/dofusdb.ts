@@ -1449,6 +1449,16 @@ export async function listRecipes(q: RecipeQuery, signal?: AbortSignal): Promise
   return getJson<FeathersList<Recipe>>(url, signal);
 }
 
+// Parmi une liste d'ids, lesquels ont une recette (sont craftables) — 1 requête.
+export async function craftableIdsAmong(ids: number[], signal?: AbortSignal): Promise<Set<number>> {
+  const uniq = [...new Set(ids)].filter((n) => Number.isFinite(n));
+  if (!uniq.length) return new Set();
+  const idParams = uniq.map((id) => `resultId[$in][]=${id}`).join("&");
+  const url = `${BASE}/recipes?$limit=50&$select[]=resultId&${idParams}`;
+  const data = await getJson<FeathersList<{ resultId: number }>>(url, signal);
+  return new Set((data.data ?? []).map((r) => r.resultId));
+}
+
 // Recette(s) produisant un objet (sert à l'arbre de craft + fiche objet).
 export async function getRecipesForResult(itemId: number, signal?: AbortSignal): Promise<Recipe[]> {
   const data = await listRecipes({ resultId: itemId, limit: 50 }, signal);

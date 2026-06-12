@@ -22,18 +22,30 @@ import {
   getItemsByIds,
   getMonstersLite,
   listMonsters,
+  listItemTypes,
+  browseItems,
   type MapCell,
   type ResourcePin,
   type WorldGeometry,
 } from "../api/dofusdb";
 
-type SearchMode = "resource" | "monster";
+type SearchMode = "resource" | "monster" | "metier";
+
+// Métiers de RÉCOLTE → types d'items récoltés (résolus en typeIds via listItemTypes).
+const GATHER_JOBS: { label: string; typeNames: string[] }[] = [
+  { label: "Bûcheron", typeNames: ["Bois"] },
+  { label: "Mineur", typeNames: ["Minerai"] },
+  { label: "Paysan", typeNames: ["Céréale"] },
+  { label: "Alchimiste", typeNames: ["Plante", "Fleur"] },
+  { label: "Pêcheur", typeNames: ["Poisson"] },
+];
 
 export default function Carte() {
   const [params, setParams] = useSearchParams();
   const [worldId, setWorldId] = useState(1);
   const [mode, setMode] = useState<SearchMode>("resource");
   const [term, setTerm] = useState("");
+  const [gatherJob, setGatherJob] = useState(0); // index dans GATHER_JOBS
   const debounced = useDebounce(term);
 
   // Sélection courante : une ressource (pins) OU un monstre (zones surlignées).
@@ -276,6 +288,19 @@ export default function Carte() {
     enabled: mode === "monster" && debounced.trim().length >= 2,
   });
 
+  // ── Mode « Métier » : ressources de récolte d'un métier ────────────────────
+  const itemTypesQ = useQuery({ queryKey: ["item-types"], queryFn: ({ signal }) => listItemTypes(signal), staleTime: Infinity });
+  const gatherTypeIds = useMemo(() => {
+    const names = new Set(GATHER_JOBS[gatherJob]?.typeNames ?? []);
+    return (itemTypesQ.data ?? []).filter((t) => names.has(t.name?.fr ?? "")).map((t) => t.id);
+  }, [itemTypesQ.data, gatherJob]);
+  const metierResQ = useQuery({
+    queryKey: ["metier-res", gatherTypeIds.join(","), debounced],
+    queryFn: ({ signal }) => browseItems({ typeIds: gatherTypeIds, search: debounced, limit: 50 }, signal),
+    enabled: mode === "metier" && gatherTypeIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
+
   const pickResource = (id: number, name: string) => {
     switchedResRef.current = null; // re-évaluer la bascule de monde pour cette sélection
     setMode("resource");
@@ -332,7 +357,7 @@ export default function Carte() {
       {/* Barre de recherche + sélecteur de monde — z élevé pour que le menu déroulant passe AU-DESSUS de la carte. */}
       <div className="glass relative z-30 mb-4 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center">
         <div className="flex shrink-0 rounded-lg bg-void-800/60 p-0.5 text-xs font-semibold">
-          {(["resource", "monster"] as SearchMode[]).map((m) => (
+          {(["resource", "monster", "metier"] as SearchMode[]).map((m) => (
             <button
               key={m}
               onClick={() => {
@@ -343,7 +368,7 @@ export default function Carte() {
                 mode === m ? "bg-glow-purple/25 text-white" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              {m === "resource" ? "Ressource" : "Monstre"}
+              {m === "resource" ? "Ressource" : m === "monster" ? "Monstre" : "Métier"}
             </button>
           ))}
         </div>
@@ -353,11 +378,17 @@ export default function Carte() {
           <input
             value={term}
             onChange={(e) => setTerm(e.target.value)}
-            placeholder={mode === "resource" ? "Rechercher une ressource (Fer, Frêne…)" : "Rechercher un monstre…"}
+            placeholder={
+              mode === "resource"
+                ? "Rechercher une ressource (Fer, Frêne…)"
+                : mode === "monster"
+                  ? "Rechercher un monstre…"
+                  : "Filtrer les ressources du métier…"
+            }
             className="no-drag w-full rounded-xl border border-white/10 bg-void-800/60 py-2.5 pl-10 pr-3 text-sm text-slate-200 outline-none transition focus:border-glow-purple/50"
           />
-          {/* Dropdown résultats */}
-          {term.trim().length >= 2 && (
+          {/* Dropdown résultats (ressource/monstre) */}
+          {mode !== "metier" && term.trim().length >= 2 && (
             <div className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-white/10 bg-void-900/95 p-1 shadow-xl backdrop-blur">
               {mode === "resource"
                 ? (itemSearchQ.data ?? []).map((it) => (
@@ -405,6 +436,25 @@ export default function Carte() {
           </select>
         )}
       </div>
+
+      {/* Chips des métiers de récolte (mode Métier) */}
+      {mode === "metier" && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {GATHER_JOBS.map((j, i) => (
+            <button
+              key={j.label}
+              onClick={() => setGatherJob(i)}
+              className={`no-drag inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                gatherJob === i
+                  ? "bg-glow-purple/25 text-white ring-1 ring-glow-purple/40"
+                  : "bg-white/5 text-slate-400 hover:bg-white/10"
+              }`}
+            >
+              <DofusIcon name="job" size={14} /> {j.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Bandeau sélection active */}
       {activeLabel &&
@@ -465,6 +515,42 @@ export default function Carte() {
               selectedCell={selectedCell}
               onSelectCell={setSelectedCell}
             />
+
+            {/* Mode Métier : liste des ressources récoltables du métier → clic = pins. */}
+            {mode === "metier" && (
+              <div className="absolute left-3 top-3 flex max-h-[calc(100%-1.5rem)] w-64 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 shadow-2xl backdrop-blur-md">
+                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                  <DofusIcon name="job" size={14} className="text-glow-purple" />
+                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">
+                    {GATHER_JOBS[gatherJob].label}
+                  </span>
+                  {(metierResQ.data?.length ?? 0) > 0 && <Pill tone="purple">{metierResQ.data!.length}</Pill>}
+                </div>
+                <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
+                  {metierResQ.isFetching && !metierResQ.data ? (
+                    <p className="px-1 py-1.5 text-xs text-slate-500">Chargement…</p>
+                  ) : (metierResQ.data?.length ?? 0) === 0 ? (
+                    <p className="px-1 py-1.5 text-xs text-slate-500">Aucune ressource.</p>
+                  ) : (
+                    metierResQ.data!.map((it) => (
+                      <button
+                        key={it.id}
+                        onClick={() => pickResource(it.id, it.name.fr)}
+                        className={`no-drag flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs transition ${
+                          resource?.id === it.id
+                            ? "bg-glow-emerald/20 text-white ring-1 ring-glow-emerald/40"
+                            : "text-slate-300 hover:bg-white/10"
+                        }`}
+                      >
+                        <img src={it.img} alt="" loading="lazy" className="h-6 w-6 shrink-0 object-contain" />
+                        <span className="min-w-0 flex-1 truncate">{it.name.fr}</span>
+                        {it.level > 0 && <span className="text-[10px] text-slate-500">Niv.{it.level}</span>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Liste des maps de la ressource (groupées par zone), cliquables pour y voler. */}
             {mode === "resource" && resource && pins.length > 0 && (

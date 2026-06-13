@@ -1619,6 +1619,22 @@ export async function getMapCellAt(
   return m ? { id: m.id, posX: m.posX, posY: m.posY, subAreaId: m.subAreaId } : null;
 }
 
+// Zone (sous-zone) sous une coordonnée : nom + toutes ses cases — pour surligner la zone au survol.
+export async function getZoneAt(
+  worldId: number,
+  posX: number,
+  posY: number,
+  signal?: AbortSignal,
+): Promise<{ subAreaId: number; name: string; cells: { posX: number; posY: number }[] } | null> {
+  const cell = await getMapCellAt(worldId, posX, posY, signal);
+  if (!cell) return null;
+  const [names, cells] = await Promise.all([
+    getSubareasByIds([cell.subAreaId], signal),
+    getSubareaCells([cell.subAreaId], worldId, signal),
+  ]);
+  return { subAreaId: cell.subAreaId, name: names[0]?.name?.fr ?? "", cells };
+}
+
 // Positions (posX,posY,worldMap,subAreaId) de maps par ids — ex. entrées de donjon pour localiser
 // un boss de donjon sur la worldmap. Chunks de 50.
 export async function getMapPositionsByIds(

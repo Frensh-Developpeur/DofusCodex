@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Search, X, Check, ChevronRight, MapPin } from "../components/DofusIcons";
+import { Search, X, ChevronRight, MapPin } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
 import { SectionHeader, Pill, Spinner, EmptyState } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
@@ -312,19 +312,18 @@ function ResourceRow({
         <button
           onClick={() => actions.setResourceOwned(id, done ? 0 : need)}
           title={done ? "Tout remettre à zéro" : "Marquer comme complet"}
-          className={`no-drag grid h-6 w-6 place-items-center rounded-md transition ${
-            done ? "bg-glow-emerald/20" : "text-slate-500 hover:bg-white/10 hover:text-white"
+          className={`no-drag grid h-6 w-6 place-items-center rounded-md transition hover:bg-white/10 ${
+            done ? "bg-glow-emerald/20" : "opacity-35 hover:opacity-100"
           }`}
         >
-          {done ? <DofusIcon name="success" size={15} /> : <Check className="h-3.5 w-3.5" />}
+          <DofusIcon name="success" size={15} />
         </button>
         <Link
           to={`/carte?resource=${id}`}
           state={{ fromSection: true }}
-          title="Voir cette ressource sur la carte du monde (zones de récolte)"
           className="no-drag grid h-6 w-6 place-items-center rounded-md text-slate-500 transition hover:bg-white/10 hover:text-glow-cyan"
         >
-          <MapPin className="h-3.5 w-3.5" />
+          <MapPin title="Voir les zones de récolte sur la carte" className="h-3.5 w-3.5" />
         </Link>
       </div>
     </div>

@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   getMapCellAt,
+  getZoneAt,
   worldPyramidTileImg,
   type MapCell,
   type ResourcePin,
   type WorldGeometry,
 } from "../../api/dofusdb";
 import { useMapTransform, type MapView } from "../../lib/useMapTransform";
+import { useDebounce } from "../../hooks/useDebounce";
 
 interface Props {
   geo: WorldGeometry;
@@ -57,10 +60,33 @@ export default function WorldMapCanvas({
   const cw = geo.mapWidth + 0.6;
   const ch = geo.mapHeight + 0.6;
 
+  // Survol d'une case (highlight + coordonnées, façon carte du jeu). MAJ uniquement au changement
+  // de case (pas à chaque pixel) pour limiter les rendus.
+  const [hover, setHover] = useState<{ posX: number; posY: number } | null>(null);
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const { px, py } = screenToPlane(e.clientX - r.left, e.clientY - r.top);
+    const posX = Math.floor((px - geo.origineX) / geo.mapWidth);
+    const posY = Math.floor((py - geo.origineY) / geo.mapHeight);
+    setHover((h) => (h && h.posX === posX && h.posY === posY ? h : { posX, posY }));
+  };
+
+  // Survol → zone (sous-zone entière + nom), récupérée après un court délai (debounce).
+  const debHover = useDebounce(hover, 130);
+  const zoneQ = useQuery({
+    queryKey: ["zone-at", worldId, debHover?.posX, debHover?.posY],
+    queryFn: ({ signal }) => getZoneAt(worldId, debHover!.posX, debHover!.posY, signal),
+    enabled: !!debHover,
+    staleTime: Infinity,
+  });
+  const zone = hover && zoneQ.data ? zoneQ.data : null; // n'affiche la zone que si on survole encore
+
   return (
     <div
       ref={viewportRef}
-      className="relative h-full w-full touch-none overflow-hidden rounded-2xl border border-white/10 bg-void-950 [&_*]:select-none"
+      onMouseMove={onMouseMove}
+      onMouseLeave={() => setHover(null)}
+      className="relative h-full w-full touch-none overflow-hidden rounded-2xl border border-white/10 bg-void-900 [&_*]:select-none"
       style={{ cursor: "grab" }}
     >
       <div ref={planeRef} className="absolute left-0 top-0 origin-top-left will-change-transform">
@@ -71,7 +97,7 @@ export default function WorldMapCanvas({
         {highlightCells?.map((c, i) => (
           <div
             key={`${c.posX},${c.posY},${i}`}
-            className="pointer-events-none absolute bg-glow-purple/40 mix-blend-screen"
+            className="pointer-events-none absolute bg-glow-purple/45 ring-1 ring-inset ring-glow-purple/60"
             style={{
               left: geo.origineX + c.posX * geo.mapWidth,
               top: geo.origineY + c.posY * geo.mapHeight,
@@ -81,10 +107,10 @@ export default function WorldMapCanvas({
           />
         ))}
 
-        {/* Map sélectionnée (anneau cyan). */}
+        {/* Map sélectionnée (anneau or, très visible). */}
         {selectedCell && (
           <div
-            className="pointer-events-none absolute ring-2 ring-inset ring-glow-cyan"
+            className="pointer-events-none absolute ring-[3px] ring-inset ring-glow-gold"
             style={{
               left: geo.origineX + selectedCell.posX * geo.mapWidth,
               top: geo.origineY + selectedCell.posY * geo.mapHeight,
@@ -92,6 +118,52 @@ export default function WorldMapCanvas({
               height: ch,
             }}
           />
+        )}
+
+        {/* Survol : ZONE entière surlignée (sous-zone) + case sous le curseur + coordonnées/nom. */}
+        {zone?.cells.map((c, i) => (
+          <div
+            key={`z${c.posX},${c.posY},${i}`}
+            className="pointer-events-none absolute bg-glow-cyan/25"
+            style={{
+              left: geo.origineX + c.posX * geo.mapWidth,
+              top: geo.origineY + c.posY * geo.mapHeight,
+              width: cw,
+              height: ch,
+            }}
+          />
+        ))}
+        {hover && (
+          <>
+            <div
+              className="pointer-events-none absolute rounded-[2px] bg-glow-cyan/15 ring-2 ring-inset ring-white"
+              style={{
+                left: geo.origineX + hover.posX * geo.mapWidth,
+                top: geo.origineY + hover.posY * geo.mapHeight,
+                width: cw,
+                height: ch,
+              }}
+            />
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: geo.origineX + hover.posX * geo.mapWidth + geo.mapWidth / 2,
+                top: geo.origineY + hover.posY * geo.mapHeight + geo.mapHeight,
+              }}
+            >
+              <div
+                className="max-w-[260px] rounded-lg border border-white/25 bg-void-900 px-2.5 py-1.5 text-center shadow-xl"
+                style={{ transform: `translate(-50%, 6px) scale(${1 / view.s})`, transformOrigin: "top center" }}
+              >
+                {zone?.name && (
+                  <div className="truncate text-[14px] font-extrabold leading-tight text-white drop-shadow">{zone.name}</div>
+                )}
+                <div className="font-mono text-[12px] font-bold text-glow-gold">
+                  [{hover.posX}, {hover.posY}]
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {/* Pins ressource — marqueur « goutte » (taille écran constante via contre-échelle 1/s,
@@ -105,13 +177,13 @@ export default function WorldMapCanvas({
                 className="flex flex-col items-center"
                 style={{ transform: `translate(-50%, -100%) scale(${1 / view.s})`, transformOrigin: "bottom center" }}
               >
-                <div className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-gradient-to-b from-[#6ee7b7] to-[#059669] px-1.5 shadow-[0_3px_7px_rgba(0,0,0,0.5)] ring-2 ring-white/90">
-                  <span className="text-[11px] font-extrabold leading-none text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.45)]">
+                <div className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-gradient-to-b from-[#fb7185] to-[#e11d48] px-1.5 shadow-[0_3px_7px_rgba(0,0,0,0.6)] ring-2 ring-white">
+                  <span className="text-[11px] font-extrabold leading-none text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.55)]">
                     {p.quantity}
                   </span>
                 </div>
                 {/* pointe vers le bas (couleur = bas du dégradé) */}
-                <div className="-mt-px h-0 w-0 border-x-[5px] border-t-[7px] border-x-transparent border-t-[#059669]" />
+                <div className="-mt-px h-0 w-0 border-x-[5px] border-t-[7px] border-x-transparent border-t-[#e11d48]" />
               </div>
             </div>
           );

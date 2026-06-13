@@ -495,162 +495,184 @@ export default function Carte() {
           );
         })()}
 
-      {/* Carte + panneau zone */}
-      <div className="relative h-[72vh] w-full">
-        {worldsQ.isError ? (
-          <ErrorState message="Carte indisponible" onRetry={() => worldsQ.refetch()} />
-        ) : !geo ? (
-          <div className="grid h-full place-items-center rounded-2xl border border-white/10 bg-void-950">
-            <Spinner label="Chargement de la carte du monde…" />
-          </div>
-        ) : (
-          <>
-            <WorldMapCanvas
-              key={worldId}
-              geo={geo}
-              worldId={worldId}
-              pins={pins}
-              highlightCells={highlightCellsQ.data}
-              focusTarget={focusTarget}
-              selectedCell={selectedCell}
-              onSelectCell={setSelectedCell}
-            />
+      {/* Carte + panneaux HORS de la carte : un à GAUCHE (parcours/localisation), un à DROITE (sous-zone). */}
+      {(() => {
+        const showMetier = mode === "metier";
+        const showResList = mode === "resource" && !!resource && pins.length > 0;
+        const showDrop = mode === "resource" && !!resource && noHarvest && (dropperQ.data?.length ?? 0) > 0;
+        const showDungeons = mode === "monster" && !!monster && (monsterDungeonsQ.data?.length ?? 0) > 0;
+        const hasLeft = showMetier || showResList || showDrop || showDungeons;
+        const hasRight = !!selectedCell;
+        const cardCls = "flex max-h-[42vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 lg:max-h-none lg:flex-1";
+        return (
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+            {/* Carte — pleine largeur sur mobile, zone principale à gauche sur grand écran */}
+            <div className="relative h-[58vh] min-w-0 flex-1 lg:h-[74vh]">
+              {worldsQ.isError ? (
+                <ErrorState message="Carte indisponible" onRetry={() => worldsQ.refetch()} />
+              ) : !geo ? (
+                <div className="grid h-full place-items-center rounded-2xl border border-white/10 bg-void-900">
+                  <Spinner label="Chargement de la carte du monde…" />
+                </div>
+              ) : (
+                <WorldMapCanvas
+                  key={worldId}
+                  geo={geo}
+                  worldId={worldId}
+                  pins={pins}
+                  highlightCells={highlightCellsQ.data}
+                  focusTarget={focusTarget}
+                  selectedCell={selectedCell}
+                  onSelectCell={setSelectedCell}
+                />
+              )}
+            </div>
 
-            {/* Mode Métier : liste des ressources récoltables du métier → clic = pins. */}
-            {mode === "metier" && (
-              <div className="absolute left-3 top-3 flex max-h-[calc(100%-1.5rem)] w-64 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-                  <DofusIcon name="job" size={14} className="text-glow-purple" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">
-                    {GATHER_JOBS[gatherJob].label}
-                  </span>
-                  {(metierResQ.data?.length ?? 0) > 0 && <Pill tone="purple">{metierResQ.data!.length}</Pill>}
-                </div>
-                <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
-                  {metierResQ.isFetching && !metierResQ.data ? (
-                    <p className="px-1 py-1.5 text-xs text-slate-500">Chargement…</p>
-                  ) : (metierResQ.data?.length ?? 0) === 0 ? (
-                    <p className="px-1 py-1.5 text-xs text-slate-500">Aucune ressource.</p>
-                  ) : (
-                    metierResQ.data!.map((it) => (
-                      <button
-                        key={it.id}
-                        onClick={() => pickResource(it.id, it.name.fr)}
-                        className={`no-drag flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs transition ${
-                          resource?.id === it.id
-                            ? "bg-glow-emerald/20 text-white ring-1 ring-glow-emerald/40"
-                            : "text-slate-300 hover:bg-white/10"
-                        }`}
-                      >
-                        <img src={it.img} alt="" loading="lazy" className="h-6 w-6 shrink-0 object-contain" />
-                        <span className="min-w-0 flex-1 truncate">{it.name.fr}</span>
-                        {it.level > 0 && <span className="text-[10px] text-slate-500">Niv.{it.level}</span>}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Liste des maps de la ressource (groupées par zone), cliquables pour y voler. */}
-            {mode === "resource" && resource && pins.length > 0 && (
-              <div className="absolute left-3 top-3 flex max-h-[calc(100%-1.5rem)] w-64 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-                  <DofusIcon name="pin" size={14} className="text-glow-emerald" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">{resource.name}</span>
-                  <Pill tone="emerald">{pins.length}</Pill>
-                </div>
-                <div className="flex flex-col gap-2 overflow-y-auto p-2">
-                  {groupedPins.map((g) => (
-                    <div key={g.pins[0].subAreaId}>
-                      <p className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{g.zone}</p>
-                      <div className="flex flex-col gap-0.5">
-                        {g.pins.map((p) => (
+            {/* Colonne d'infos — à DROITE de la carte sur grand écran, sous la carte sinon.
+                Carte et infos visibles d'un coup, sans avoir à défiler la page. */}
+            {(hasLeft || hasRight) && (
+              <div className="flex min-w-0 flex-col gap-3 lg:h-[74vh] lg:w-[380px] lg:shrink-0">
+                {/* Mode Métier : ressources récoltables → clic = pins. */}
+                {showMetier && (
+                  <div className={cardCls}>
+                    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                      <DofusIcon name="job" size={14} className="text-glow-purple" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">
+                        {GATHER_JOBS[gatherJob].label}
+                      </span>
+                      {(metierResQ.data?.length ?? 0) > 0 && <Pill tone="purple">{metierResQ.data!.length}</Pill>}
+                    </div>
+                    <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
+                      {metierResQ.isFetching && !metierResQ.data ? (
+                        <p className="px-1 py-1.5 text-xs text-slate-500">Chargement…</p>
+                      ) : (metierResQ.data?.length ?? 0) === 0 ? (
+                        <p className="px-1 py-1.5 text-xs text-slate-500">Aucune ressource.</p>
+                      ) : (
+                        metierResQ.data!.map((it) => (
                           <button
-                            key={p.mapId}
-                            onClick={() => goToMap(p)}
+                            key={it.id}
+                            onClick={() => pickResource(it.id, it.name.fr)}
                             className={`no-drag flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs transition ${
-                              selectedCell?.id === p.mapId
-                                ? "bg-glow-cyan/20 text-white ring-1 ring-glow-cyan/40"
+                              resource?.id === it.id
+                                ? "bg-glow-emerald/20 text-white ring-1 ring-glow-emerald/40"
                                 : "text-slate-300 hover:bg-white/10"
                             }`}
                           >
-                            <span className="font-mono">
-                              [{p.posX}, {p.posY}]
-                            </span>
-                            <span className="ml-auto font-bold text-glow-gold">×{p.quantity}</span>
+                            <img src={it.img} alt="" loading="lazy" className="h-6 w-6 shrink-0 object-contain" />
+                            <span className="min-w-0 flex-1 truncate">{it.name.fr}</span>
+                            {it.level > 0 && <span className="text-[10px] text-slate-500">Niv.{it.level}</span>}
                           </button>
-                        ))}
-                      </div>
+                        ))
+                      )}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Liste des maps de la ressource (groupées par zone), cliquables pour y voler. */}
+                {showResList && (
+                  <div className={cardCls}>
+                    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                      <DofusIcon name="pin" size={14} className="text-glow-emerald" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">{resource!.name}</span>
+                      <Pill tone="emerald">{pins.length}</Pill>
+                    </div>
+                    <div className="flex flex-col gap-2 overflow-y-auto p-2">
+                      {groupedPins.map((g) => (
+                        <div key={g.pins[0].subAreaId}>
+                          <p className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{g.zone}</p>
+                          <div className="flex flex-col gap-0.5">
+                            {g.pins.map((p) => (
+                              <button
+                                key={p.mapId}
+                                onClick={() => goToMap(p)}
+                                className={`no-drag flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs transition ${
+                                  selectedCell?.id === p.mapId
+                                    ? "bg-glow-cyan/20 text-white ring-1 ring-glow-cyan/40"
+                                    : "text-slate-300 hover:bg-white/10"
+                                }`}
+                              >
+                                <span className="font-mono">
+                                  [{p.posX}, {p.posY}]
+                                </span>
+                                <span className="ml-auto font-bold text-glow-gold">×{p.quantity}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Panneau « Droppé par » (ressource sans récolte). */}
+                {showDrop && (
+                  <div className={cardCls}>
+                    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                      <DofusIcon name="bestiary" size={14} className="text-glow-rose" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">Droppé par</span>
+                      <Pill tone="rose">{dropperQ.data!.length}</Pill>
+                    </div>
+                    <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
+                      <p className="px-1 pb-1 text-[10px] text-slate-500">Cliquez un monstre pour le localiser.</p>
+                      {dropperQ.data!.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => pickMonster(m.id, m.name.fr)}
+                          className="no-drag group flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
+                        >
+                          {m.img && <img src={m.img} alt="" loading="lazy" className="h-6 w-6 shrink-0 object-contain" />}
+                          <span className="min-w-0 flex-1 truncate">{m.name.fr}</span>
+                          <ChevronRight className="h-3 w-3 shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Panneau donjons (mode monstre). */}
+                {showDungeons && (
+                  <div className={cardCls}>
+                    <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
+                      <DofusIcon name="dungeon" size={14} className="text-glow-rose" />
+                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">Donjons</span>
+                      <Pill tone="rose">{monsterDungeonsQ.data!.length}</Pill>
+                    </div>
+                    <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
+                      {monsterDungeonsQ.data!.map((d) => (
+                        <Link
+                          key={d.id}
+                          to={`/donjons/${d.id}`}
+                          state={{ returnTo: mapUrl, returnLabel: "Carte" }}
+                          className="no-drag group flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <DofusIcon name="dungeon" size={14} className="shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
+                          <span className="min-w-0 flex-1 truncate">{d.name.fr}</span>
+                          <ChevronRight className="h-3 w-3 shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {hasRight && (
+                  <div className="min-h-0 max-h-[60vh] lg:max-h-none lg:flex-1">
+                    <AnimatePresence>
+                      {selectedCell && (
+                        <SubareaPanel
+                          key={selectedCell.subAreaId}
+                          cell={selectedCell}
+                          backTo={mapUrl}
+                          onClose={() => setSelectedCell(null)}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Panneau « Droppé par » (ressource sans récolte) : localiser via ses monstres droppeurs. */}
-            {mode === "resource" && resource && noHarvest && (dropperQ.data?.length ?? 0) > 0 && (
-              <div className="absolute left-3 top-3 flex max-h-[calc(100%-1.5rem)] w-64 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-                  <DofusIcon name="bestiary" size={14} className="text-glow-rose" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">Droppé par</span>
-                  <Pill tone="rose">{dropperQ.data!.length}</Pill>
-                </div>
-                <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
-                  <p className="px-1 pb-1 text-[10px] text-slate-500">Cliquez un monstre pour le localiser sur la carte.</p>
-                  {dropperQ.data!.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => pickMonster(m.id, m.name.fr)}
-                      className="no-drag group flex items-center gap-2 rounded-lg px-2 py-1 text-left text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    >
-                      {m.img && <img src={m.img} alt="" loading="lazy" className="h-6 w-6 shrink-0 object-contain" />}
-                      <span className="min-w-0 flex-1 truncate">{m.name.fr}</span>
-                      <ChevronRight className="h-3 w-3 shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Panneau donjons (mode monstre) : le monstre est un boss de donjon → liens vers le donjon. */}
-            {mode === "monster" && monster && (monsterDungeonsQ.data?.length ?? 0) > 0 && (
-              <div className="absolute left-3 top-3 flex max-h-[calc(100%-1.5rem)] w-64 flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 shadow-2xl backdrop-blur-md">
-                <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-                  <DofusIcon name="dungeon" size={14} className="text-glow-rose" />
-                  <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-200">Donjons</span>
-                  <Pill tone="rose">{monsterDungeonsQ.data!.length}</Pill>
-                </div>
-                <div className="flex flex-col gap-0.5 overflow-y-auto p-2">
-                  {monsterDungeonsQ.data!.map((d) => (
-                    <Link
-                      key={d.id}
-                      to={`/donjons/${d.id}`}
-                      state={{ returnTo: mapUrl, returnLabel: "Carte" }}
-                      className="no-drag group flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <DofusIcon name="dungeon" size={14} className="shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
-                      <span className="min-w-0 flex-1 truncate">{d.name.fr}</span>
-                      <ChevronRight className="h-3 w-3 shrink-0 text-slate-500 transition group-hover:text-glow-rose" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <AnimatePresence>
-              {selectedCell && (
-                <SubareaPanel
-                  key={selectedCell.subAreaId}
-                  cell={selectedCell}
-                  backTo={mapUrl}
-                  onClose={() => setSelectedCell(null)}
-                />
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </div>
+          </div>
+        );
+      })()}
 
       <p className="mt-2 text-[11px] text-slate-500">
         Les pins marquent les <strong>maps contenant</strong> la ressource (granularité officielle DofusDB), pas chaque nœud individuel.
@@ -682,11 +704,11 @@ function SubareaPanel({ cell, backTo, onClose }: { cell: MapCell; backTo: string
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 24 }}
-      transition={{ duration: 0.2 }}
-      className="absolute right-3 top-3 flex max-h-[calc(100%-1.5rem)] w-72 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-void-900/95 p-4 shadow-2xl backdrop-blur-md"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+      className="flex h-full max-h-[60vh] w-full shrink-0 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-void-900/95 p-4 lg:max-h-none"
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <h3 className="font-display text-base font-bold leading-tight text-white">{sub?.name?.fr ?? "Sous-zone"}</h3>

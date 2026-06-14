@@ -4,4 +4,7 @@ release
 .DS_Store
 *.log
 .env
-.claude/settings.local.json
+.claude/
+CLAUDE.md
+AGENTS.md
+HANDOFF.md

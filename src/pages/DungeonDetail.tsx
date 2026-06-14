@@ -14,7 +14,7 @@ import {
   pickBoss,
   type Monster,
 } from "../api/dofusdb";
-import { getDungeonGuide, type BossPhase } from "../data/dungeonGuides";
+import { getDungeonGuide, type BossPhase, type StratImage } from "../data/dungeonGuides";
 import { levelTone } from "../data/meta";
 import { useStore, actions } from "../store/store";
 import { Pill, Spinner, ErrorState, fadeUp } from "../components/ui";
@@ -30,12 +30,17 @@ const ELEMENTS: { key: keyof Monster["grades"][0]; label: string; color: string;
   { key: "neutralResistance", label: "Neutre", color: "bg-slate-400", icon: "resNeutre" },
 ];
 
-const DANGER_META: Record<BossPhase["danger"], { label: string; tone: any; bar: string }> = {
-  low: { label: "Facile", tone: "emerald", bar: "from-glow-emerald to-glow-cyan" },
-  medium: { label: "Modéré", tone: "gold", bar: "from-glow-gold to-glow-ember" },
-  high: { label: "Dangereux", tone: "ember", bar: "from-glow-ember to-glow-rose" },
-  extreme: { label: "Extrême", tone: "rose", bar: "from-glow-rose to-glow-purple" },
-};
+// Élément le plus faible du boss (résistance la plus basse) → « point faible » mis en avant.
+function weakestElement(grade?: Monster["grades"][0]) {
+  if (!grade) return null;
+  let best: { label: string; icon: DofusIconName; value: number } | null = null;
+  for (const el of ELEMENTS) {
+    if (el.key === "neutralResistance") continue; // on conseille un élément, pas le neutre
+    const value = (grade[el.key] as number) ?? 0;
+    if (!best || value < best.value) best = { label: el.label, icon: el.icon, value };
+  }
+  return best;
+}
 
 function fmtPct(p?: number): string {
   if (p == null) return "—";
@@ -80,24 +85,70 @@ function ResistanceBar({ label, value, color, icon }: { label: string; value: nu
   );
 }
 
-function PhaseCard({ phase, index }: { phase: BossPhase; index: number }) {
-  const [open, setOpen] = useState(index === 0);
-  const meta = DANGER_META[phase.danger];
+// Une mécanique : « Nom du sort : effet » → nom en gras (rendu type fiche de sort).
+// Heuristique prudente : on ne met en gras que si le segment avant « : » est court (≤ 32),
+// sinon le « : » sépare une phrase de conseil et tout doit rester en texte normal.
+function MechanicRow({ text }: { text: string }) {
+  const m = text.match(/^(.{2,32}?)\s:\s(.+)$/s);
   return (
-    <motion.div variants={fadeUp} custom={index} className="glass overflow-hidden rounded-2xl">
-      <button onClick={() => setOpen((o) => !o)} className="no-drag flex w-full items-center gap-4 p-4 text-left">
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 font-display text-lg font-bold text-white">
-          {index + 1}
-          <span className={`absolute inset-0 -z-10 rounded-xl bg-gradient-to-br ${meta.bar} opacity-30 blur`} />
-        </div>
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h4 className="font-display font-bold text-white">{phase.title}</h4>
-            <Pill tone={meta.tone}>{meta.label}</Pill>
-            {phase.hp && <span className="text-xs text-slate-500">{phase.hp} PV</span>}
+    <div className="flex gap-2.5 rounded-xl border border-white/5 bg-white/[0.03] px-3 py-2 text-sm leading-relaxed text-slate-300">
+      <DofusIcon name="epeesCroisees" size={15} className="mt-0.5 shrink-0 text-glow-rose/70" />
+      <p className="min-w-0">
+        {m ? (
+          <>
+            <span className="font-semibold text-white">{m[1]}</span> — {m[2]}
+          </>
+        ) : (
+          text
+        )}
+      </p>
+    </div>
+  );
+}
+
+// Galerie de schémas de stratégie (clic = agrandir).
+function StratGallery({ images, onZoom }: { images: StratImage[]; onZoom: (img: StratImage) => void }) {
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      {images.map((img, i) => (
+        <button
+          key={i}
+          onClick={() => onZoom(img)}
+          title={img.caption ?? "Agrandir"}
+          className="no-drag group overflow-hidden rounded-xl border border-white/10 bg-void-900/80 text-left transition hover:border-glow-rose/40"
+        >
+          <div className="aspect-square w-full bg-void-950">
+            <img
+              src={img.src}
+              alt={img.caption ?? ""}
+              loading="lazy"
+              className="h-full w-full object-contain transition group-hover:scale-105"
+              onError={(e) => (e.currentTarget.style.opacity = "0.2")}
+            />
           </div>
+          {img.caption && <p className="px-2 py-1.5 text-[11px] leading-tight text-slate-400">{img.caption}</p>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PhaseCard({ phase, index, onZoom }: { phase: BossPhase; index: number; onZoom: (img: StratImage) => void }) {
+  const [open, setOpen] = useState(true); // déplié par défaut — on ne minimise plus la stratégie
+  return (
+    <motion.div variants={fadeUp} custom={index} className="glass overflow-hidden rounded-2xl ring-1 ring-white/5">
+      <button onClick={() => setOpen((o) => !o)} className="no-drag flex w-full items-center gap-4 p-4 text-left">
+        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white/10 to-white/5 font-display text-lg font-bold text-white">
+          {index + 1}
+          <span className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-br from-glow-rose to-glow-purple opacity-25 blur" />
         </div>
-        <ChevronDown className={`h-5 w-5 text-slate-500 transition ${open ? "rotate-180" : ""}`} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <h4 className="font-display font-bold text-white">{phase.title}</h4>
+          {phase.hp && (
+            <span className="rounded-md bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-slate-400">{phase.hp} PV</span>
+          )}
+        </div>
+        <ChevronDown className={`h-5 w-5 shrink-0 text-slate-500 transition ${open ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -107,14 +158,14 @@ function PhaseCard({ phase, index }: { phase: BossPhase; index: number }) {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ul className="space-y-2 px-4 pb-4 pl-16">
-              {phase.mechanics.map((m, i) => (
-                <li key={i} className="flex gap-2 text-sm text-slate-300">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-glow-purple" />
-                  {m}
-                </li>
-              ))}
-            </ul>
+            <div className="border-t border-white/5 px-4 pb-4 pt-3">
+              <div className="space-y-2">
+                {phase.mechanics.map((m, i) => (
+                  <MechanicRow key={i} text={m} />
+                ))}
+              </div>
+              {phase.images && phase.images.length > 0 && <StratGallery images={phase.images} onZoom={onZoom} />}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -215,11 +266,14 @@ export default function DungeonDetail() {
   // Grade du boss sélectionné (G1…G5) + map agrandie. Reset au changement de donjon.
   const [gradeIdx, setGradeIdx] = useState(0);
   const [mapBig, setMapBig] = useState(false);
+  // Schéma de stratégie agrandi (visionneuse).
+  const [lightbox, setLightbox] = useState<StratImage | null>(null);
   // Monstre sélectionné dans « Habitants » → carte de portée interactive (modal).
   const [spellMonster, setSpellMonster] = useState<Monster | null>(null);
   useEffect(() => {
     setGradeIdx(0);
     setMapBig(false);
+    setLightbox(null);
     setSpellMonster(null);
   }, [dungeonId]);
 
@@ -264,6 +318,7 @@ export default function DungeonDetail() {
   // Tant que dropItems charge, itemById est vide → on garde dropList pour ne pas vider la grille.
   const visibleDrops = dropItems ? dropList.filter(([oid]) => itemById.has(oid)) : dropList;
   const tone = levelTone(dungeon.optimalPlayerLevel);
+  const weak = weakestElement(bossGrade);
 
   return (
     <div className="space-y-6">
@@ -271,6 +326,13 @@ export default function DungeonDetail() {
 
       {/* En-tête : portrait boss (cliquable) + identité + actions + stats du boss. */}
       <div className="glass relative overflow-hidden rounded-3xl p-5 sm:p-7">
+        {/* Fond cinématique : rendu de la map du boss, fortement atténué */}
+        {bossMapId && (
+          <div className="pointer-events-none absolute inset-0 opacity-[0.13]">
+            <img src={dungeonMapImg(bossMapId, "0.5")} alt="" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-void-900 via-void-900/75 to-void-900/40" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_25%,rgba(244,63,94,0.14),transparent_48%)]" />
         <motion.div
           className="pointer-events-none absolute -right-12 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-glow-rose/15 blur-3xl"
@@ -311,6 +373,11 @@ export default function DungeonDetail() {
                 <DofusIcon name="boss" size={14} /> Boss de donjon
               </Pill>
               <Pill tone={tone}>Niv. optimal {dungeon.optimalPlayerLevel}</Pill>
+              {weak && (
+                <Pill tone="emerald">
+                  <DofusIcon name={weak.icon} size={12} /> Faible : {weak.label}
+                </Pill>
+              )}
               {area && (
                 <Pill tone="cyan">
                   <DofusIcon name="map" size={12} /> {area}
@@ -433,6 +500,21 @@ export default function DungeonDetail() {
             <h2 className="mb-4 flex items-center gap-2 font-display text-xl font-bold text-white">
               <DofusIcon name="epeesCroisees" size={20} /> Mécaniques du combat
             </h2>
+            {/* Point faible : l'élément à privilégier, très visible avant les phases. */}
+            {weak && (
+              <div className="mb-3 flex items-center gap-4 rounded-2xl border border-glow-emerald/20 bg-glow-emerald/[0.06] p-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-glow-emerald/15 ring-1 ring-glow-emerald/30">
+                  <DofusIcon name={weak.icon} size={26} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-glow-emerald">Point faible</p>
+                  <p className="text-sm text-slate-300">
+                    Concentrez vos dégâts <span className="font-bold text-white">{weak.label}</span> — c'est la résistance
+                    la plus basse du boss ({weak.value > 0 ? `+${weak.value}` : weak.value}%).
+                  </p>
+                </div>
+              </div>
+            )}
             <motion.div
               initial="hidden"
               animate="show"
@@ -440,9 +522,12 @@ export default function DungeonDetail() {
               className="space-y-3"
             >
               {guide.phases.map((p, i) => (
-                <PhaseCard key={i} phase={p} index={i} />
+                <PhaseCard key={i} phase={p} index={i} onZoom={setLightbox} />
               ))}
             </motion.div>
+            {authored && (
+              <p className="mt-3 text-[11px] text-slate-600">Stratégie et schémas adaptés de DofusPourLesNoobs.</p>
+            )}
           </div>
 
           <div className="glass rounded-2xl p-5">
@@ -482,9 +567,21 @@ export default function DungeonDetail() {
                     className="glass rounded-2xl p-4 transition hover:ring-1 hover:ring-glow-gold/30"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-glow-gold/15 text-glow-gold ring-1 ring-glow-gold/30">
-                        <DofusIcon name="trophy" size={16} />
-                      </span>
+                      {a.image ? (
+                        <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-void-900/60 ring-1 ring-glow-gold/30">
+                          <img
+                            src={a.image}
+                            alt=""
+                            loading="lazy"
+                            className="h-full w-full object-contain"
+                            onError={(e) => (e.currentTarget.style.opacity = "0.2")}
+                          />
+                        </span>
+                      ) : (
+                        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-glow-gold/15 text-glow-gold ring-1 ring-glow-gold/30">
+                          <DofusIcon name="trophy" size={16} />
+                        </span>
+                      )}
                       <div className="min-w-0">
                         <p className="font-display font-semibold leading-snug text-white">{a.name}</p>
                         {a.strategy ? (
@@ -649,6 +746,48 @@ export default function DungeonDetail() {
                   <div className="overflow-auto rounded-xl border border-white/10 bg-void-900">
                     <BossMap mapId={bossMapId} scale="1" />
                   </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
+
+      {/* Schéma de stratégie agrandi. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {lightbox && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setLightbox(null)}
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96, y: 14 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="glass relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl p-5 ring-1 ring-white/10"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="flex items-center gap-2 font-display text-base font-bold text-white">
+                      <DofusIcon name="epeesCroisees" size={18} /> {lightbox.caption ?? "Schéma de stratégie"}
+                    </h3>
+                    <button
+                      onClick={() => setLightbox(null)}
+                      className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <DofusIcon name="closeRed" size={16} />
+                    </button>
+                  </div>
+                  <div className="grid flex-1 place-items-center overflow-auto rounded-xl border border-white/10 bg-void-950 p-2">
+                    <img src={lightbox.src} alt={lightbox.caption ?? ""} className="max-h-[70vh] w-auto object-contain" />
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">Schéma : DofusPourLesNoobs.</p>
                 </motion.div>
               </motion.div>
             )}

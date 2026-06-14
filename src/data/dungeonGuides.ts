@@ -1,17 +1,26 @@
 // Stratégies écrites pour les boss de donjon. Les API fournissent les stats/monstres
 // mais pas les mécaniques rédigées : on les complète ici, avec un fallback générique
 // généré pour tout donjon non couvert.
+import { EXTRA_GUIDES } from "./dungeonGuidesExtra";
+
+// Diagramme de stratégie (schéma de sort, confusion, placement…) — illustration à afficher.
+export interface StratImage {
+  src: string;
+  caption?: string;
+}
 
 export interface BossPhase {
   title: string;
   hp?: string; // tranche de PV où la phase se déclenche
   mechanics: string[];
-  danger: "low" | "medium" | "high" | "extreme";
+  danger?: "low" | "medium" | "high" | "extreme";
+  images?: StratImage[]; // schémas illustrant la phase (sorts, confusions…)
 }
 
 export interface DungeonAchievement {
   name: string; // nom exact du succès
   strategy?: string; // comment l'obtenir (si connu)
+  image?: string; // illustration du succès
 }
 
 export interface DungeonGuide {
@@ -24,6 +33,9 @@ export interface DungeonGuide {
   rewards: string[];
   achievements?: DungeonAchievement[]; // succès du donjon + stratégie
 }
+
+// Schémas de stratégie hébergés par DofusPourLesNoobs (source des guides rédigés).
+const DPLN = "https://www.dofuspourlesnoobs.com/uploads/1/3/0/1/13010384";
 
 // Guides détaillés par id de donjon (DofusDB).
 const GUIDES: Record<number, DungeonGuide> = {
@@ -830,54 +842,105 @@ const GUIDES: Record<number, DungeonGuide> = {
     ],
   },
 
-  // Donjon du Comte Harebourg — Comte Harebourg
+  // Donjon du Comte Harebourg — Comte Harebourg (stratégie + schémas : DofusPourLesNoobs)
   71: {
     summary:
-      "Parmi les contenus les plus techniques du jeu. Le Comte est invulnérable en permanence : on ne le blesse qu'en provoquant un échange de position joueur ↔ boss, le tout sous une confusion qui dévie chaque sort. La lecture des glyphes mortels est vitale.",
+      "Boss final de Frigost 3, parmi les contenus les plus techniques du jeu. Le Comte est invulnérable en permanence et ne se rend vulnérable que les tours pairs, via un échange de position — le tout sous une confusion qui fait pivoter chacun de vos sorts selon votre vitalité. La lecture des glyphes mortels est vitale.",
     recommendedLevel: "200",
-    composition: "Pour débuter : Pandawa (Stabilisation/placement), Zobal, Iop, Eniripsa (boucliers, dégâts rapides, soin).",
-    keyResist: ["Variable"],
+    composition:
+      "Tout passe une fois les confusions maîtrisées. Pour une première : Pandawa (placement/Stabilisation), Zobal (boucliers), Iop (burst), Eniripsa (soin) — du bouclier et du soin pour avoir droit à l'erreur.",
+    keyResist: ["Variable (voir résistances)"],
     phases: [
       {
-        title: "Salles préliminaires",
+        title: "Les sorts du Comte",
         mechanics: [
-          "Tuez Cycloïde et Sinistrofu en premier : leur vol de PM et leur contrôle sont les plus gênants.",
-          "Profitez-en pour vous habituer à la confusion avec moins de pression.",
+          "Mi-temps : à chaque début de tour, pose un glyphe en croix (taille 3) autour de lui — centre compris depuis la 3.5. Un allié qui commence son tour dessus est tué. Dure 1 tour.",
+          "Contretemps (jusqu'à 14 PO, en ligne, sans ligne de vue) : 700 Terre + une 2ᵉ ligne Eau valant 7% des PV manquants de la cible (10% au càc). S'il est vulnérable, téléporte la cible à sa case de début de tour.",
+          "Jaquemart (invulnérable uniquement, 4 PO, sans ligne de vue) : 700 Eau en vol de vie, retire 3 PA esquivables (4 au càc) pour 1 tour.",
+          "Multicomte (le tour suivant sa désactivation, 6 PO, ligne/diagonale, avec ligne de vue) : 500 Feu en cercle de rayon 3 à 5 et crée des illusions.",
         ],
         danger: "high",
+        images: [
+          { src: `${DPLN}/mi-temps3_orig.png`, caption: "Mi-temps — glyphe en croix (taille 3)" },
+          { src: `${DPLN}/contretemps_1_orig.png`, caption: "Contretemps — ligne, jusqu'à 14 PO" },
+          { src: `${DPLN}/jaquemart_orig.png`, caption: "Jaquemart — seulement invulnérable" },
+          { src: `${DPLN}/multicomte_orig.png`, caption: "Multicomte — cercle 3 à 5 + illusions" },
+        ],
       },
       {
         title: "Lever l'invulnérabilité (échange de place)",
         mechanics: [
-          "Le Comte est invulnérable en PERMANENCE : il faut provoquer un échange de position joueur ↔ boss pour le rendre vulnérable — le frapper sans cet échange ne fait rien.",
-          "Tours impairs : quand vous frappez le Comte, c'est VOUS qui pivotez de 180° autour de lui.",
-          "Tours pairs : le Comte échange sa place (180°) avec votre personnage ; c'est cet échange qui lève l'invulnérabilité et donne +100 dégâts au perso pour 1 tour.",
-          "⚠️ Si la case d'arrivée de l'échange est inaccessible, TOUTE l'équipe meurt instantanément : contrôlez les positions (Stabilisation pour le bloquer).",
+          "Le Comte est invulnérable toute la durée du combat ; l'état ne se désactive QUE les tours pairs (2, 4, 6…).",
+          "Pour le rendre vulnérable : provoquez un changement de place avec une entité (alliée ou ennemie) au moment où le Comte change de position.",
+          "Une fois vulnérable, surveillez la case où vous le laissez en fin de tour : son glyphe + la téléportation de Contretemps peuvent renvoyer vos persos commencer leur tour DANS le glyphe (= mort).",
+          "Astuce : Stabilisation sur le Comte après lui avoir retiré l'invulnérabilité l'empêche de bouger quand vous le tapez — précieux si les confusions horaires vous gênent.",
         ],
         danger: "extreme",
+        images: [
+          { src: `${DPLN}/vulne-desec_orig.png`, caption: "Désactivation de l'état invulnérable" },
+          { src: `${DPLN}/impair_orig.png`, caption: "Tour impair — invulnérable" },
+          { src: `${DPLN}/pair_orig.png`, caption: "Tour pair — fenêtre de vulnérabilité" },
+        ],
       },
       {
-        title: "Confusion & glyphes",
+        title: "Confusions & trigonométrie",
         mechanics: [
-          "Chaque tour, vos sorts sont déviés selon votre % de PV : 90° horaire, 180° ou 90° anti-horaire. Viser une case inexistante = échec critique et tour perdu.",
-          "Au corps-à-corps, la confusion tourne de 90° anti-horaire par ligne de dégâts (jusqu'à 10 coups).",
-          "Mi-temps pose un glyphe en croix (taille 3) à chaque début de tour : commencer son tour dessus tue.",
-          "Contretemps (14 PO) : 700 Neutre + 7-10% des PV manquants en Eau ; Jaquemart (4 PO) : 700 Eau en vol de vie, -3/4 PA ; Multicomte : 500 Feu et crée des illusions en cercle.",
+          "Chaque tour, vos sorts sont redirigés (90°, 180° ou 270°, horaire/anti-horaire) selon votre pourcentage de vitalité.",
+          "Frapper un monstre au corps-à-corps décale votre confusion de 90° anti-horaire PAR ligne de dégâts (plusieurs fois si le sort tape plusieurs lignes) ; plus de changement au-delà de 10 coups.",
+          "Le plus rapide : jouez en ligne ou en diagonale pour viser sans calcul — vous n'avez que 30 s par tour.",
+          "Un sort redirigé vers une case inexistante ou inaccessible provoque un échec critique (et un tour passé si c'est votre corps-à-corps).",
         ],
-        danger: "extreme",
+        danger: "high",
+        images: [
+          { src: `${DPLN}/comte-harebourg_orig.png`, caption: "La roue des confusions" },
+          { src: `${DPLN}/effet-epee_orig.png`, caption: "Sort à deux lignes de dégâts" },
+          { src: `${DPLN}/confusion-cac_orig.png`, caption: "1re frappe : respecter la confusion" },
+          { src: `${DPLN}/confusion-cac2_orig.png`, caption: "2e frappe : décalée de -90° par ligne" },
+        ],
+      },
+      {
+        title: "Les sbires",
+        mechanics: [
+          "Cycloïde : tacle, retire des PM et attire — le plus pénible. À tuer en premier (le Sinistrofu d'abord en équipe de 6+). Bloquez-le (invocation, retrait PM).",
+          "Granduk : gagne de l'intelligence ; ses dégâts à distance montent avec vos PV manquants, et il arrive vite au contact.",
+          "Nocturlabe : gros tacle et renvoie les dégâts ; rush au contact.",
+          "Sinistrofu : rend invisible avec renvoi de dégâts.",
+          "Strigide : échange de place et booste la PO ; son « Stridicule » retire 25% PV à ses alliés en cercle inversé (taille 5) mais fait perdre 50% PV temporaires à vos persos pris dans la zone.",
+        ],
+        danger: "medium",
       },
     ],
     tips: [
-      "Comprenez la redirection AVANT de viser le DPS : jouez en lignes/diagonales pour calculer vite (timer 30 s).",
-      "En tour pair, maîtrisez où finit le Comte pour que vos alliés ne commencent pas dans son prochain glyphe.",
+      "Votre première fois : tuez le Comte en DERNIER, pour maîtriser vos confusions avant d'avoir à le gérer vulnérable.",
+      "Jouez en lignes/diagonales pour calculer la redirection vite — le timer n'est que de 30 s.",
+      "En tour pair, maîtrisez la case finale du Comte pour qu'aucun allié ne commence son tour dans son prochain glyphe.",
       "Tout repose sur le placement et l'échange de position, pas sur les dégâts bruts.",
     ],
     rewards: ["Set d'Harebourg (Glacomponents)", "Ressources THL rares", "Succès prestigieux"],
     achievements: [
-      { name: "Versatile", strategy: "N'utiliser chaque action qu'une seule fois par tour." },
-      { name: "Statue", strategy: "Finir chaque tour sur la case où on l'a commencé, tout le combat." },
-      { name: "Duo", strategy: "Vaincre tous les monstres avec 2 personnages maximum et en moins de 40 tours." },
-      { name: "L'échec n'est pas une option", strategy: "Les ennemis ne doivent subir aucun dégât au corps-à-corps." },
+      {
+        name: "Versatile",
+        strategy:
+          "N'utiliser chaque sort/action qu'une seule fois par tour. Gérez confusions ET unicité des sorts ; le Pandawa est handicapé (porter/jeter = un seul et même sort).",
+        image: `${DPLN}/custom_themes/586567114324766674/files/dj-succes/illus/versatile.png`,
+      },
+      {
+        name: "Statue",
+        strategy:
+          "Finir chaque tour sur sa case de départ. Difficile à cause de l'attirance du Cycloïde (qui sépare vos persos) et du glyphe du Comte.",
+        image: `${DPLN}/custom_themes/586567114324766674/files/dj-succes/illus/statue.png`,
+      },
+      {
+        name: "L'échec n'est pas une option",
+        strategy: "Les ennemis ne doivent subir aucun dégât au corps-à-corps : jouez à distance et maîtrisez vos confusions.",
+        image: `${DPLN}/custom_themes/586567114324766674/files/dj-succes/illus/special.png`,
+      },
+      {
+        name: "Duo",
+        strategy:
+          "Vaincre à 2 personnages max en moins de 40 tours. Ex. simples : Iop + Pandawa (le Panda porte le Iop quasi en permanence), ou un tacle air (pour tuer le Cycloïde) + un tapeur feu avec càc de soin.",
+        image: `${DPLN}/custom_themes/586567114324766674/files/dj-succes/illus/duo.png`,
+      },
       { name: "Mini Nuits'", strategy: "Combattre à 4 persos min. avec au moins un Inferno, Styx, Mandrin ou Will Killson." },
     ],
   },
@@ -5209,7 +5272,8 @@ export function getDungeonGuide(
   level: number,
   monsterCount: number,
 ): { guide: DungeonGuide; authored: boolean } {
-  const authored = GUIDES[id];
+  // Les guides enrichis (DPLN, avec schémas) priment sur les guides rédigés de base.
+  const authored = EXTRA_GUIDES[id] ?? GUIDES[id];
   if (authored) return { guide: authored, authored: true };
   return { guide: buildGenericGuide(name, level, monsterCount), authored: false };
 }

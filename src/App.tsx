@@ -43,6 +43,8 @@ import Metamob from "./pages/Metamob";
 import Carte from "./pages/Carte";
 import Metiers from "./pages/Metiers";
 import ShoppingList from "./pages/ShoppingList";
+import CraftProfit from "./pages/CraftProfit";
+import XpFamilier from "./pages/XpFamilier";
 
 const SHELL = "app-page-shell mx-auto max-w-6xl px-8 py-8";
 // En mode overlay (fenêtre compacte), on réduit fortement les marges et on prend toute la largeur.
@@ -62,6 +64,8 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/chasse", <Hunt />],
   ["/carte", <Carte />],
   ["/metiers", <Metiers />],
+  ["/rentabilite-metiers", <CraftProfit />],
+  ["/xp-familier", <XpFamilier />],
   ["/liste-courses", <ShoppingList />],
   ["/metamob", <Metamob />],
   ["/monstres", <Monsters />],

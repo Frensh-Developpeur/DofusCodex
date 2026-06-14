@@ -92,6 +92,7 @@ export interface ItemLite {
   name: Localized;
   img: string;
   level: number;
+  typeId?: number; // type d'item (ex. Bois, Minerai…) — résolu en nom via listItemTypes
 }
 
 export interface Quest {
@@ -459,16 +460,35 @@ export async function getItemsByIds(ids: number[], signal?: AbortSignal): Promis
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
     const idParams = chunk.map((id) => `id[$in][]=${id}`).join("&");
-    const url = `${BASE}/items?lang=fr&$limit=50&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level&${idParams}`;
-    const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number }>>(
+    const url = `${BASE}/items?lang=fr&$limit=50&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level&$select[]=typeId&${idParams}`;
+    const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number; typeId: number }>>(
       url,
       signal,
     );
     for (const it of data.data) {
-      out.push({ id: it.id, name: it.name, level: it.level, img: `${BASE}/img/items/${it.iconId}.png` });
+      out.push({ id: it.id, name: it.name, level: it.level, typeId: it.typeId, img: `${BASE}/img/items/${it.iconId}.png` });
     }
   }
   return out;
+}
+
+// Résout une liste de NOMS d'items exacts → ItemLite (id + image), en une requête via une
+// alternation de regex ancrée (?i)^(nom1|nom2|…)$. Les noms introuvables sont simplement absents
+// de la Map (clé = nom en minuscules). Sert aux tableaux de forgemagie (items connus par nom).
+export async function resolveItemsByName(names: string[], signal?: AbortSignal): Promise<Map<string, ItemLite>> {
+  const map = new Map<string, ItemLite>();
+  const uniq = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  if (!uniq.length) return map;
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = `^(${uniq.map(esc).join("|")})$`;
+  const url =
+    `${BASE}/items?lang=fr&$limit=50&$select[]=id&$select[]=name&$select[]=iconId&$select[]=level` +
+    `&name.fr[$regex]=(?i)${encodeURIComponent(pattern)}`;
+  const data = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; level: number }>>(url, signal);
+  for (const it of data.data ?? []) {
+    map.set(it.name.fr.toLowerCase(), { id: it.id, name: it.name, level: it.level, img: `${BASE}/img/items/${it.iconId}.png` });
+  }
+  return map;
 }
 
 // ---- Havre-sacs (thèmes) ----
@@ -1423,6 +1443,9 @@ export interface RecipeQuery {
   jobId?: number;
   resultId?: number;
   ingredientId?: number; // reverse : recettes utilisant cet ingrédient
+  minResultLevel?: number;
+  maxResultLevel?: number;
+  sort?: "asc" | "desc";
   skip?: number;
   limit?: number;
 }
@@ -1433,7 +1456,7 @@ export async function listRecipes(q: RecipeQuery, signal?: AbortSignal): Promise
     "lang=fr",
     `$limit=${limit}`,
     `$skip=${q.skip ?? 0}`,
-    "$sort[resultLevel]=-1",
+    `$sort[resultLevel]=${q.sort === "asc" ? 1 : -1}`,
     "$sort[id]=1",
     "$select[]=id",
     "$select[]=resultId",
@@ -1445,8 +1468,37 @@ export async function listRecipes(q: RecipeQuery, signal?: AbortSignal): Promise
   if (q.jobId != null) parts.push(`jobId=${q.jobId}`);
   if (q.resultId != null) parts.push(`resultId=${q.resultId}`);
   if (q.ingredientId != null) parts.push(`ingredientIds[$in][]=${q.ingredientId}`);
+  if (q.minResultLevel != null) parts.push(`resultLevel[$gte]=${q.minResultLevel}`);
+  if (q.maxResultLevel != null) parts.push(`resultLevel[$lte]=${q.maxResultLevel}`);
   const url = `${BASE}/recipes?${parts.join("&")}`;
   return getJson<FeathersList<Recipe>>(url, signal);
+}
+
+export async function listRecipesForJobRange(
+  jobId: number,
+  minResultLevel: number,
+  maxResultLevel: number,
+  signal?: AbortSignal,
+): Promise<Recipe[]> {
+  const out: Recipe[] = [];
+  let skip = 0;
+  for (;;) {
+    const page = await listRecipes(
+      {
+        jobId,
+        minResultLevel,
+        maxResultLevel,
+        sort: "asc",
+        skip,
+        limit: 50,
+      },
+      signal,
+    );
+    out.push(...page.data);
+    skip += page.data.length;
+    if (skip >= page.total || page.data.length === 0) break;
+  }
+  return out;
 }
 
 // Parmi une liste d'ids, lesquels ont une recette (sont craftables) — 1 requête.

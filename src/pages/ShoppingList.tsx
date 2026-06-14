@@ -8,7 +8,7 @@ import { SectionHeader, Pill, Spinner, EmptyState } from "../components/ui";
 import { useDebounce } from "../hooks/useDebounce";
 import { levelTone } from "../data/meta";
 import { useStore, actions, type ShoppingItem } from "../store/store";
-import { searchItems, craftableIdsAmong, getItemsByIds, type ItemLite } from "../api/dofusdb";
+import { searchItems, craftableIdsAmong, getItemsByIds, listItemTypes, type ItemLite } from "../api/dofusdb";
 import { aggregateResources } from "../lib/craftAggregator";
 
 export default function ShoppingList() {
@@ -72,17 +72,49 @@ export default function ShoppingList() {
     return m;
   }, [aggItemsQ.data]);
 
-  // Lignes de ressources triées : incomplètes d'abord, puis besoin décroissant.
+  // Type d'item (Bois, Minerai, Plante…) → nom, pour grouper les ressources.
+  const itemTypesQ = useQuery({ queryKey: ["item-types"], queryFn: ({ signal }) => listItemTypes(signal), staleTime: Infinity });
+  const typeName = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const t of itemTypesQ.data ?? []) m.set(t.id, t.name?.fr ?? "");
+    return m;
+  }, [itemTypesQ.data]);
+
+  // Lignes de ressources (avec niveau + type, résolus dès que les infos sont chargées).
   const rows = useMemo(() => {
     const data = aggQ.data ?? {};
-    return Object.entries(data)
-      .map(([id, need]) => {
-        const rid = Number(id);
-        const have = owned[rid] ?? 0;
-        return { id: rid, need, have, done: have >= need };
-      })
-      .sort((a, b) => Number(a.done) - Number(b.done) || b.need - a.need);
-  }, [aggQ.data, owned]);
+    return Object.entries(data).map(([id, need]) => {
+      const rid = Number(id);
+      const have = owned[rid] ?? 0;
+      const info = aggMap.get(rid);
+      return {
+        id: rid,
+        need,
+        have,
+        done: have >= need,
+        level: info?.level ?? 0,
+        typeName: (info?.typeId != null ? typeName.get(info.typeId) : "") || "Autres",
+      };
+    });
+  }, [aggQ.data, owned, aggMap, typeName]);
+
+  // Groupées par type de ressource ; à l'intérieur, triées par niveau décroissant.
+  // Les groupes sont ordonnés par leur plus haut niveau (décroissant).
+  const groups = useMemo(() => {
+    const byType = new Map<string, typeof rows>();
+    for (const r of rows) {
+      const g = byType.get(r.typeName) ?? [];
+      g.push(r);
+      byType.set(r.typeName, g);
+    }
+    return [...byType.entries()]
+      .map(([name, items]) => ({
+        name,
+        items: [...items].sort((a, b) => b.level - a.level || b.need - a.need),
+        maxLevel: Math.max(...items.map((i) => i.level || 0)),
+      }))
+      .sort((a, b) => b.maxLevel - a.maxLevel || a.name.localeCompare(b.name));
+  }, [rows]);
 
   const totalNeed = rows.reduce((s, r) => s + r.need, 0);
   const totalHave = rows.reduce((s, r) => s + Math.min(r.have, r.need), 0);
@@ -182,9 +214,20 @@ export default function ShoppingList() {
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  {rows.map((r) => (
-                    <ResourceRow key={r.id} id={r.id} need={r.need} have={r.have} done={r.done} info={aggMap.get(r.id)} />
+                <div className="flex flex-col gap-3">
+                  {groups.map((g) => (
+                    <div key={g.name}>
+                      <div className="mb-1 flex items-center gap-2 px-0.5">
+                        <DofusIcon name="resources" size={12} className="text-slate-500" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{g.name}</span>
+                        <span className="text-[10px] text-slate-600">×{g.items.length}</span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {g.items.map((r) => (
+                          <ResourceRow key={r.id} id={r.id} need={r.need} have={r.have} done={r.done} info={aggMap.get(r.id)} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </>

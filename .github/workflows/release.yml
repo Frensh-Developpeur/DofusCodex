@@ -7,7 +7,14 @@
 #      avec les installeurs + les manifestes (latest.yml / latest-mac.yml).
 #   4. Tu publies la release (bouton "Publish") → les apps installées se mettent à jour.
 #
-# Rien d'autre à configurer : GITHUB_TOKEN est fourni automatiquement par Actions.
+# Sécurité chaîne d'appro :
+#   - Les actions tierces sont ÉPINGLÉES à un SHA1 de commit (immuable), pas à un tag mobile.
+#     Le commentaire « # vX.Y.Z » indique la version lisible. À chaque mise à jour d'une action,
+#     re-vérifier son code avant de changer le SHA.
+#   - Une attestation de provenance (actions/attest-build-provenance) est générée pour chaque
+#     installeur publié → vérifiable avec `gh attestation verify <fichier> -R <owner>/<repo>`.
+#
+# GITHUB_TOKEN est fourni automatiquement par Actions.
 
 name: Release
 
@@ -17,7 +24,9 @@ on:
       - "v*"
 
 permissions:
-  contents: write # nécessaire pour créer/mettre à jour la release
+  contents: write # créer/mettre à jour la release
+  id-token: write # OIDC, requis par l'attestation de provenance
+  attestations: write # écrire l'attestation de provenance
 
 jobs:
   release:
@@ -27,9 +36,9 @@ jobs:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
           cache: npm
@@ -51,6 +60,20 @@ jobs:
           # (le build réussit ; la signature pourra être ajoutée plus tard).
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx electron-builder --publish never
+
+      - name: Attestation de provenance (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: |
+            release/*.dmg
+            release/*.zip
+
+      - name: Attestation de provenance (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: release/*.exe
 
       - name: Scan release artifacts with VirusTotal
         env:

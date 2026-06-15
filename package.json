@@ -1,6 +1,6 @@
 {
   "name": "dofus-codex",
-  "version": "0.1.48",
+  "version": "0.1.49",
   "description": "DofusCodex — Le guide nouvelle génération pour Dofus 3 : donjons animés, stuffinator, quêtes et almanax.",
   "author": "DofusCodex",
   "private": true,
@@ -47,8 +47,8 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.3",
     "electronmon": "^2.0.4",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",

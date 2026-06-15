@@ -88,6 +88,7 @@ export interface AppState {
   skinDesigns: SkinDesign[];
   barbofusSkins: BarbofusSkin[]; // skins Barbofus sauvegardés (page « Mes Skins »)
   sidebarCollapsed: boolean; // navbar repliée (icônes seules)
+  favoritePages: string[]; // pages épinglées en haut du menu (chemins `to`), ordre = ordre d'affichage
   metamob: MetamobAuth | null; // connexion au compte Metamob (null = non connecté)
   shoppingList: ShoppingItem[]; // liste de courses (items à fabriquer)
   resourceOwned: Record<number, number>; // resourceId -> quantité possédée (suivi de récolte)
@@ -110,6 +111,7 @@ const DEFAULT_STATE: AppState = {
   skinDesigns: [],
   barbofusSkins: [],
   sidebarCollapsed: false,
+  favoritePages: [],
   metamob: null,
   shoppingList: [],
   resourceOwned: {},
@@ -355,6 +357,30 @@ export const actions = {
   },
   toggleSidebar() {
     setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }));
+  },
+  // ---- Pages favorites (épinglées en haut du menu) ----
+  toggleFavoritePage(to: string) {
+    setState((s) => ({
+      ...s,
+      favoritePages: s.favoritePages.includes(to)
+        ? s.favoritePages.filter((p) => p !== to)
+        : [...s.favoritePages, to],
+    }));
+  },
+  // Déplace une page favorite d'un cran (dir = -1 vers le haut, +1 vers le bas).
+  moveFavoritePage(to: string, dir: -1 | 1) {
+    setState((s) => {
+      const i = s.favoritePages.indexOf(to);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= s.favoritePages.length) return s;
+      const next = [...s.favoritePages];
+      [next[i], next[j]] = [next[j], next[i]];
+      return { ...s, favoritePages: next };
+    });
+  },
+  // Remplace l'ordre complet des favoris (utilisé par le glisser-déposer du gestionnaire).
+  setFavoritePages(order: string[]) {
+    setState((s) => ({ ...s, favoritePages: order }));
   },
   // ---- Compte Metamob ----
   setMetamobAuth(auth: MetamobAuth) {

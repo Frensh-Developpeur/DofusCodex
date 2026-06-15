@@ -7,6 +7,7 @@ import DofusIcon from "./DofusIcon";
 import { actions } from "../store/store";
 import { idbClearAll } from "../lib/guideDb";
 import { clearViewState } from "../lib/viewState";
+import { syncNow } from "../lib/cloudSync";
 
 // Liste affichée dans l'avertissement.
 const WIPES = [
@@ -15,6 +16,7 @@ const WIPES = [
   "La progression des donjons et des quêtes",
   "Le suivi des guides (étapes, cases cochées, favoris, récents)",
   "Les guides téléchargés hors-ligne",
+  "Ta sauvegarde dans le cloud (si tu es connecté·e)",
 ];
 
 export default function ClearCacheButton({ collapsed = false }: { collapsed?: boolean }) {
@@ -26,6 +28,10 @@ export default function ClearCacheButton({ collapsed = false }: { collapsed?: bo
     setBusy(true);
     try {
       actions.resetAll(); // store + localStorage
+      // Si connecté au cloud : pousse immédiatement l'état VIDE pour écraser la sauvegarde
+      // distante, sinon la synchro la re-fusionnerait au prochain lancement (progression
+      // « ressuscitée »). No-op si déconnecté.
+      await syncNow();
       clearViewState(); // filtres/recherche/scroll mémorisés
       await idbClearAll(); // cache guides (IndexedDB)
       qc.clear(); // cache requêtes en mémoire

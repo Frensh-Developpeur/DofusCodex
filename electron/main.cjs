@@ -334,8 +334,10 @@ function createWindow() {
   win.once("ready-to-show", () => win.show());
 
   if (process.env.DOFUS_DEBUG) {
-    win.webContents.on("console-message", (_e, level, message, line, source) => {
-      console.log(`[renderer:${level}] ${message} @ ${source}:${line}`);
+    // Electron 36+ : l'event « console-message » fournit un seul objet (level string,
+    // message, sourceId, lineNumber) au lieu des anciens arguments positionnels.
+    win.webContents.on("console-message", (e) => {
+      console.log(`[renderer:${e.level}] ${e.message} @ ${e.sourceId}:${e.lineNumber}`);
     });
     win.webContents.on("did-fail-load", (_e, code, desc, url) => {
       console.log(`[did-fail-load] ${code} ${desc} ${url}`);

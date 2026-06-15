@@ -45,6 +45,8 @@ import Metiers from "./pages/Metiers";
 import ShoppingList from "./pages/ShoppingList";
 import CraftProfit from "./pages/CraftProfit";
 import XpFamilier from "./pages/XpFamilier";
+import Quests from "./pages/Quests";
+import QuestDetail from "./pages/QuestDetail";
 
 const SHELL = "app-page-shell mx-auto max-w-6xl px-8 py-8";
 // En mode overlay (fenêtre compacte), on réduit fortement les marges et on prend toute la largeur.
@@ -66,6 +68,7 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/metiers", <Metiers />],
   ["/rentabilite-metiers", <CraftProfit />],
   ["/xp-familier", <XpFamilier />],
+  ["/quetes", <Quests />],
   ["/liste-courses", <ShoppingList />],
   ["/metamob", <Metamob />],
   ["/monstres", <Monsters />],
@@ -85,7 +88,7 @@ const KEEP_MAP = new Map(KEEP_ALIVE);
 
 // Une page de détail = un chemin à segment(s) sous l'une de ces racines.
 const isDetailPath = (p: string) =>
-  /^\/(donjons|builder|monstres|avis-de-recherche|guides|objets|panoplies|classes|havre-sac)\/[^/]+/.test(p);
+  /^\/(donjons|builder|monstres|avis-de-recherche|guides|objets|panoplies|classes|havre-sac|quetes)\/[^/]+/.test(p);
 
 export default function App() {
   const location = useLocation();
@@ -234,6 +237,7 @@ export default function App() {
               <ErrorBoundary>
                 <Routes location={location}>
                   <Route path="/donjons/:id" element={<DungeonDetail />} />
+                  <Route path="/quetes/:id" element={<QuestDetail />} />
                   <Route path="/builder/:id" element={<Builder />} />
                   <Route path="/monstres/:id" element={<MonsterDetail />} />
                   <Route path="/avis-de-recherche/:slug" element={<WantedDetail />} />

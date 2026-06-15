@@ -186,6 +186,7 @@ export interface QuestQuery {
   minLevel?: number;
   maxLevel?: number;
   dungeonOnly?: boolean;
+  categoryId?: number;
   limit?: number;
   skip?: number;
 }
@@ -201,10 +202,177 @@ export async function listQuests(q: QuestQuery, signal?: AbortSignal): Promise<F
     "levelMin[$gte]": q.minLevel,
     "levelMin[$lte]": q.maxLevel,
     isDungeonQuest: q.dungeonOnly ? true : undefined,
+    categoryId: q.categoryId,
   };
   let url = `${BASE}/quests${qs(params as Record<string, string | number | undefined>)}`;
   url += searchClause(q.search);
   return getJson<FeathersList<Quest>>(url, signal);
+}
+
+export interface QuestCategory {
+  id: number;
+  name: Localized;
+}
+
+export async function listQuestCategories(signal?: AbortSignal): Promise<QuestCategory[]> {
+  const url = `${BASE}/quest-categories?lang=fr&$limit=100&$sort[id]=1&$select[]=id&$select[]=name`;
+  const data = await getJson<FeathersList<QuestCategory>>(url, signal);
+  return (data.data ?? []).filter((c) => c.name?.fr);
+}
+
+// ---- Quête détaillée (étapes + objectifs + récompenses, embarqués par DofusDB) ----
+
+export type QuestEntityKind = "monster" | "npc" | "item" | "map";
+export interface QuestEntityRef {
+  kind: QuestEntityKind;
+  id: number;
+  name: string;
+}
+export type QuestSegment = { text: string } | { ref: QuestEntityRef };
+export interface QuestObjectiveLite {
+  segments: QuestSegment[];
+  dungeonId?: number;
+}
+
+export interface QuestStepFull {
+  id: number;
+  name: string;
+  description?: string;
+  optimalLevel?: number;
+  objectives: QuestObjectiveLite[];
+  rewards: AchievementRewards; // réutilise la structure des récompenses de succès (xp/kamas absolus + items)
+}
+
+export interface QuestFull {
+  id: number;
+  name: string;
+  levelMin: number;
+  levelMax: number;
+  categoryId: number;
+  isDungeonQuest: boolean;
+  isPartyQuest: boolean;
+  repeatable: boolean;
+  followable: boolean;
+  steps: QuestStepFull[];
+}
+
+// Noms d'entités par id, pour résoudre les jetons d'objectifs de quête.
+export async function getNpcNames(ids: number[], signal?: AbortSignal): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  if (!ids.length) return map;
+  for (let i = 0; i < ids.length; i += 50) {
+    const idp = ids.slice(i, i + 50).map((id) => `id[$in][]=${id}`).join("&");
+    const url = `${BASE}/npcs?lang=fr&$limit=50&$select[]=id&$select[]=name&${idp}`;
+    const d = await getJson<FeathersList<{ id: number; name?: Localized }>>(url, signal);
+    for (const n of d.data ?? []) if (n.name?.fr) map.set(n.id, n.name.fr);
+  }
+  return map;
+}
+
+const QUEST_TOKEN_RE = /\{(monster|npc|item|map),(\d+)\}/gi;
+const TOKEN_FALLBACK: Record<QuestEntityKind, string> = {
+  monster: "un monstre",
+  npc: "un PNJ",
+  item: "un objet",
+  map: "ciblée",
+};
+
+// Découpe le texte d'objectif en segments texte + entités résolues (nom + lien possible).
+function segmentObjective(text: string, names: Record<QuestEntityKind, Map<number, string>>): QuestSegment[] {
+  const segs: QuestSegment[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  QUEST_TOKEN_RE.lastIndex = 0;
+  const pushText = (s: string) => {
+    const clean = s.replace(/\{[^}]*\}/g, "").replace(/\[[a-zA-Z]+,\d+\]/g, "").replace(/\s{2,}/g, " ");
+    if (clean) segs.push({ text: clean });
+  };
+  while ((m = QUEST_TOKEN_RE.exec(text))) {
+    if (m.index > last) pushText(text.slice(last, m.index));
+    const kind = m[1].toLowerCase() as QuestEntityKind;
+    const id = Number(m[2]);
+    const name = names[kind].get(id) || TOKEN_FALLBACK[kind];
+    segs.push({ ref: { kind, id, name } });
+    last = QUEST_TOKEN_RE.lastIndex;
+  }
+  if (last < text.length) pushText(text.slice(last));
+  return segs;
+}
+
+interface RawQuestObjective {
+  text?: Localized | string;
+  need?: { generated?: { dungeons?: number[] } };
+}
+interface RawQuestStep {
+  id: number;
+  name?: Localized;
+  description?: Localized;
+  optimalLevel?: number;
+  objectives?: RawQuestObjective[];
+  rewards?: RawReward[];
+}
+interface RawQuestFull extends Quest {
+  repeatType: number;
+  steps?: RawQuestStep[];
+}
+
+export async function getQuest(id: number, signal?: AbortSignal): Promise<QuestFull | null> {
+  const data = await getJson<FeathersList<RawQuestFull>>(`${BASE}/quests${qs({ id, lang: "fr" })}`, signal);
+  const q = data.data?.[0];
+  if (!q) return null;
+  const questLevel = q.levelMax || q.levelMin || 1;
+
+  // 1) Collecte tous les ids d'entités référencés par les objectifs.
+  const ids: Record<QuestEntityKind, Set<number>> = { monster: new Set(), npc: new Set(), item: new Set(), map: new Set() };
+  const rawText = (o: RawQuestObjective) => (typeof o.text === "string" ? o.text : o.text?.fr) ?? "";
+  for (const st of q.steps ?? []) {
+    for (const o of st.objectives ?? []) {
+      let m: RegExpExecArray | null;
+      QUEST_TOKEN_RE.lastIndex = 0;
+      const t = rawText(o);
+      while ((m = QUEST_TOKEN_RE.exec(t))) ids[m[1].toLowerCase() as QuestEntityKind].add(Number(m[2]));
+    }
+  }
+
+  // 2) Résout les noms en lots (tolérant aux erreurs réseau).
+  const [monsters, items, npcNames] = await Promise.all([
+    ids.monster.size ? getMonstersLite([...ids.monster], signal).catch(() => []) : Promise.resolve([]),
+    ids.item.size ? getItemsByIds([...ids.item], signal).catch(() => []) : Promise.resolve([]),
+    ids.npc.size ? getNpcNames([...ids.npc], signal).catch(() => new Map<number, string>()) : Promise.resolve(new Map<number, string>()),
+  ]);
+  const names: Record<QuestEntityKind, Map<number, string>> = {
+    monster: new Map(monsters.map((mo) => [mo.id, mo.name.fr])),
+    item: new Map(items.map((it) => [it.id, it.name.fr])),
+    npc: npcNames,
+    map: new Map(),
+  };
+
+  // 3) Construit les étapes avec objectifs segmentés.
+  const steps: QuestStepFull[] = (q.steps ?? []).map((st) => {
+    const objectives: QuestObjectiveLite[] = (st.objectives ?? [])
+      .map((o) => ({ segments: segmentObjective(rawText(o), names), dungeonId: o.need?.generated?.dungeons?.[0] }))
+      .filter((o) => o.segments.length > 0 || o.dungeonId);
+    return {
+      id: st.id,
+      name: st.name?.fr ?? "Étape",
+      description: st.description?.fr,
+      optimalLevel: st.optimalLevel,
+      objectives,
+      rewards: parseRewards(st.rewards, st.optimalLevel ?? questLevel),
+    };
+  });
+  return {
+    id: q.id,
+    name: q.name.fr,
+    levelMin: q.levelMin,
+    levelMax: q.levelMax,
+    categoryId: q.categoryId,
+    isDungeonQuest: q.isDungeonQuest,
+    isPartyQuest: q.isPartyQuest,
+    repeatable: (q.repeatType ?? 0) !== 0,
+    followable: q.followable,
+    steps,
+  };
 }
 
 export async function getQuestSteps(ids: number[], signal?: AbortSignal): Promise<QuestStep[]> {

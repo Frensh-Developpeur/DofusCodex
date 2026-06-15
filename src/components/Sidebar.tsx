@@ -4,75 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { getEquipment } from "../api/dofusdude";
 import { useStore, actions } from "../store/store";
 import { skinatorEngine, useEngineOpen } from "../store/skinatorEngine";
-import DofusIcon, { type DofusIconName } from "./DofusIcon";
-import {
-  ChevronDown,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "./DofusIcons";
+import DofusIcon from "./DofusIcon";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "./DofusIcons";
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import AccountButton from "./AccountButton";
+import FavoritesManager from "./FavoritesManager";
+import { NAV_GROUPS as GROUPS, ALL_NAV_ITEMS as ALL_ITEMS, type NavItem as Item } from "../lib/navItems";
 
-type Item = { to: string; label: string; end?: boolean; dofus: DofusIconName };
-
-const GROUPS: { title?: string; items: Item[]; collapsible?: boolean }[] = [
-  {
-    items: [{ to: "/", label: "Accueil", dofus: "world", end: true }],
-  },
-  {
-    title: "Jeu",
-    collapsible: true,
-    items: [
-      { to: "/donjons", label: "Donjons", dofus: "dungeon" },
-      { to: "/avis-de-recherche", label: "Avis de recherche", dofus: "teteDeMort" },
-      { to: "/guides", label: "Guides", dofus: "book" },
-      { to: "/arbre", label: "Arbre des guides", dofus: "genealogy" },
-    ],
-  },
-  {
-    title: "Monde",
-    collapsible: true,
-    items: [
-      { to: "/carte", label: "Carte du monde", dofus: "map" },
-      { to: "/metiers", label: "Métiers & Craft", dofus: "job" },
-      { to: "/rentabilite-metiers", label: "XP métier", dofus: "recipe" },
-      { to: "/xp-familier", label: "XP familier", dofus: "bestiary" },
-      { to: "/liste-courses", label: "Liste de courses", dofus: "cupboard" },
-    ],
-  },
-  {
-    title: "Encyclopédie",
-    collapsible: true,
-    items: [
-      { to: "/classes", label: "Classes", dofus: "emote" },
-      { to: "/monstres", label: "Monstres", dofus: "bestiary" },
-      { to: "/stuffinator", label: "Équipements", dofus: "menuStuffs" },
-      { to: "/panoplies", label: "Panoplies", dofus: "menuItemsets" },
-      { to: "/objets", label: "Objets & Ressources", dofus: "inventory" },
-      { to: "/havre-sac", label: "Havre-Sacs", dofus: "havenbag" },
-      { to: "/succes", label: "Succès", dofus: "trophy" },
-    ],
-  },
-  {
-    title: "Skin",
-    collapsible: true,
-    items: [
-      { to: "/skinator", label: "Skinator", dofus: "character" },
-      { to: "/mes-skins", label: "Mes Skins", dofus: "glyph" },
-    ],
-  },
-  {
-    title: "Outils",
-    collapsible: true,
-    items: [
-      { to: "/builder", label: "Builder", dofus: "characteristic" },
-      { to: "/chasse", label: "Chasse au trésor", dofus: "map" },
-      { to: "/metamob", label: "Metamob", dofus: "archmonster" },
-      { to: "/almanax", label: "Almanax", dofus: "calendar" },
-    ],
-  },
-];
 
 export default function Sidebar() {
   const location = useLocation();
@@ -129,6 +68,66 @@ export default function Sidebar() {
     }
   }, [location.pathname, itemId, itemSection]);
 
+  // Pages favorites (épinglées) résolues en items (label + icône), dans l'ordre choisi.
+  const favoritePages = useStore((s) => s.favoritePages);
+  const favItems = favoritePages.map((to) => ALL_ITEMS.get(to)).filter((it): it is Item => !!it);
+  const [favManagerOpen, setFavManagerOpen] = useState(false);
+
+  // Rendu d'un lien de menu (réutilisé par les groupes ET la section Favoris).
+  // `region` : layoutId distinct pour les favoris → la pastille active ne « vole » jamais
+  // entre la section Favoris et les groupes (deux contextes d'animation séparés).
+  const renderLink = (item: Item, region: "group" | "fav" = "group") => {
+    const isGuides = item.to === "/guides";
+    const inSection =
+      location.pathname === item.to || location.pathname.startsWith(item.to + "/") || item.to === itemSection;
+    const remembered = sectionMemory.current[item.to];
+    const to = isGuides && lastGuide ? `/guides/${lastGuide}` : !inSection && remembered ? remembered : item.to;
+    const forceActive = isGuides && location.pathname.startsWith("/guides");
+    const activeFor = (isActive: boolean) => (itemSection ? item.to === itemSection : isActive || forceActive);
+    return (
+      <NavLink
+        to={to}
+        end={item.end}
+        state={{ fromSection: true }}
+        title={collapsed ? item.label : undefined}
+        onClick={(e) => {
+          if (guardLeave && to !== "/skinator") {
+            e.preventDefault();
+            skinatorEngine.requestLeave(to);
+          }
+        }}
+        className={({ isActive }) =>
+          clsx(
+            "no-drag group relative flex items-center rounded-xl text-sm font-medium transition-colors",
+            collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
+            activeFor(isActive) ? "text-white" : "text-slate-400 hover:text-slate-200",
+          )
+        }
+      >
+        {({ isActive }) => {
+          const active = activeFor(isActive);
+          return (
+            <>
+              {active && (
+                <motion.span
+                  layoutId={region === "fav" ? "nav-active-fav" : "nav-active"}
+                  className="absolute inset-0 rounded-xl border border-glow-purple/30 bg-gradient-to-r from-glow-purple/20 to-glow-cyan/10 shadow-glow"
+                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                />
+              )}
+              <DofusIcon
+                name={item.dofus}
+                size={18}
+                className={clsx("relative transition", active ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
+              />
+              {!collapsed && <span className="relative truncate">{item.label}</span>}
+            </>
+          );
+        }}
+      </NavLink>
+    );
+  };
+
   return (
     <aside
       className={clsx(
@@ -153,92 +152,67 @@ export default function Sidebar() {
           // En mode icônes (sidebar réduite) on affiche tout ; sinon on respecte le repli du groupe.
           const isCollapsibleHeader = !!group.collapsible && !!group.title && !collapsed;
           const groupOpen = !isCollapsibleHeader || (group.title ? openGroups[group.title] : true);
-          return (
-          <div key={gi} className="flex flex-col gap-0.5">
-            {group.title &&
-              (collapsed ? (
-                gi > 0 && <div className="mx-auto my-1.5 h-px w-6 bg-white/10" />
-              ) : isCollapsibleHeader ? (
-                <button
-                  onClick={() => toggleGroup(group.title!)}
-                  className="no-drag flex items-center justify-between rounded-lg px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:text-slate-400"
-                  aria-expanded={groupOpen}
-                >
-                  <span>{group.title}</span>
-                  <ChevronDown className={clsx("h-3.5 w-3.5 transition-transform", groupOpen ? "rotate-180" : "")} />
-                </button>
-              ) : (
-                <span className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-                  {group.title}
-                </span>
-              ))}
-            {groupOpen &&
-              group.items.map((item) => {
-              const isGuides = item.to === "/guides";
-              // « Dans la section » inclut le cas fiche objet rattachée à cet onglet
-              // (itemSection) → recliquer l'onglet actif y ramène à la liste, et depuis
-              // une AUTRE section on revient à l'item mémorisé.
-              const inSection =
-                location.pathname === item.to ||
-                location.pathname.startsWith(item.to + "/") ||
-                item.to === itemSection;
-              const remembered = sectionMemory.current[item.to];
-              // Guides : repère via le store (persistant). Autres sections : mémoire de session.
-              // Si on est déjà dans la section, on cible la liste (item.to) pour pouvoir y revenir.
-              const to = isGuides && lastGuide ? `/guides/${lastGuide}` : !inSection && remembered ? remembered : item.to;
-              const forceActive = isGuides && location.pathname.startsWith("/guides");
-              // Sur une fiche objet, l'onglet actif dépend du type (équipement → Équipements,
-              // ressource → Objets) ; partout ailleurs, highlight normal (NavLink isActive).
-              const activeFor = (isActive: boolean) =>
-                itemSection ? item.to === itemSection : isActive || forceActive;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={to}
-                  end={item.end}
-                  // Arrivée « par la sidebar » = interne à la section → la fiche éventuelle
-                  // propose un retour vers la liste de la section (et non un navigate(-1)).
-                  state={{ fromSection: true }}
-                  title={collapsed ? item.label : undefined}
-                  onClick={(e) => {
-                    if (guardLeave && to !== "/skinator") {
-                      e.preventDefault();
-                      skinatorEngine.requestLeave(to);
-                    }
-                  }}
-                  className={({ isActive }) =>
-                    clsx(
-                      "no-drag group relative flex items-center rounded-xl text-sm font-medium transition-colors",
-                      collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-3 py-2.5",
-                      activeFor(isActive) ? "text-white" : "text-slate-400 hover:text-slate-200",
-                    )
-                  }
-                >
-                  {({ isActive }) => {
-                    const active = activeFor(isActive);
-                    return (
-                      <>
-                        {active && (
-                          <motion.span
-                            layoutId="nav-active"
-                            className="absolute inset-0 rounded-xl border border-glow-purple/30 bg-gradient-to-r from-glow-purple/20 to-glow-cyan/10 shadow-glow"
-                            transition={{ type: "spring", stiffness: 400, damping: 32 }}
-                          />
-                        )}
-                        <DofusIcon
-                          name={item.dofus}
-                          size={18}
-                          className={clsx("relative transition", active ? "opacity-100" : "opacity-70 group-hover:opacity-100")}
-                        />
-                        {!collapsed && <span className="relative truncate">{item.label}</span>}
-                      </>
-                    );
-                  }}
-                </NavLink>
-              );
-            })}
-          </div>
-          );
+          // Une page épinglée n'apparaît PLUS dans son groupe (elle vit dans « Favoris »).
+          // L'Accueil ("/") reste toujours là. Un groupe entièrement épinglé est masqué (entête compris).
+          const visibleItems = group.items.filter((it) => it.to === "/" || !favoritePages.includes(it.to));
+          const groupNode =
+            group.title && visibleItems.length === 0 ? null : (
+              <div key={gi} className="flex flex-col gap-0.5">
+                {group.title &&
+                  (collapsed ? (
+                    <div className="mx-auto my-1.5 h-px w-6 bg-white/10" />
+                  ) : isCollapsibleHeader ? (
+                    <button
+                      onClick={() => toggleGroup(group.title!)}
+                      className="no-drag flex items-center justify-between rounded-lg px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:text-slate-400"
+                      aria-expanded={groupOpen}
+                    >
+                      <span>{group.title}</span>
+                      <ChevronDown className={clsx("h-3.5 w-3.5 transition-transform", groupOpen ? "rotate-180" : "")} />
+                    </button>
+                  ) : (
+                    <span className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      {group.title}
+                    </span>
+                  ))}
+                {groupOpen && visibleItems.map((item) => <Fragment key={item.to}>{renderLink(item, "group")}</Fragment>)}
+              </div>
+            );
+          // La section Favoris (toujours visible) s'insère juste après l'Accueil (1er groupe).
+          // Pas de contrôles inline : un bouton discret ouvre la fenêtre de gestion.
+          if (gi === 0) {
+            return (
+              <Fragment key="accueil-favoris">
+                {groupNode}
+                <div className="flex flex-col gap-0.5">
+                  {collapsed ? (
+                    <button
+                      onClick={() => setFavManagerOpen(true)}
+                      title="Gérer les favoris"
+                      className="no-drag mx-auto my-1 grid h-9 w-9 place-items-center rounded-xl text-glow-gold/70 transition hover:bg-white/10 hover:text-glow-gold"
+                    >
+                      <DofusIcon name="starFilled" size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setFavManagerOpen(true)}
+                      title="Gérer les favoris"
+                      className="no-drag group flex items-center justify-between rounded-lg px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-glow-gold/70 transition hover:text-glow-gold"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <DofusIcon name="starFilled" size={11} /> Favoris
+                      </span>
+                      <DofusIcon name="settingsGear" size={12} className="opacity-0 transition group-hover:opacity-100" />
+                    </button>
+                  )}
+                  {favItems.map((item) => (
+                    <Fragment key={item.to}>{renderLink(item, "fav")}</Fragment>
+                  ))}
+                </div>
+              </Fragment>
+            );
+          }
+          return groupNode;
         })}
       </nav>
 
@@ -281,6 +255,8 @@ export default function Sidebar() {
           )}
         </NavLink>
       </div>
+
+      <FavoritesManager open={favManagerOpen} onClose={() => setFavManagerOpen(false)} />
     </aside>
   );
 }

@@ -37,7 +37,30 @@ permissions:
   attestations: write # écrire l'attestation de provenance
 
 jobs:
+  # Crée le brouillon de release UNE SEULE FOIS, avant la matrice. Sans ça, les jobs mac et
+  # win lancent chacun un getOrCreateRelease en parallèle et créent DEUX brouillons rivaux
+  # (l'un finit publié, l'autre orphelin avec la moitié des artefacts). En garantissant que
+  # le brouillon existe déjà, les deux jobs le retrouvent et y uploadent au même endroit.
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Créer le brouillon (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+        run: |
+          REPO=Frensh-Developpeur/DofusCodex-releases
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release/brouillon $TAG déjà présent — réutilisé."
+          else
+            gh release create "$TAG" --repo "$REPO" --draft --target main \
+              --title "$TAG" --notes "Release $TAG"
+          fi
+
   release:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -88,8 +111,9 @@ jobs:
           VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
         run: node scripts/virustotal-scan.mjs
 
-      # Uploade les artefacts de cette plateforme dans le brouillon partagé
-      # (`releaseType: draft` dans package.json → find-or-create du même brouillon).
+      # Uploade les artefacts de cette plateforme dans le brouillon partagé créé par le
+      # job « prepare » (`releaseType: draft` dans package.json → electron-builder retrouve
+      # ce brouillon par son tag et y ajoute ses fichiers, sans en créer un second).
       - name: Upload des artefacts dans le brouillon
         env:
           GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}

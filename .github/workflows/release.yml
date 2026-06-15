@@ -3,9 +3,17 @@
 # Utilisation :
 #   1. Monte "version" dans package.json (ex. 0.2.0).
 #   2. git commit -am "v0.2.0" && git tag v0.2.0 && git push --follow-tags
-#   3. Le workflow build sur macOS ET Windows, puis publie une release GitHub (en brouillon)
-#      avec les installeurs + les manifestes (latest.yml / latest-mac.yml).
-#   4. Tu publies la release (bouton "Publish") → les apps installées se mettent à jour.
+#   3. Le workflow build sur macOS ET Windows et uploade les installeurs + manifestes
+#      (latest.yml / latest-mac.yml) dans un MÊME brouillon de release GitHub.
+#   4. Une fois les deux plateformes terminées, le job « publish » bascule le brouillon en
+#      release publiée → les apps installées se mettent à jour automatiquement.
+#
+# Pourquoi un brouillon puis une publication séparée (et pas `releaseType: release`) :
+#   Les deux jobs de la matrice (mac + win) tournent EN PARALLÈLE et publient chacun via
+#   electron-builder. Publier directement une release non-brouillon provoque une course :
+#   le 1er runner crée la release, le 2nd se prend un « 422 — Published releases must have a
+#   valid tag » (le tag n'existe que dans le repo source, pas dans le repo des releases).
+#   Un brouillon est tolérant à la création concurrente ; on le publie ensuite en une fois.
 #
 # Sécurité chaîne d'appro :
 #   - Les actions tierces sont ÉPINGLÉES à un SHA1 de commit (immuable), pas à un tag mobile.
@@ -80,7 +88,21 @@ jobs:
           VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
         run: node scripts/virustotal-scan.mjs
 
-      - name: Publish release
+      # Uploade les artefacts de cette plateforme dans le brouillon partagé
+      # (`releaseType: draft` dans package.json → find-or-create du même brouillon).
+      - name: Upload des artefacts dans le brouillon
         env:
           GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
         run: npx electron-builder --publish always
+
+  # Une fois mac ET windows terminés, bascule le brouillon en release publiée (une seule fois).
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publier le brouillon de release
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --repo Frensh-Developpeur/DofusCodex-releases --draft=false --latest

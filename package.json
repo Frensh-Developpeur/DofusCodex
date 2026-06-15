@@ -1,6 +1,6 @@
 {
   "name": "dofus-codex",
-  "version": "0.1.49",
+  "version": "0.1.50",
   "description": "DofusCodex — Le guide nouvelle génération pour Dofus 3 : donjons animés, stuffinator, quêtes et almanax.",
   "author": "DofusCodex",
   "private": true,
@@ -73,7 +73,7 @@
         "provider": "github",
         "owner": "Frensh-Developpeur",
         "repo": "DofusCodex-releases",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ],
     "directories": {

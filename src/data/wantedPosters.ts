@@ -5,6 +5,10 @@ import { type DofusIconName } from "../components/DofusIcon";
 // même source que les guides de donjon. Chaque criminel est aussi un monstre
 // DofusDB → la fiche relie au portrait + à /monstres/:id via resolveMonsterIdByName.
 //
+// Référence d'exhaustivité : l'API DofusDB liste 82 quêtes « On recherche … » (le set
+// complet du jeu). Les 82 sont couverts ici. « Sans Visage » (criminel d'alignement)
+// est sourcé via JeuxOnLine + DofusDB (absent de DPLN au format habituel).
+//
 // ⚠️ Aucune donnée inventée : niveau, zone, faiblesse, PV, mécaniques et récompenses
 // proviennent toutes de la fiche source du criminel.
 
@@ -486,6 +490,35 @@ export const WANTED_POSTERS: WantedPoster[] = [
       "Minimisez les PA/PM si Hanté, et privilégiez les dégâts Terre.",
     ],
     rewards: [{ token: "Aliton", amount: 17 }],
+  },
+  {
+    slug: "sans-visage",
+    name: "Sans Visage",
+    level: 190,
+    hp: 27000,
+    region: "Bonta & Brâkmar",
+    location: "Dimension Obscure (Amakna)",
+    access: "Avis au tableau de la salle de milice de votre alignement — Bonta [-33,-56] ou Brâkmar [-26,-36].",
+    prerequisite: "Être aligné Bonta ou Brâkmar (alignement 79+).",
+    weakness: ["air", "terre"],
+    resists: "Résiste surtout Neutre (+50%), Eau (+20%) et Feu (+15%) ; moins résistant Air (+5%) et Terre (+10%).",
+    protections: [
+      "Invisible en début de combat : il le reste tant que vous ne lui infligez aucun dégât.",
+      "S'il passe un tour complet sans subir le moindre dégât, il cumule des bonus (+10% Vitalité, +10 Esquive…) et devient capable de tuer un personnage.",
+      "Invoque des Bak invulnérables qui posent des glyphes mortels — détruisez-les pour neutraliser la mise en place.",
+    ],
+    spells: [
+      { name: "Rohichi", effect: "Début de tour : récupère ~8000 PV, gagne 50% de critiques et 4 PA ; peut se rendre invisible et réduire votre portée." },
+      { name: "Rage Avide", effect: "Portée 1-2 : tue instantanément la cible s'il n'a subi aucun dégât au tour précédent, sinon inflige des dégâts Eau." },
+      { name: "Air Électrifiant", effect: "Portée 1-12 : applique -50 Fuite." },
+      { name: "Invocation de Bak", effect: "Invoque des Bak invulnérables créant des glyphes de tue-instantané." },
+    ],
+    strategy: [
+      "Infligez-lui des dégâts à CHAQUE tour : c'est la condition pour l'empêcher de redevenir invisible et de déclencher son exécution (Rage Avide).",
+      "Détruisez les Bak invoqués pour contrôler les glyphes, et prévoyez un soigneur — il se rend ~8000 PV par tour.",
+      "Combat haut niveau : un groupe de 2-3 joueurs (tank résistant, soigneur, dégâteur) est le meilleur compromis.",
+    ],
+    rewards: [{ token: "Aliton", amount: 19 }],
   },
   {
     slug: "culbutoeuf",

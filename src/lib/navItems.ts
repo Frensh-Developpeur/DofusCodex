@@ -54,6 +54,7 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { to: "/builder", label: "Builder", dofus: "characteristic" },
+      { to: "/forgemagie", label: "Forgemagie", dofus: "fm" },
       { to: "/rentabilite-metiers", label: "XP métier", dofus: "recipe" },
       { to: "/xp-familier", label: "XP familier", dofus: "bestiary" },
       { to: "/chasse", label: "Chasse au trésor", dofus: "map" },

@@ -753,6 +753,33 @@ export async function searchItems(term: string, limit = 24, signal?: AbortSignal
   return data.data.map((it) => ({ id: it.id, name: it.name, level: it.level, img: `${BASE}/img/items/${it.iconId}.png` }));
 }
 
+// ---- Runes (forgemagie) ----
+
+export interface Rune {
+  id: number;
+  name: string;
+  value: number; // valeur de stat ajoutée par rune (basic 1×, Pa 3×, Ra 10× — varie selon la stat)
+  charac: number; // id de caractéristique DofusDB
+  img: string;
+}
+
+// Toutes les runes de forgemagie (items typeId 78), avec leur valeur de stat et leur icône.
+// Le POIDS de forgemagie n'est PAS exposé par l'API → table curée côté page Forgemagie.
+export async function getRunes(signal?: AbortSignal): Promise<Rune[]> {
+  const out: Rune[] = [];
+  for (let skip = 0; skip < 400; skip += 50) {
+    const url = `${BASE}/items?lang=fr&typeId=78&$limit=50&$skip=${skip}&$sort[id]=1&$select[]=id&$select[]=name&$select[]=iconId&$select[]=effects`;
+    const page = await getJson<FeathersList<{ id: number; name: Localized; iconId: number; effects?: { from?: number; characteristic?: number }[] }>>(url, signal);
+    for (const it of page.data ?? []) {
+      const e = it.effects?.[0];
+      if (!e || e.characteristic == null || !e.from) continue;
+      out.push({ id: it.id, name: it.name.fr, value: e.from, charac: e.characteristic, img: `${BASE}/img/items/${it.iconId}.png` });
+    }
+    if (!page.data?.length || skip + 50 >= page.total) break;
+  }
+  return out;
+}
+
 // Item générique (DofusDB connaît tout : ressources, suiveurs, consommables, objets
 // de quête… contrairement à l'endpoint « equipment » de DofusDude qui renvoie 404).
 // Sert de repli quand un <item> d'un guide n'est pas un équipement.
@@ -887,8 +914,10 @@ export interface SpellLevel {
   castInLine?: boolean; // ne se lance qu'en ligne droite (pour la map de portée)
   castInDiagonal?: boolean; // ne se lance qu'en diagonale
   losRequired?: boolean; // nécessite une ligne de vue (castTestLos)
+  rangeable?: boolean; // la portée peut être augmentée par la caractéristique Portée (+PO)
   zoneShape?: number; // id de forme DofusDB (effet à plus grande aire), 0/80 = mono-case
   zoneSize?: number; // taille de la zone (param1)
+  zoneParam2?: number; // paramètre secondaire de zone (épaisseur/longueur selon la forme)
   utility?: string[]; // effets non-dégâts rendus en texte (téléporte, repousse, -PA, états…)
   criticalUtility?: string[]; // idem pour les effets critiques
 }
@@ -902,10 +931,12 @@ export interface ClassSpell {
   variantId: number; // identifiant de la variante (regroupe sort de base + variante)
   variantIndex: number; // 0 = sort de base, 1 = variante
   auto?: boolean; // sort « Auto » (passif de départ d'un monstre)
+  common?: boolean; // sort commun (typeId 463 : Flamiche, Attraction… accessibles à toutes les classes)
 }
 
 const DMG_EFFECTS = new Set([96, 97, 98, 99, 100]); // dégâts directs
 const STEAL_EFFECTS = new Set([90, 91, 92, 93, 94, 95]); // vol de vie
+const CAST_SPELL_EFFECTS = new Set([1160]); // lancement/propagation de sous-sort
 // Effets qui posent/retirent un état : leur template est « État #3 » / « Enlève l'état #3 »
 // / « Désactive l'état #3 », où #3 (= value) est un id d'état à résoudre en nom (/spell-states).
 const STATE_EFFECTS = new Set([950, 951, 952]);
@@ -1150,6 +1181,11 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
         criticalDamage: decodeSpellDamage(l.criticalEffect),
         // Effet 293 = « +dégâts par charge/état » → les fourchettes de dégâts sont par charge.
         chargeScaled: Array.isArray(l.effects) && l.effects.some((e: Record<string, number>) => e?.effectId === 293),
+        castInLine: !!l.castInLine,
+        castInDiagonal: !!l.castInDiagonal,
+        losRequired: !!l.castTestLos,
+        rangeable: !!l.rangeCanBeBoosted,
+        ...extractZone(l.effects),
       }))
       .sort((a, b) => a.grade - b.grade);
     return {
@@ -1177,6 +1213,106 @@ export async function getClassSpells(breedId: number, signal?: AbortSignal): Pro
   }
 
   // Tri : par variante puis position dans la variante (base avant variante).
+  spells.sort((a, b) => a.variantId - b.variantId || a.variantIndex - b.variantIndex);
+  return spells;
+}
+
+// Appariement sort de base ↔ variante des sorts communs (Dofus 3). DofusDB ne les relie pas
+// par une spell-variant (réservées aux classes), mais les regroupe par typeId : 21 = bases,
+// 463 = variantes. Le couplage [idBase, idVariante] est fixe (ids de sort stables du jeu).
+const COMMON_SPELL_PAIRS: [number, number][] = [
+  [24006, 350], // Flamèche → Flamiche
+  [368, 24029], // Libération → Attraction
+  [364, 24007], // Boomerang Perfide → Boomerang de Diamantine
+  [366, 24010], // Marteau de Moon → Marteau de Darkli Moon
+  [367, 24022], // Cawotte Savouweuse → Cawotte Chawnue
+  [369, 24017], // Foudroiement de Grunob → Leçon de Grunob
+  [370, 24027], // Invocation de l'Arakne → Invocation de l'Arakne Majeure
+  [373, 24028], // Invocation de Chaferfu → Invocation de Chaferfu Lancier
+  [3506, 24030], // Maîtrise d'Arme → Maladresse d'Arme
+  [18646, 22312], // Maîtrise des Invocations → Liberté des Invocations
+  [24011, 24013], // Mantiscroc → Dard Moklès
+  [24015, 24016], // Kannibulle → Ebilition
+];
+
+// Sorts communs (accessibles à TOUTES les classes) : sorts de BASE (typeId 21) + leurs
+// VARIANTES (typeId 463), appariés base/variante comme les sorts de classe. « Coup de poing »
+// (id 0, attaque d'arme par défaut) est exclu. variantId négatif → pas de collision avec les
+// variantes de classe ; variantIndex 0 = base, 1 = variante.
+export async function getCommonSpells(signal?: AbortSignal): Promise<ClassSpell[]> {
+  const list = await getJson<FeathersList<Record<string, any>>>(
+    `${BASE}/spells?typeId[$in][]=21&typeId[$in][]=463&$limit=50&$sort[id]=1`,
+    signal,
+  );
+  const raw = (list.data ?? []).filter(
+    (s) => s?.id !== 0 && s?.name?.fr && Array.isArray(s.spellLevels) && s.spellLevels.length,
+  );
+  if (!raw.length) return [];
+
+  const levelIds = new Set<number>();
+  for (const s of raw) for (const id of s.spellLevels as number[]) levelIds.add(id);
+  const levelById = new Map<number, Record<string, any>>();
+  const ids = [...levelIds];
+  for (let i = 0; i < ids.length; i += 50) {
+    const idParams = ids.slice(i, i + 50).map((id) => `id[$in][]=${id}`).join("&");
+    const data = await getJson<FeathersList<Record<string, any>>>(`${BASE}/spell-levels?$limit=50&${idParams}`, signal);
+    for (const l of data.data ?? []) levelById.set(l.id, l);
+  }
+
+  // Groupe de variante (variantId partagé) + position (0 base, 1 variante) pour chaque sort.
+  const variantOf = new Map<number, { variantId: number; variantIndex: number }>();
+  for (const [base, variant] of COMMON_SPELL_PAIRS) {
+    variantOf.set(base, { variantId: -base, variantIndex: 0 });
+    variantOf.set(variant, { variantId: -base, variantIndex: 1 });
+  }
+
+  const spells: ClassSpell[] = raw.map((s) => {
+    const levels: SpellLevel[] = (s.spellLevels as number[])
+      .map((id) => levelById.get(id))
+      .filter((l): l is Record<string, any> => !!l)
+      .map((l) => ({
+        grade: l.grade ?? 1,
+        minPlayerLevel: l.minPlayerLevel ?? 1,
+        apCost: l.apCost ?? 0,
+        minRange: l.minRange ?? 0,
+        range: l.range ?? 0,
+        critProbability: l.criticalHitProbability ?? 0,
+        damage: decodeSpellDamage(l.effects),
+        criticalDamage: decodeSpellDamage(l.criticalEffect),
+        chargeScaled: Array.isArray(l.effects) && l.effects.some((e: Record<string, number>) => e?.effectId === 293),
+        castInLine: !!l.castInLine,
+        castInDiagonal: !!l.castInDiagonal,
+        losRequired: !!l.castTestLos,
+        rangeable: !!l.rangeCanBeBoosted,
+        ...extractZone(l.effects),
+      }))
+      .sort((a, b) => a.grade - b.grade);
+    const pair = variantOf.get(s.id) ?? { variantId: -s.id, variantIndex: 0 };
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description ?? { fr: "" },
+      img: s.img,
+      levels,
+      variantId: pair.variantId,
+      variantIndex: pair.variantIndex,
+      common: true,
+    };
+  });
+
+  // Résolution des libellés de condition (« si <état> »), comme pour les sorts de classe.
+  const stateIds = new Set<number>();
+  for (const sp of spells)
+    for (const lv of sp.levels)
+      for (const d of [...lv.damage, ...lv.criticalDamage]) stateIdsOf(d.condition).forEach((id) => stateIds.add(id));
+  if (stateIds.size) {
+    const stateNames = await resolveStateNames(stateIds, signal);
+    for (const sp of spells)
+      for (const lv of sp.levels)
+        for (const d of [...lv.damage, ...lv.criticalDamage]) d.conditionLabel = labelForCondition(d.condition, stateNames);
+  }
+
+  // Tri : par groupe de variante puis base avant variante (pour l'empilage en colonnes).
   spells.sort((a, b) => a.variantId - b.variantId || a.variantIndex - b.variantIndex);
   return spells;
 }
@@ -1326,14 +1462,30 @@ export async function getMonsterSpells(
 // Zone d'effet à prévisualiser : on prend l'effet à plus grande aire (shape ≠ POINT(80)/NONE(0)
 // et param1>0) — souvent l'effet de dégâts —, pas le 1ᵉʳ effet (souvent un état mono-case).
 // La TAILLE = param1 (l'atténuation de dégâts n'est PAS l'étendue).
-function extractZone(effects: unknown): { zoneShape: number; zoneSize: number } {
-  let best = { zoneShape: 0, zoneSize: 0 };
+function extractZone(effects: unknown): { zoneShape: number; zoneSize: number; zoneParam2: number } {
+  let best = { zoneShape: 0, zoneSize: 0, zoneParam2: 0 };
   if (Array.isArray(effects)) {
-    for (const e of effects) {
+    // Certains sorts (ex. Réfraction) listent les effets du sort principal, puis des effets
+    // de propagation/sous-sort. Si le sort principal a déjà des dégâts en point avant le 1160,
+    // on ignore les zones du sous-sort pour ne pas afficher une fausse zone de lancer.
+    const castIdx = effects.findIndex((e) => CAST_SPELL_EFFECTS.has((e as Record<string, any>)?.effectId));
+    const primary =
+      castIdx > 0 &&
+      effects.slice(0, castIdx).some((e) => {
+        const id = (e as Record<string, any>)?.effectId;
+        return DMG_EFFECTS.has(id) || STEAL_EFFECTS.has(id);
+      })
+        ? effects.slice(0, castIdx)
+        : effects;
+
+    for (const e of primary) {
       const z = (e as Record<string, any>)?.zoneDescr;
       const shape = z?.shape ?? 0;
       const size = z?.param1 ?? 0;
-      if (shape && shape !== 80 && size > 0 && size > best.zoneSize) best = { zoneShape: shape, zoneSize: size };
+      const param2 = z?.param2 ?? 0;
+      if (shape && shape !== 80 && size > 0 && size > best.zoneSize) {
+        best = { zoneShape: shape, zoneSize: size, zoneParam2: param2 };
+      }
     }
   }
   return best;

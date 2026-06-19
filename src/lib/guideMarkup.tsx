@@ -2,7 +2,7 @@ import { Fragment, ReactNode, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import DofusIcon from "../components/DofusIcon";
-import { ExternalLink, MapPin, Check } from "../components/DofusIcons";
+import { ExternalLink, MapPin, Check, Copy } from "../components/DofusIcons";
 import { resolveQuestDungeon } from "../api/dofusdb";
 import { useStore, actions } from "../store/store";
 
@@ -103,6 +103,29 @@ function QuestRef({ id, image, children }: { id?: number; image?: string; childr
   );
 }
 
+// Petit bouton « copier le nom » glissé dans les puces d'item/ressource : copie le
+// libellé brut dans le presse-papier (pratique pour le retrouver en HDV / le crafter).
+function CopyNameBtn({ name }: { name: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(name).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1200);
+        });
+      }}
+      title={copied ? "Nom copié !" : `Copier « ${name} »`}
+      className="no-drag -my-1 ml-1 inline-flex cursor-pointer items-center self-stretch rounded-md border border-white/10 bg-white/10 px-1.5 py-1 opacity-80 transition hover:bg-white/20 hover:opacity-100"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </span>
+  );
+}
+
 // Positions Dofus dans le texte (ex. « allez en [5,-19] ») → puce cliquable qui copie
 // la commande d'autopilote /travel x,y (comme sur Ganymède).
 const COORD_RE = /(\[\s*-?\d+\s*,\s*-?\d+\s*\])/g;
@@ -188,10 +211,12 @@ function renderNode(node: ChildNode, key: string, ctx: Ctx): ReactNode {
     case "item": {
       const id = Number(attr(el, "dofusdb"));
       const img = attr(el, "imageurl");
+      const name = (el.textContent || "").trim();
       const chip = (
         <span className={`${CHIP} border-glow-purple/30 bg-glow-purple/15 text-glow-violet`}>
           <EntityIcon url={img} fallback={<DofusIcon name="chestGrey" size={14} />} />
           {kids}
+          {name && <CopyNameBtn name={name} />}
         </span>
       );
       if (ctx.onItem && Number.isFinite(id))

@@ -30,6 +30,7 @@ const ELEMENTS = [
 export function zoneOffsets(level: SpellLevel, dirX: number, dirY: number): [number, number][] {
   const id = level.zoneShape ?? 0;
   const size = Math.min(level.zoneSize ?? 0, 6);
+  const param2 = Math.min(level.zoneParam2 ?? 0, 10);
   const out: [number, number][] = [[0, 0]];
   if (!id || id === 80 || size <= 0) return out; // NONE / POINT → mono-case
   // Direction lanceur→impact, telle quelle : une cible sur l'axe vertical a dirX=0 — il NE
@@ -38,19 +39,73 @@ export function zoneOffsets(level: SpellLevel, dirX: number, dirY: number): [num
   const dy = dirY;
   let dx = dirX;
   if (dx === 0 && dy === 0) dx = 1;
+  const add = (x: number, y: number) => {
+    if (!out.some(([ox, oy]) => ox === x && oy === y)) out.push([x, y]);
+  };
+  const local = (forward: number, side: number): [number, number] => [
+    dx * forward - dy * side,
+    dy * forward + dx * side,
+  ];
   const cardinal = () => {
-    for (let k = 1; k <= size; k++) out.push([k, 0], [-k, 0], [0, k], [0, -k]);
+    for (let k = 1; k <= size; k++) {
+      add(k, 0);
+      add(-k, 0);
+      add(0, k);
+      add(0, -k);
+    }
   };
   const diagonal = () => {
-    for (let k = 1; k <= size; k++) out.push([k, k], [-k, -k], [k, -k], [-k, k]);
+    for (let k = 1; k <= size; k++) {
+      add(k, k);
+      add(-k, -k);
+      add(k, -k);
+      add(-k, k);
+    }
+  };
+  const square = () => {
+    for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (x || y) add(x, y);
+  };
+  const cone = () => {
+    for (let forward = 1; forward <= size; forward++) {
+      for (let side = -forward; side <= forward; side++) {
+        const [x, y] = local(forward, side);
+        add(x, y);
+      }
+    }
+  };
+  const arc = () => {
+    for (let side = -size; side <= size; side++) {
+      if (side === 0) continue;
+      const [x, y] = local(1, side);
+      add(x, y);
+    }
+  };
+  const slash = () => {
+    for (let k = 1; k <= size; k++) {
+      add(k, -k);
+      add(-k, k);
+    }
+  };
+  const zigzag = () => {
+    for (let k = 1; k <= size; k++) {
+      const side = k % 2 === 0 ? -1 : 1;
+      const [x, y] = local(k, side);
+      add(x, y);
+    }
   };
   switch (id) {
     case 67: // CIRCLE
-      for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (Math.abs(x) + Math.abs(y) <= size && (x || y)) out.push([x, y]);
+      for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (Math.abs(x) + Math.abs(y) <= size && (x || y)) add(x, y);
       break;
     case 79: // RING
-      for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (Math.abs(x) + Math.abs(y) === size) out.push([x, y]);
+      for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (Math.abs(x) + Math.abs(y) === size) add(x, y);
       break;
+    case 35: // GRID / checker-like monster zone
+    case 59: // SEMICOLON / compact monster zone
+    case 71: // SQUARE (ex. Distorsion : size 1 = carré 3×3)
+      square();
+      break;
+    case 81: // CROSS cardinale (ex. Libération : croix de 1 case)
     case 88: // CROSS (cardinale)
       cardinal();
       break;
@@ -62,13 +117,52 @@ export function zoneOffsets(level: SpellLevel, dirX: number, dirY: number): [num
       diagonal();
       break;
     case 76: // LINE (direction du tir)
-      for (let k = 1; k <= size; k++) out.push([dx * k, dy * k]);
+      for (let k = 1; k <= size; k++) add(dx * k, dy * k);
+      break;
+    case 108: // EXTENDED LINE (lowercase L)
+      for (let k = 1; k <= Math.max(size, param2 && param2 <= 10 ? param2 : size); k++) add(dx * k, dy * k);
       break;
     case 84: // PERPENDICULAR LINE
-      for (let k = 1; k <= size; k++) out.push([-dy * k, dx * k], [dy * k, -dx * k]);
+    case 45: // HORIZONTAL / spread line
+      for (let k = 1; k <= size; k++) {
+        add(-dy * k, dx * k);
+        add(dy * k, -dx * k);
+      }
+      break;
+    case 66: // BOOMERANG
+    case 70: // FRONT ARC
+    case 85: // ARC
+      arc();
+      break;
+    case 86: // CONE
+    case 87: // WIDE CONE / weapon-like monster zone
+      cone();
+      break;
+    case 82: { // RECTANGLE / wide line (param1 = half-width, param2 = length)
+      const length = Math.max(1, param2 || size);
+      for (let forward = 0; forward <= length; forward++) {
+        for (let side = -size; side <= size; side++) {
+          if (forward === 0 && side === 0) continue;
+          const [x, y] = local(forward, side);
+          add(x, y);
+        }
+      }
+      break;
+    }
+    case 73: // INVERTED CIRCLE / donut-like area
+      for (let x = -size; x <= size; x++) for (let y = -size; y <= size; y++) if (Math.abs(x) + Math.abs(y) >= Math.max(1, size - 1) && Math.abs(x) + Math.abs(y) <= size) add(x, y);
+      break;
+    case 68: // DIAGONAL / very large glyph-like lines
+      diagonal();
+      break;
+    case 47: // SLASH DIAGONAL
+      slash();
+      break;
+    case 90: // ZIGZAG
+      zigzag();
       break;
     default:
-      break; // formes rares (cône, boomerang…) non gérées → mono-case (pas de fausse zone)
+      break; // forme inconnue → mono-case (pas de fausse zone)
   }
   return out;
 }
@@ -128,19 +222,35 @@ export function spellLevelForGrade(
 
 // Grille isométrique (diamant) des cases ciblables, façon Dofus.
 const TILT = 0.6; // aplatissement vertical (perspective iso de Dofus)
-const GRID_R = 6; // rayon FIXE de la grille (13×13) → même taille de cases pour tous les sorts
-export function SpellRangeMap({ level, cell = 16 }: { level: SpellLevel; cell?: number }) {
+const MAX_R = 14; // rayon max affiché (les très longues portées, ex. 30 PO, sont bornées ici)
+export function SpellRangeMap({
+  level,
+  cell = 16,
+  casterLabel = "Monstre",
+  maxWidth = 340,
+}: {
+  level: SpellLevel;
+  cell?: number;
+  casterLabel?: string;
+  maxWidth?: number; // largeur max du losange → la taille des cases s'y adapte
+}) {
   const range = level.range ?? 0;
   const minRange = Math.max(0, level.minRange ?? 0);
   const line = !!level.castInLine;
   const diag = !!level.castInDiagonal;
   const wholeMap = level.zoneShape === 97 || level.zoneShape === 65; // effet sur toute la carte
   const selfCast = !wholeMap && range === 0; // lancé sur le lanceur
-  const R = GRID_R; // grille fixe (les cases ne rétrécissent jamais selon le sort)
+  // Rayon de grille ADAPTÉ à la portée (+ un peu pour la zone d'effet qui déborde de la cible),
+  // borné à MAX_R pour rester lisible. Min 6 → garde une grille correcte pour les courtes portées.
+  const zoneExtra = spellHasZone(level) ? Math.min(level.zoneSize ?? 0, 2) : 0;
+  const R = Math.max(6, Math.min(MAX_R, (selfCast ? zoneExtra : range + zoneExtra) || 6));
   const size = R * 2 + 1;
-  const gap = Math.max(3, Math.round(cell / 6));
+  // Taille de case auto : on réduit pour que le losange (≈ size·cell·√2) tienne dans maxWidth.
+  const fitCell = Math.floor((maxWidth - 24) / (size * Math.SQRT2 * 1.18));
+  cell = Math.max(6, Math.min(cell, fitCell));
+  const gap = Math.max(1, Math.round(cell / 6));
   const gridPx = size * cell + (size - 1) * gap;
-  const diagPx = gridPx * Math.SQRT2; // largeur du losange (constante car grille fixe)
+  const diagPx = gridPx * Math.SQRT2; // largeur du losange
   const boxW = Math.round(diagPx) + 24;
   const boxH = Math.round(diagPx * TILT) + 24;
   const gridTransform = `scaleY(${TILT}) rotate(45deg)`;
@@ -228,7 +338,7 @@ export function SpellRangeMap({ level, cell = 16 }: { level: SpellLevel; cell?: 
       {/* Badge de ciblage spécial */}
       {(wholeMap || selfCast) && (
         <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-glow-emerald/30 bg-void-900/80 px-3 py-1 text-[11px] font-semibold text-glow-emerald">
-          {wholeMap ? "Affecte toute la carte" : "Lancé sur le monstre"}
+          {wholeMap ? "Affecte toute la carte" : `Lancé sur le ${casterLabel.toLowerCase()}`}
         </span>
       )}
 
@@ -248,7 +358,7 @@ export function SpellRangeMap({ level, cell = 16 }: { level: SpellLevel; cell?: 
     {/* Légende */}
     <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
       <span className="inline-flex items-center gap-1.5">
-        <span className="h-3 w-3 rounded-[3px] border border-glow-violet bg-glow-violet/50" /> Monstre (au centre)
+        <span className="h-3 w-3 rounded-[3px] border border-glow-violet bg-glow-violet/50" /> {casterLabel} (au centre)
       </span>
       <span className="inline-flex items-center gap-1.5">
         <span className="h-3 w-3 rounded-[3px] border border-glow-cyan/60 bg-glow-cyan/25" /> Portée
@@ -402,7 +512,7 @@ export function MonsterSpellMapModal({
               {selectedSpell && spellLevel ? (
                 <>
                   <p className="mb-3 text-xs text-slate-500">{mapSubtitle(spellLevel)}</p>
-                  <SpellRangeMap level={spellLevel} cell={24} />
+                  <SpellRangeMap level={spellLevel} cell={24} maxWidth={460} />
                   {/* Détail du sort : dégâts/effets calés sur le grade (comme la fiche monstre). */}
                   <div className="mt-4">
                     <SpellDetail spell={selectedSpell} level={spellLevel} grade={grade} />

@@ -10,6 +10,7 @@ import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import AccountButton from "./AccountButton";
 import FavoritesManager from "./FavoritesManager";
+import { openGlobalSearch } from "./GlobalSearch";
 import { NAV_GROUPS as GROUPS, ALL_NAV_ITEMS as ALL_ITEMS, type NavItem as Item } from "../lib/navItems";
 
 
@@ -148,6 +149,24 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-2.5 overflow-y-auto overflow-x-hidden px-3 pb-3">
+        {/* Recherche globale (Cmd/Ctrl+K) */}
+        <button
+          onClick={openGlobalSearch}
+          title="Rechercher (Ctrl/⌘ + K)"
+          className={clsx(
+            "no-drag group flex items-center rounded-xl border border-white/10 bg-void-900/50 text-sm font-medium text-slate-400 transition hover:border-glow-purple/40 hover:text-white",
+            collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
+          )}
+        >
+          <DofusIcon name="search" size={16} className="shrink-0 opacity-80 group-hover:opacity-100" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left">Rechercher…</span>
+              <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">⌘K</span>
+            </>
+          )}
+        </button>
+
         {GROUPS.map((group, gi) => {
           // En mode icônes (sidebar réduite) on affiche tout ; sinon on respecte le repli du groupe.
           const isCollapsibleHeader = !!group.collapsible && !!group.title && !collapsed;

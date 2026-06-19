@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "../components/DofusIcons";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
 import {
   ChevronRight,
@@ -15,11 +15,14 @@ import { getEquipment, getSet, type EquipmentLight } from "../api/dofusdude";
 import {
   listBreeds,
   getClassSpells,
+  getCommonSpells,
   type Breed,
   type ClassSpell,
   type SpellDamage,
+  type SpellLevel,
   type StatTier,
 } from "../api/dofusdb";
+import { SpellRangeMap, mapSubtitle } from "../components/SpellRangeMap";
 import {
   emptyStats,
   emptyTarget,
@@ -34,7 +37,7 @@ import {
   type DamageLine,
 } from "../lib/damage";
 import { baseApForLevel, baseHpForLevel, baseMpForLevel, statPointsForLevel, pointsForCarac } from "../lib/dofusStats";
-import { levelTone } from "../data/meta";
+import { levelTone, effectTone } from "../data/meta";
 import { classIllus } from "../data/classIllus";
 import { buildSkinPayload, renderSkin, skinKey } from "../lib/skinRender";
 import { actions, useStore, type Build, type BuildSlots } from "../store/store";
@@ -158,7 +161,7 @@ const SLOTS: SlotDef[] = [
   { key: "boots", label: "Bottes", icon: dofusUiIcon("slotBoots"), types: ["boots"] },
   { key: "shield", label: "Bouclier", icon: dofusUiIcon("slotShield"), types: ["shield"] },
   { key: "weapon", label: "Arme", icon: dofusUiIcon("slotWeapon"), types: ["sword", "bow", "staff", "wand", "dagger", "hammer", "axe"] },
-  { key: "petmount", label: "Familier/Monture", icon: dofusUiIcon("slotPet"), types: ["pet", "dragoturkey", "petsmount"] },
+  { key: "petmount", label: "Familier/Monture", icon: dofusUiIcon("slotPet"), types: ["pet", "dragoturkey", "petsmount", "seemyool", "rhineetle"] },
   ...Array.from({ length: 6 }).map((_, i) => ({
     key: `dofus${i + 1}`,
     label: `Dofus/Trophée ${i + 1}`,
@@ -273,6 +276,50 @@ function multiSlotGroup(key: string): string[] | null {
   return null;
 }
 
+// Une pièce de panoplie proposée à l'équipement (modale « compléter la panoplie »).
+interface ProposalPiece {
+  id: number;
+  name: string;
+  level: number;
+  icon: string;
+  isWeapon: boolean;
+  typeName: string;
+  slotLabel: string; // libellé de l'emplacement cible (ex. « Ceinture »)
+  replacingName: string | null; // nom de l'objet qui serait remplacé, sinon null (emplacement libre)
+}
+
+// Un palier de bonus de panoplie (N pièces → lignes d'effets formatées).
+interface SetTier {
+  n: number;
+  lines: { text: string; name: string }[];
+}
+
+// Détermine l'emplacement cible d'une pièce de panoplie (mapping par type localisé).
+// Pour les emplacements multiples (anneaux, dofus), on privilégie un emplacement LIBRE ;
+// s'il n'y en a pas, on retombe sur le premier du groupe (→ remplacement). Renvoie null
+// si le type ne correspond à aucun emplacement. Sert à la modale « compléter la panoplie ».
+const ARMOR_TYPE_TO_SLOT: { needle: string; key: string }[] = [
+  { needle: "chapeau", key: "hat" },
+  { needle: "cape", key: "cloak" },
+  { needle: "amulette", key: "amulet" },
+  { needle: "ceinture", key: "belt" },
+  { needle: "bottes", key: "boots" },
+  { needle: "bouclier", key: "shield" },
+];
+function targetSlotForPiece(detail: { is_weapon?: boolean; type: { name: string } }, current: Record<string, number>): string | null {
+  const isEmpty = (k: string) => current[k] == null;
+  if (detail.is_weapon) return "weapon";
+  const tn = detail.type.name.toLowerCase();
+  for (const { needle, key } of ARMOR_TYPE_TO_SLOT) {
+    if (tn.includes(needle)) return key;
+  }
+  if (tn.includes("anneau")) return ["ring1", "ring2"].find(isEmpty) ?? "ring1";
+  if (tn.includes("dofus") || tn.includes("trophée") || tn.includes("prysmaradite") || tn.includes("prisme")) {
+    return DOFUS_SLOT_KEYS.find(isEmpty) ?? DOFUS_SLOT_KEYS[0];
+  }
+  return null;
+}
+
 // Wrapper routeur : résout le build depuis l'URL et redirige vers la galerie si introuvable.
 export default function Builder() {
   const { id } = useParams<{ id: string }>();
@@ -299,6 +346,17 @@ function BuildEditor({ build }: { build: Build }) {
   const [target, setTarget] = useState<TargetStats>(build.target ?? emptyTarget());
   const [pickerSlot, setPickerSlot] = useState<SlotDef | null>(null);
   const [showSpells, setShowSpells] = useState(false);
+  // Proposition « compléter la panoplie » après l'équipement d'une pièce de set :
+  // liste des autres pièces, avec emplacement cible et statut (libre / remplacement).
+  const [setProposal, setSetProposal] = useState<
+    { setName: string; pieces: ProposalPiece[]; tiers: SetTier[]; equippedCount: number; totalPieces: number } | null
+  >(null);
+  const queryClient = useQueryClient();
+  // Miroir des slots pour lecture synchrone dans proposeSet (setSlots est asynchrone).
+  const slotsRef = useRef<BuildSlots>(slots);
+  useEffect(() => {
+    slotsRef.current = slots;
+  }, [slots]);
   const [buildName, setBuildName] = useState(build.name);
   const [saved, setSaved] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
@@ -330,6 +388,13 @@ function BuildEditor({ build }: { build: Build }) {
     queryFn: ({ signal }) => getClassSpells(breedId!, signal),
     enabled: !!breedId,
     staleTime: 1000 * 60 * 60,
+  });
+
+  // Sorts communs (Flamiche, Attraction…) — communs à toutes les classes, chargés une fois.
+  const { data: commonSpells } = useQuery({
+    queryKey: ["common-spells"],
+    queryFn: ({ signal }) => getCommonSpells(signal),
+    staleTime: 1000 * 60 * 60 * 6,
   });
 
   const { data: roomSpells } = useQuery({
@@ -475,6 +540,95 @@ function BuildEditor({ build }: { build: Build }) {
       });
     }
     setPickerSlot(null);
+    void proposeSet(item.ankama_id);
+  }
+
+  // Après avoir équipé une pièce, propose de compléter sa panoplie : on récupère les autres
+  // pièces (non déjà équipées) avec leur emplacement cible et ce qu'elles remplaceraient,
+  // pour que l'utilisateur choisisse. Requêtes via le cache react-query.
+  async function proposeSet(itemId: number) {
+    try {
+      const detail = await queryClient.fetchQuery({
+        queryKey: ["equipment", itemId],
+        queryFn: ({ signal }) => getEquipment(itemId, signal),
+        staleTime: 1000 * 60 * 30,
+      });
+      const set = detail.parent_set;
+      if (!set) return;
+      const setDetail = await queryClient.fetchQuery({
+        queryKey: ["set", set.id],
+        queryFn: ({ signal }) => getSet(set.id, signal),
+        staleTime: 1000 * 60 * 60,
+      });
+      const current = { ...slotsRef.current };
+      const equippedNow = new Set(Object.values(current).filter((v): v is number => v != null));
+      equippedNow.add(itemId);
+      const otherIds = setDetail.equipment_ids.filter((id) => !equippedNow.has(id));
+      if (otherIds.length === 0) return;
+      const details = await Promise.all(
+        otherIds.map((id) =>
+          queryClient
+            .fetchQuery({
+              queryKey: ["equipment", id],
+              queryFn: ({ signal }) => getEquipment(id, signal),
+              staleTime: 1000 * 60 * 30,
+            })
+            .catch(() => null),
+        ),
+      );
+      const nameById = new Map(items.map((it) => [it.ankama_id, it.name] as const));
+      const pieces: ProposalPiece[] = [];
+      for (const d of details) {
+        if (!d) continue;
+        const key = targetSlotForPiece(d, current);
+        if (!key) continue;
+        const replacingId = current[key];
+        pieces.push({
+          id: d.ankama_id,
+          name: d.name,
+          level: d.level,
+          icon: d.image_urls.icon,
+          isWeapon: !!d.is_weapon,
+          typeName: d.type.name,
+          slotLabel: byKey(key).label,
+          replacingName: replacingId != null ? (nameById.get(replacingId) ?? "objet équipé") : null,
+        });
+      }
+      if (pieces.length === 0) return;
+      // Paliers de bonus de panoplie (2 pièces, 3 pièces…) + état actuel.
+      const tiers: SetTier[] = Object.entries(setDetail.effects ?? {})
+        .map(([n, eff]) => ({
+          n: Number(n),
+          lines: (eff ?? []).filter((e) => e.formatted).map((e) => ({ text: e.formatted, name: e.type.name })),
+        }))
+        .filter((t) => t.n >= 2 && t.lines.length > 0)
+        .sort((a, b) => a.n - b.n);
+      const equippedCount = setDetail.equipment_ids.filter((id) => equippedNow.has(id)).length;
+      setSetProposal({
+        setName: set.name,
+        pieces,
+        tiers,
+        equippedCount,
+        totalPieces: setDetail.equipment_ids.length,
+      });
+    } catch {
+      /* réseau indisponible → pas de proposition, silencieux */
+    }
+  }
+
+  // Équipe les pièces choisies dans la modale, dans leur emplacement cible (en remplaçant
+  // l'occupant si l'utilisateur l'a accepté). Le calcul d'emplacement est refait sur l'état
+  // courant pour que deux pièces d'un même groupe (anneaux) aillent sur des slots distincts.
+  function applySetSelection(selected: ProposalPiece[]) {
+    setSlots((prev) => {
+      const next = { ...prev };
+      for (const p of selected) {
+        const key = targetSlotForPiece({ is_weapon: p.isWeapon, type: { name: p.typeName } }, next);
+        if (key) next[key] = p.id;
+      }
+      return next;
+    });
+    setSetProposal(null);
   }
   function unequip(key: string) {
     setSlots((s) => {
@@ -492,6 +646,15 @@ function BuildEditor({ build }: { build: Build }) {
     const v = Math.max(0, Math.min(PARCH_MAX, Math.floor(value || 0)));
     setParch((p) => ({ ...p, [key]: v }));
   }
+  // Met la même valeur de parchemins à toutes les caractéristiques (bouton « 100 all »).
+  function setAllParch(value: number) {
+    const v = Math.max(0, Math.min(PARCH_MAX, Math.floor(value || 0)));
+    setParch((p) => {
+      const next = { ...p };
+      (Object.keys(next) as CaracKey[]).forEach((k) => (next[k] = v));
+      return next;
+    });
+  }
   function resetAll() {
     setSlots({});
     setExos({});
@@ -502,7 +665,8 @@ function BuildEditor({ build }: { build: Build }) {
 
   const filledCount = equippedIds.length;
   // Tous les sorts, regroupés par variante (sort de base + sa variante).
-  const allSpells = spells ?? [];
+  // Sorts de la classe + sorts communs (Flamiche…), ces derniers en fin de liste.
+  const allSpells = useMemo(() => [...(spells ?? []), ...(commonSpells ?? [])], [spells, commonSpells]);
   const damageCount = allSpells.filter((s) => s.levels.some((l) => l.damage.length > 0)).length;
 
   // Colonnes de sorts façon DofusDB : chaque colonne = sort de base + sa variante empilés.
@@ -516,8 +680,13 @@ function BuildEditor({ build }: { build: Build }) {
     return [...groups.values()].map((arr) => [...arr].sort((a, b) => a.variantIndex - b.variantIndex));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSpells.map((s) => s.id).join(",")]);
+  // Séparation classe / communs : les sorts communs (Flamiche…) ont leur propre section,
+  // eux aussi appariés base + variante (colonnes empilées comme les sorts de classe).
+  const classColumns = spellColumns.filter((c) => !c[0]?.common);
+  const commonColumns = spellColumns.filter((c) => c[0]?.common);
   // Nombre de lignes par colonne (base + variante) → alignement uniforme de la grille.
-  const spellRows = Math.max(1, ...spellColumns.map((c) => c.length));
+  const spellRows = Math.max(1, ...classColumns.map((c) => c.length), 1);
+  const commonRows = Math.max(1, ...commonColumns.map((c) => c.length), 1);
   const selSpell =
     allSpells.find((s) => s.id === selectedSpellId) ??
     allSpells.find((s) => s.levels.some((l) => l.damage.length > 0)) ??
@@ -925,9 +1094,28 @@ function BuildEditor({ build }: { build: Build }) {
 
             {/* Caractéristiques */}
             <div className="glass rounded-2xl p-5">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="font-display font-bold text-white">Caractéristiques</h3>
-                <Pill tone={pointsLeft < 0 ? "rose" : "purple"}>{pointsLeft} pts</Pill>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const allParchMaxed = CARACS.every((c) => parch[c.key] >= PARCH_MAX);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setAllParch(allParchMaxed ? 0 : PARCH_MAX)}
+                        title={
+                          allParchMaxed
+                            ? "Remettre tous les parchemins à 0"
+                            : "Mettre 100 parchemins à toutes les caractéristiques"
+                        }
+                        className="no-drag rounded-lg border border-glow-violet/30 bg-glow-violet/10 px-2 py-1 text-[11px] font-bold text-glow-violet transition hover:bg-glow-violet/20"
+                      >
+                        {allParchMaxed ? "Parch. 0" : "Parch. 100"}
+                      </button>
+                    );
+                  })()}
+                  <Pill tone={pointsLeft < 0 ? "rose" : "purple"}>{pointsLeft} pts</Pill>
+                </div>
               </div>
               <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-white/5">
                 <div
@@ -1045,11 +1233,33 @@ function BuildEditor({ build }: { build: Build }) {
             title={pickerSlot.label}
             allowedTypes={pickerSlot.types}
             maxLevel={level}
+            currentIds={(multiSlotGroup(pickerSlot.key) ?? [pickerSlot.key])
+              .map((k) => slots[k])
+              .filter((v): v is number => v != null)}
             onPick={equip}
             onClose={() => setPickerSlot(null)}
           />
         )}
       </AnimatePresence>
+
+      {/* Proposition « compléter la panoplie » — modale de sélection (en portal). */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {setProposal && (
+              <SetCompleteModal
+                setName={setProposal.setName}
+                pieces={setProposal.pieces}
+                tiers={setProposal.tiers}
+                equippedCount={setProposal.equippedCount}
+                totalPieces={setProposal.totalPieces}
+                onConfirm={applySetSelection}
+                onClose={() => setSetProposal(null)}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
       {/* Modale « page temporaire » des sorts & dégâts — en portal pour passer au-dessus
           de la Sidebar/TitleBar (le <main> z-10 crée un contexte d'empilement qui piégeait le z-50). */}
@@ -1100,37 +1310,66 @@ function BuildEditor({ build }: { build: Build }) {
                 </div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-                  {/* Grille d'icônes : sort de base en haut, sa variante juste en dessous.
-                      Chaque colonne occupe le même nombre de lignes → alignement net au wrap. */}
-                  <div className="flex flex-wrap content-start gap-1.5 overflow-y-auto rounded-2xl bg-void-900/50 p-2 ring-1 ring-white/10 lg:w-[296px] lg:shrink-0">
-                    {spellColumns.map((col, i) => (
-                      <div key={i} className="flex flex-col gap-1.5">
-                        {Array.from({ length: spellRows }).map((_, row) => {
-                          const sp = col[row];
-                          if (!sp) return <div key={row} className="h-12 w-12 shrink-0" aria-hidden />;
-                          return (
-                            <button
-                              key={sp.id}
-                              onClick={() => setSelectedSpellId(sp.id)}
-                              title={sp.name.fr}
-                              className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
-                                selSpell?.id === sp.id
-                                  ? "shadow-[0_0_18px_-4px_rgba(124,92,255,0.7)] ring-2 ring-glow-violet"
-                                  : "ring-1 ring-white/10 hover:ring-glow-violet/40"
-                              }`}
-                            >
-                              <img
-                                src={sp.img}
-                                alt={sp.name.fr}
-                                loading="lazy"
-                                className="h-full w-full object-cover"
-                                onError={(e) => (e.currentTarget.style.opacity = "0.3")}
-                              />
-                            </button>
-                          );
-                        })}
+                  {/* Grille d'icônes : sorts de classe (base + variante empilées), puis une
+                      section distincte « Sorts communs » (accessibles à toutes les classes). */}
+                  <div className="flex flex-col gap-2 overflow-y-auto rounded-2xl bg-void-900/50 p-2 ring-1 ring-white/10 lg:w-[296px] lg:shrink-0">
+                    <div className="flex flex-wrap content-start gap-1.5">
+                      {classColumns.map((col, i) => (
+                        <div key={i} className="flex flex-col gap-1.5">
+                          {Array.from({ length: spellRows }).map((_, row) => {
+                            const sp = col[row];
+                            if (!sp) return <div key={row} className="h-12 w-12 shrink-0" aria-hidden />;
+                            return (
+                              <button
+                                key={sp.id}
+                                onClick={() => setSelectedSpellId(sp.id)}
+                                title={sp.name.fr}
+                                className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
+                                  selSpell?.id === sp.id
+                                    ? "shadow-[0_0_18px_-4px_rgba(124,92,255,0.7)] ring-2 ring-glow-violet"
+                                    : "ring-1 ring-white/10 hover:ring-glow-violet/40"
+                                }`}
+                              >
+                                <SpellIcon src={sp.img} alt={sp.name.fr} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+
+                    {commonColumns.length > 0 && (
+                      <div className="mt-1 border-t border-white/10 pt-2">
+                        <p className="mb-1.5 flex items-center gap-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-glow-emerald">
+                          <DofusIcon name="spells" size={11} /> Sorts communs
+                          <span className="font-normal normal-case text-slate-500">· base + variante</span>
+                        </p>
+                        <div className="flex flex-wrap content-start gap-1.5">
+                          {commonColumns.map((col, i) => (
+                            <div key={i} className="flex flex-col gap-1.5">
+                              {Array.from({ length: commonRows }).map((_, row) => {
+                                const sp = col[row];
+                                if (!sp) return <div key={row} className="h-12 w-12 shrink-0" aria-hidden />;
+                                return (
+                                  <button
+                                    key={sp.id}
+                                    onClick={() => setSelectedSpellId(sp.id)}
+                                    title={`${sp.name.fr} (commun${sp.variantIndex === 1 ? " · variante" : ""})`}
+                                    className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
+                                      selSpell?.id === sp.id
+                                        ? "shadow-[0_0_18px_-4px_rgba(52,211,153,0.7)] ring-2 ring-glow-emerald"
+                                        : "ring-1 ring-glow-emerald/25 hover:ring-glow-emerald/50"
+                                    }`}
+                                  >
+                                    <SpellIcon src={sp.img} alt={sp.name.fr} />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                   {/* Détail du sort sélectionné — scroll vertical indépendant */}
                   <div className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1">
@@ -1142,6 +1381,7 @@ function BuildEditor({ build }: { build: Build }) {
                         stats={total}
                         target={target}
                         roomSpell={roomSpell}
+                        bonusRange={kpi.po}
                       />
                     )}
                   </div>
@@ -1157,6 +1397,34 @@ function BuildEditor({ build }: { build: Build }) {
   );
 }
 
+// Icône de sort avec reprise + repli propre : DofusDB limite parfois les rafales d'images
+// (beaucoup d'icônes chargées d'un coup) → on retente 2× avant de retomber sur une icône
+// générique, au lieu d'afficher une vignette cassée/à moitié transparente.
+function SpellIcon({ src, alt }: { src?: string; alt: string }) {
+  const [tries, setTries] = useState(0);
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="grid h-full w-full place-items-center bg-void-700/60 text-slate-600">
+        <DofusIcon name="spells" size={22} />
+      </div>
+    );
+  }
+  return (
+    <img
+      key={tries} // force le remount → nouvelle tentative de chargement
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => {
+        if (tries < 2) window.setTimeout(() => setTries((t) => t + 1), 500 * (tries + 1));
+        else setFailed(true);
+      }}
+      className="h-full w-full object-cover"
+    />
+  );
+}
+
 // Panneau de détail d'un sort (agencement DofusDB) : en-tête + caractéristiques + dégâts estimés.
 function SpellDetail({
   spell,
@@ -1165,6 +1433,7 @@ function SpellDetail({
   stats,
   target,
   roomSpell,
+  bonusRange = 0,
 }: {
   spell: ClassSpell;
   twinName?: string;
@@ -1172,9 +1441,13 @@ function SpellDetail({
   stats: CharacterStats;
   target: TargetStats;
   roomSpell?: RoomSpell;
+  bonusRange?: number; // +PO du personnage, appliqué si le sort a une portée modifiable
 }) {
   // Sort au niveau EXACT du perso (interpolation continue entre grades).
   const cur = spellLevelAt(spell, level);
+  // Portée effective pour la carte : +PO du perso si le sort est « rangeable » (porté modifiable).
+  const rangeBoost = cur?.rangeable ? Math.max(0, bonusRange) : 0;
+  const mapLevel: SpellLevel | null = cur ? { ...cur, range: (cur.range ?? 0) + rangeBoost } : null;
   const est = cur ? estimateSpell(cur, stats, target) : null;
   // Sorts à charges (Téléfrag, Xélor) : paliers simulés au plus près de DofusBook.
   const tierLines =
@@ -1219,12 +1492,9 @@ function SpellDetail({
     >
       <section className="min-w-0 rounded-2xl bg-[#3e3e3e] p-4 ring-1 ring-black/25">
         <div className="flex items-start gap-4">
-          <img
-            src={spell.img}
-            alt={spell.name.fr}
-            className="h-14 w-14 shrink-0 rounded-lg bg-void-700/60 object-cover ring-1 ring-black/30"
-            onError={(e) => (e.currentTarget.style.opacity = "0.3")}
-          />
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-void-700/60 ring-1 ring-black/30">
+            <SpellIcon src={spell.img} alt={spell.name.fr} />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1232,10 +1502,14 @@ function SpellDetail({
                   <span className="truncate">{roomSpell?.label ?? spell.name.fr}</span>
                   <span
                     className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
-                      isVariant ? "bg-glow-violet/20 text-glow-violet" : "bg-white/10 text-slate-300"
+                      spell.common
+                        ? "bg-glow-emerald/20 text-glow-emerald"
+                        : isVariant
+                          ? "bg-glow-violet/20 text-glow-violet"
+                          : "bg-white/10 text-slate-300"
                     }`}
                   >
-                    {isVariant ? "Variante" : "Base"}
+                    {spell.common ? "Commun" : isVariant ? "Variante" : "Base"}
                   </span>
                 </h3>
                 {twinName && (
@@ -1423,6 +1697,26 @@ function SpellDetail({
                 {el === 5 ? "Meilleur élt" : ELEMENTS[el]}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Carte de portée interactive (façon page Monstres) — survol des cases = zone d'effet.
+            La portée intègre le +PO du perso si le sort est à portée modifiable. */}
+        {mapLevel && (
+          <div className="mt-5 border-t border-white/10 pt-4">
+            <h4 className="mb-2 flex items-center gap-2 font-display text-sm font-bold text-white">
+              <DofusIcon name="po" size={16} /> Portée
+            </h4>
+            <p className="mb-2 text-[11px] text-slate-400">{mapSubtitle(mapLevel)}</p>
+            {cur?.rangeable &&
+              (rangeBoost > 0 ? (
+                <p className="mb-2 text-[11px] font-semibold text-glow-violet">
+                  Portée modifiable : +{rangeBoost} PO inclus (base {cur.range} → {mapLevel.range}).
+                </p>
+              ) : (
+                <p className="mb-2 text-[11px] text-slate-500">Portée modifiable (+PO) — aucun bonus de portée sur le build.</p>
+              ))}
+            <SpellRangeMap level={mapLevel} cell={18} casterLabel="Personnage" maxWidth={330} />
           </div>
         )}
       </aside>
@@ -2175,5 +2469,191 @@ function StatChip({
         <div className="truncate text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       </div>
     </div>
+  );
+}
+
+// Modale « compléter la panoplie » : liste les autres pièces du set avec leur emplacement
+// cible et le statut (libre / remplacement). L'utilisateur coche ce qu'il veut équiper.
+function SetCompleteModal({
+  setName,
+  pieces,
+  tiers,
+  equippedCount,
+  totalPieces,
+  onConfirm,
+  onClose,
+}: {
+  setName: string;
+  pieces: ProposalPiece[];
+  tiers: SetTier[];
+  equippedCount: number;
+  totalPieces: number;
+  onConfirm: (selected: ProposalPiece[]) => void;
+  onClose: () => void;
+}) {
+  // Par défaut : on présélectionne les pièces qui prennent un emplacement LIBRE (sans rien remplacer).
+  const [selected, setSelected] = useState<Set<number>>(
+    () => new Set(pieces.filter((p) => !p.replacingName).map((p) => p.id)),
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const toggle = (id: number) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const allSelected = selected.size === pieces.length;
+  const setAll = (on: boolean) => setSelected(on ? new Set(pieces.map((p) => p.id)) : new Set());
+
+  const chosen = pieces.filter((p) => selected.has(p.id));
+  // Nombre de pièces de la panoplie après application de la sélection (pour le palier atteint).
+  const projected = Math.min(totalPieces, equippedCount + selected.size);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass flex max-h-[82vh] w-full max-w-lg flex-col rounded-3xl p-5"
+      >
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-display text-lg font-bold text-white">
+            <DofusIcon name="menuItemsets" size={20} className="text-glow-violet" />
+            Panoplie « {setName} »
+          </h3>
+          <button
+            onClick={onClose}
+            title="Fermer (Échap)"
+            className="no-drag rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+          >
+            <DofusIcon name="closeRed" size={16} />
+          </button>
+        </div>
+        <p className="mb-3 text-xs text-slate-400">
+          Choisis les pièces à équiper. Celles qui remplacent un objet déjà équipé sont signalées.
+        </p>
+
+        <div className="mb-2 flex items-center gap-2">
+          <button
+            onClick={() => setAll(!allSelected)}
+            className="no-drag rounded-lg bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10"
+          >
+            {allSelected ? "Tout décocher" : "Tout cocher"}
+          </button>
+          <span className="ml-auto text-xs text-slate-500">{selected.size}/{pieces.length} sélectionnée{selected.size > 1 ? "s" : ""}</span>
+        </div>
+
+        <div className="-mr-2 flex-1 space-y-1.5 overflow-y-auto pr-2">
+          {pieces.map((p) => {
+            const isSel = selected.has(p.id);
+            return (
+              <button
+                key={p.id}
+                onClick={() => toggle(p.id)}
+                className={`no-drag flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition ${
+                  isSel
+                    ? "border-glow-purple/45 bg-glow-purple/[0.1]"
+                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.05]"
+                }`}
+              >
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition ${
+                    isSel ? "border-glow-violet bg-glow-violet text-void-900" : "border-white/20 bg-void-900/40"
+                  }`}
+                >
+                  {isSel && <DofusIcon name="tick" size={12} />}
+                </span>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-white/10 to-white/[0.03] ring-1 ring-white/10">
+                  <img src={p.icon} alt={p.name} loading="lazy" className="h-8 w-8 object-contain" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">{p.name}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <Pill tone={levelTone(p.level)}>Niv. {p.level}</Pill>
+                    <span className="text-[11px] text-slate-500">→ {p.slotLabel}</span>
+                    {p.replacingName ? (
+                      <span className="text-[11px] font-medium text-glow-gold">Remplace : {p.replacingName}</span>
+                    ) : (
+                      <span className="text-[11px] font-medium text-glow-emerald">Emplacement libre</span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          {tiers.length > 0 && (
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">
+                  <DofusIcon name="menuItemsets" size={14} /> Bonus de panoplie
+                </h4>
+                <span className="text-[11px] font-semibold text-glow-violet">{projected}/{totalPieces} pièces</span>
+              </div>
+              <div className="space-y-2">
+                {tiers.map((t) => {
+                  const active = projected >= t.n;
+                  return (
+                    <div key={t.n} className={active ? "" : "opacity-40"}>
+                      <span
+                        className={`mb-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                          active ? "bg-glow-emerald/20 text-glow-emerald" : "bg-white/5 text-slate-500"
+                        }`}
+                      >
+                        {t.n} pièces{active ? " ✓" : ""}
+                      </span>
+                      <ul className="space-y-0.5 pl-0.5">
+                        {t.lines.map((l, i) => {
+                          const ic = effectIconFromName(l.name);
+                          return (
+                            <li key={i} className={`flex items-center gap-1.5 text-[12px] ${effectTone(l.name)}`}>
+                              {ic && <DofusIcon name={ic} size={13} />}
+                              <span>{l.text}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={onClose}
+            className="no-drag flex-1 rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/10"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => onConfirm(chosen)}
+            disabled={chosen.length === 0}
+            className="no-drag flex-1 rounded-xl bg-glow-purple/25 py-2.5 text-sm font-bold text-white ring-1 ring-glow-purple/40 transition hover:bg-glow-purple/35 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Équiper{chosen.length > 0 ? ` (${chosen.length})` : ""}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

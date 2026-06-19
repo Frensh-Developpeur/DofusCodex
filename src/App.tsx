@@ -15,6 +15,7 @@ import SkinatorLeavePrompt from "./components/SkinatorLeavePrompt";
 import UpdateBanner from "./components/UpdateBanner";
 import RecoveryModal from "./components/RecoveryModal";
 import SecurityQuestionPrompt from "./components/SecurityQuestionPrompt";
+import GlobalSearch from "./components/GlobalSearch";
 import Dashboard from "./pages/Dashboard";
 import Dungeons from "./pages/Dungeons";
 import DungeonDetail from "./pages/DungeonDetail";
@@ -26,6 +27,7 @@ import Guides from "./pages/Guides";
 import GuideDetail from "./pages/GuideDetail";
 import GuideTree from "./pages/GuideTree";
 import Almanax from "./pages/Almanax";
+import Forgemagie from "./pages/Forgemagie";
 import Hunt from "./pages/Hunt";
 import Monsters from "./pages/Monsters";
 import MonsterDetail from "./pages/MonsterDetail";
@@ -68,6 +70,7 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/metiers", <Metiers />],
   ["/rentabilite-metiers", <CraftProfit />],
   ["/xp-familier", <XpFamilier />],
+  ["/forgemagie", <Forgemagie />],
   ["/quetes", <Quests />],
   ["/liste-courses", <ShoppingList />],
   ["/metamob", <Metamob />],
@@ -258,6 +261,7 @@ export default function App() {
       <UpdateBanner />
       <RecoveryModal />
       <SecurityQuestionPrompt />
+      <GlobalSearch />
       {ov && <OverlayResizeHandle />}
     </div>
   );

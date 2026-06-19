@@ -28,6 +28,9 @@ interface Window {
       apiKey: string;
       body?: unknown;
     }) => Promise<{ ok: boolean; status: number; data: unknown; error?: string }>;
+    fetchDofusNews?: (
+      category: "news" | "changelog" | "devblog",
+    ) => Promise<{ ok: boolean; status: number; text?: string; error?: string }>;
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;
     peekUpdate?: () => Promise<UpdateEvent | null>;
     onDeepLink?: (cb: (url: string) => void) => () => void;

@@ -29,6 +29,7 @@ import GuideDetail from "./pages/GuideDetail";
 import GuideTree from "./pages/GuideTree";
 import Almanax from "./pages/Almanax";
 import Forgemagie from "./pages/Forgemagie";
+import News from "./pages/News";
 import Hunt from "./pages/Hunt";
 import Monsters from "./pages/Monsters";
 import MonsterDetail from "./pages/MonsterDetail";
@@ -62,6 +63,7 @@ const OVERLAY_SHELL = "app-page-shell w-full px-3 py-3";
 // démontées normalement : elles dépendent d'un :id et ne doivent pas s'accumuler.)
 const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/", <Dashboard />],
+  ["/actualites", <News />],
   ["/donjons", <Dungeons />],
   ["/stuffinator", <Stuffinator />],
   ["/builder", <BuildGallery />],

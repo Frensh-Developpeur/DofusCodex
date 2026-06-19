@@ -6,7 +6,10 @@ export type NavGroup = { title?: string; items: NavItem[]; collapsible?: boolean
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    items: [{ to: "/", label: "Accueil", dofus: "world", end: true }],
+    items: [
+      { to: "/", label: "Accueil", dofus: "world", end: true },
+      { to: "/actualites", label: "Actualités", dofus: "info" },
+    ],
   },
   {
     title: "Jeu",

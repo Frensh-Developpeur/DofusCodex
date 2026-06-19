@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   // Proxy API Metamob (contourne l'absence de CORS côté metamob.fr) :
   // { method, path, apiKey, body? } → { ok, status, data, error? }.
   metamobRequest: (opts) => ipcRenderer.invoke("metamob:request", opts),
+  // Actualités Dofus : récupère un flux RSS officiel (category: "news" | "changelog" | "devblog")
+  // via le process principal (UA navigateur, pas de CORS). → { ok, status, text?, error? }.
+  fetchDofusNews: (category) => ipcRenderer.invoke("dofus:news", category),
   // ---- Mises à jour ----
   // cb reçoit { state: "available" | "downloading" | "downloaded", version?, percent?, isMac }
   onUpdate: (cb) => {

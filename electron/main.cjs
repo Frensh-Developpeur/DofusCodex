@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, session, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, shell, session, ipcMain, screen, protocol } = require("electron");
 const path = require("node:path");
 const https = require("node:https");
 const fs = require("node:fs");
@@ -14,7 +14,12 @@ let mainWindow = null;
 // L'e-mail de reset Supabase redirige vers `dofuscodex://reset#access_token=…` ; l'OS ouvre
 // alors l'app avec cette URL, qu'on transmet au renderer (cf. handleAuthDeepLink côté React).
 const PROTOCOL = "dofuscodex";
+const NEWS_IMAGE_PROTOCOL = "dofuscodex-news-image";
 let pendingDeepLink = null; // lien arrivé avant que le renderer soit prêt (cold start / course)
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: NEWS_IMAGE_PROTOCOL, privileges: { secure: true, standard: true, supportFetchAPI: true } },
+]);
 
 // Mode overlay = fenêtre DÉDIÉE transparente, flottante au-dessus du jeu (la fenêtre principale
 // reste intacte, juste masquée). Dimensions/position persistées sur disque.
@@ -42,6 +47,68 @@ function saveOverlayBoundsDebounced() {
       /* best-effort */
     }
   }, 600);
+}
+
+function decodeNewsImageUrl(requestUrl) {
+  try {
+    const u = new URL(requestUrl);
+    const encoded = u.pathname.replace(/^\/+/, "") || u.hostname;
+    const raw = Buffer.from(encoded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const target = new URL(raw);
+    if (!["https:", "http:"].includes(target.protocol)) return null;
+    target.protocol = "https:";
+    const host = target.hostname.toLowerCase();
+    if (host !== "ankama.com" && !host.endsWith(".ankama.com") && host !== "dofus.com" && !host.endsWith(".dofus.com")) {
+      return null;
+    }
+    return target;
+  } catch {
+    return null;
+  }
+}
+
+function inferImageContentType(target) {
+  const ext = path.extname(target.pathname).toLowerCase();
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  if (ext === ".gif") return "image/gif";
+  if (ext === ".svg") return "image/svg+xml";
+  if (ext === ".avif") return "image/avif";
+  return "image/jpeg";
+}
+
+function fetchNewsImage(target) {
+  return new Promise((resolve) => {
+    const req = https.request(
+      target,
+      {
+        method: "GET",
+        headers: {
+          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "Accept-Language": "fr-FR,fr;q=0.9",
+          Referer: "https://www.dofus.com/fr",
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        timeout: 15000,
+      },
+      (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => {
+          const status = res.statusCode || 0;
+          const contentType = res.headers["content-type"] || inferImageContentType(target);
+          resolve({ status, contentType, body: Buffer.concat(chunks) });
+        });
+      },
+    );
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
 }
 
 // Maintient la fenêtre overlay au premier plan, y compris au-dessus d'un jeu en plein écran
@@ -299,7 +366,7 @@ function buildCsp() {
     `font-src ${FONT_FILES}`,
     // Les guides Ganymède embarquent des images hébergées sur des hôtes variés
     // (i.ibb.co, ganymede-dofus.com, etc.) → on autorise toute image https.
-    `img-src 'self' data: https: ${API_HOSTS}`,
+    `img-src 'self' data: https: ${NEWS_IMAGE_PROTOCOL}: ${API_HOSTS}`,
     `connect-src ${connectSrc}`,
     "frame-src https://barbofus.com https://skinator.barbofus.com",
     "object-src 'none'",
@@ -365,6 +432,19 @@ function createWindow() {
 app.whenReady().then(() => {
   if (!gotSingleInstanceLock) return; // 2e instance : la 1re a déjà reçu le lien profond
   loadOverlayBounds(); // dimensions/position mémorisées de l'overlay
+  protocol.handle(NEWS_IMAGE_PROTOCOL, async (request) => {
+    const target = decodeNewsImageUrl(request.url);
+    if (!target) return new Response(null, { status: 400 });
+    const image = await fetchNewsImage(target);
+    if (!image || image.status < 200 || image.status >= 300) return new Response(null, { status: 502 });
+    return new Response(image.body, {
+      status: 200,
+      headers: {
+        "Content-Type": image.contentType,
+        "Cache-Control": "public, max-age=86400",
+      },
+    });
+  });
   session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
     cb({
       responseHeaders: {
@@ -597,6 +677,47 @@ app.whenReady().then(() => {
         resolve({ ok: false, status: 0, error: "timeout" });
       });
       if (payload) req.write(payload);
+      req.end();
+    }),
+  );
+
+  // Flux RSS d'actualités Dofus (www.dofus.com/fr/rss/<cat>.xml). dofus.com est derrière
+  // CloudFront, qui bloque les User-Agents non-navigateur (403) et n'envoie aucun en-tête CORS
+  // → on relaie depuis le process principal avec un UA navigateur (pas de CORS, pas de blocage).
+  // Catégorie validée contre une liste blanche (hôte/chemin figés).
+  ipcMain.handle("dofus:news", (_e, category) =>
+    new Promise((resolve) => {
+      const cat = String(category || "news");
+      if (!["news", "changelog", "devblog"].includes(cat)) {
+        return resolve({ ok: false, status: 0, error: "Catégorie invalide." });
+      }
+      const req = https.request(
+        {
+          hostname: "www.dofus.com",
+          path: `/fr/rss/${cat}.xml`,
+          method: "GET",
+          headers: {
+            Accept: "application/xml,text/xml,*/*",
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          timeout: 15000,
+        },
+        (res) => {
+          const chunks = [];
+          res.on("data", (c) => chunks.push(c));
+          res.on("end", () => {
+            const status = res.statusCode || 0;
+            resolve({ ok: status >= 200 && status < 300, status, text: Buffer.concat(chunks).toString("utf8") });
+          });
+        },
+      );
+      req.on("error", (err) => resolve({ ok: false, status: 0, error: String(err?.message || err) }));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve({ ok: false, status: 0, error: "timeout" });
+      });
       req.end();
     }),
   );

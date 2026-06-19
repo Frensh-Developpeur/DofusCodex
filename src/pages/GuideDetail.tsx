@@ -256,7 +256,7 @@ export default function GuideDetail() {
                         state === "done"
                           ? "bg-glow-emerald/25 text-glow-emerald"
                           : state === "current"
-                            ? "bg-gradient-to-br from-glow-purple to-glow-cyan text-white shadow-[0_0_12px_-2px_rgba(124,92,255,0.8)]"
+                            ? "bg-gradient-to-br from-glow-purple to-glow-cyan text-white shadow-[0_0_12px_-2px_rgb(var(--c-purple)/0.8)]"
                             : "bg-white/5 text-slate-500"
                       }`}
                     >

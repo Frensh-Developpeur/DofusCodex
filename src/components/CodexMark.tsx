@@ -3,7 +3,7 @@ import { useId } from "react";
 
 export default function CodexMark({
   className,
-  fill = "rgba(124,92,255,0.28)",
+  fill = "rgb(var(--c-purple)/0.28)",
   strokeWidth = 1.9,
   title,
 }: {
@@ -32,9 +32,9 @@ export default function CodexMark({
       {title && <title>{title}</title>}
       <defs>
         <linearGradient id={outerGradient} x1="3" x2="21" y1="4" y2="20" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7c5cff" />
+          <stop stopColor="rgb(var(--c-purple))" />
           <stop offset="0.55" stopColor="#4f8cff" />
-          <stop offset="1" stopColor="#22d3ee" />
+          <stop offset="1" stopColor="rgb(var(--c-cyan))" />
         </linearGradient>
         <linearGradient id={innerGradient} x1="7" x2="17" y1="7" y2="17" gradientUnits="userSpaceOnUse">
           <stop stopColor="#6f5bff" stopOpacity="0.72" />

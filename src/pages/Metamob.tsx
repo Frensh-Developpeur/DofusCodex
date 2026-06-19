@@ -103,7 +103,7 @@ function Connect() {
         <form onSubmit={submit} className={clsx(SURFACE, "relative overflow-hidden p-5")}>
           <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-glow-purple/40 to-glow-cyan/20 opacity-40 blur-3xl" />
           <div className="relative mb-5 flex items-center gap-3">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-glow-purple/35 bg-gradient-to-br from-glow-purple/25 to-glow-cyan/10 shadow-[0_0_24px_-6px_rgba(124,92,255,0.6)]">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-glow-purple/35 bg-gradient-to-br from-glow-purple/25 to-glow-cyan/10 shadow-[0_0_24px_-6px_rgb(var(--c-purple)/0.6)]">
               <DofusIcon name="archmonster" size={26} />
             </div>
             <div>
@@ -438,7 +438,7 @@ function Tracker({ auth }: { auth: MetamobAuth }) {
 
         <div className="relative grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="flex min-w-0 items-center gap-4">
-            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-glow-purple/35 bg-gradient-to-br from-glow-purple/25 to-glow-cyan/10 shadow-[0_0_24px_-6px_rgba(124,92,255,0.6)]">
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-glow-purple/35 bg-gradient-to-br from-glow-purple/25 to-glow-cyan/10 shadow-[0_0_24px_-6px_rgb(var(--c-purple)/0.6)]">
               <DofusIcon name="archmonster" size={32} />
             </div>
             <div className="min-w-0">
@@ -2079,7 +2079,7 @@ function MetaBadge({ children }: { children: React.ReactNode }) {
 function TutorialStep({ n, children }: { n: number; children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5 leading-relaxed">
-      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-glow-purple to-glow-cyan text-[11px] font-bold text-white shadow-[0_0_10px_-2px_rgba(124,92,255,0.8)]">
+      <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-glow-purple to-glow-cyan text-[11px] font-bold text-white shadow-[0_0_10px_-2px_rgb(var(--c-purple)/0.8)]">
         {n}
       </span>
       <span>{children}</span>
@@ -2224,7 +2224,7 @@ function TabChip({
       className={clsx(
         "no-drag inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition",
         active
-          ? "bg-glow-purple/20 text-white ring-1 ring-glow-purple/50 shadow-[0_0_18px_-6px_rgba(124,92,255,0.7)]"
+          ? "bg-glow-purple/20 text-white ring-1 ring-glow-purple/50 shadow-[0_0_18px_-6px_rgb(var(--c-purple)/0.7)]"
           : "text-slate-400 hover:bg-white/[0.07] hover:text-slate-200",
       )}
     >
@@ -2383,7 +2383,7 @@ function MonsterCard({
       variants={fadeUp}
       custom={index % 20}
       className={clsx(
-        "group relative overflow-hidden rounded-2xl border bg-white/[0.03] p-3 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:border-glow-purple/35 hover:shadow-[0_12px_36px_-14px_rgba(124,92,255,0.5)]",
+        "group relative overflow-hidden rounded-2xl border bg-white/[0.03] p-3 backdrop-blur-xl transition duration-300 hover:-translate-y-0.5 hover:border-glow-purple/35 hover:shadow-[0_12px_36px_-14px_rgb(var(--c-purple)/0.5)]",
         owned ? "border-glow-emerald/30 ring-1 ring-glow-emerald/10" : "border-white/10",
       )}
     >

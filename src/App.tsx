@@ -23,6 +23,7 @@ import Builder from "./pages/Builder";
 import BuildGallery from "./pages/BuildGallery";
 import Skinator from "./pages/Skinator";
 import SkinatorSkins from "./pages/SkinatorSkins";
+import BarbofusGallery from "./pages/BarbofusGallery";
 import Guides from "./pages/Guides";
 import GuideDetail from "./pages/GuideDetail";
 import GuideTree from "./pages/GuideTree";
@@ -86,6 +87,7 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/almanax", <Almanax />],
   ["/parametres", <Settings />],
   ["/skinator", <Skinator />],
+  ["/galerie-skins", <BarbofusGallery />],
 ];
 const KEEP_MAP = new Map(KEEP_ALIVE);
 
@@ -99,6 +101,15 @@ export default function App() {
   const qc = useQueryClient();
   const recentGuides = useStore((s) => s.recentGuides);
   const overlayAlpha = useOverlayAlpha();
+  const theme = useStore((s) => s.theme);
+
+  // Thème de couleur : appliqué sur <html data-theme>. « void » = défaut (aucun attribut → :root).
+  // Vaut aussi pour la fenêtre overlay (même store synchronisé).
+  useEffect(() => {
+    const el = document.documentElement;
+    if (theme && theme !== "void") el.dataset.theme = theme;
+    else delete el.dataset.theme;
+  }, [theme]);
 
   // Au lancement : réchauffe le catalogue + les guides récents depuis le stockage local
   // (IndexedDB), et lance une mise à jour discrète si la dernière synchro est trop ancienne.

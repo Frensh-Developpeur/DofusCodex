@@ -13,8 +13,8 @@ const RETRY_EVERY_MS = 5000;
 
 // Fond dégradé identique au splash de démarrage (index.html) → continuité visuelle parfaite.
 const BACKDROP =
-  "radial-gradient(120% 90% at 50% 18%, rgba(124, 92, 255, 0.16), transparent 60%)," +
-  "radial-gradient(90% 70% at 50% 100%, rgba(34, 211, 238, 0.1), transparent 55%)," +
+  "radial-gradient(120% 90% at 50% 18%, rgb(var(--c-purple)/0.16), transparent 60%)," +
+  "radial-gradient(90% 70% at 50% 100%, rgb(var(--c-cyan)/0.1), transparent 55%)," +
   "#070912";
 
 async function probeConnection(): Promise<boolean> {
@@ -115,7 +115,7 @@ function OfflineScreen({ onRetry, retrying }: { onRetry: () => void; retrying: b
         className="relative grid h-28 w-28 place-items-center"
       >
         <span className="absolute inset-2 rounded-full bg-glow-purple/25 blur-2xl" />
-        <WifiOff className="relative h-12 w-12 text-glow-violet drop-shadow-[0_0_12px_rgba(124,92,255,0.7)]" />
+        <WifiOff className="relative h-12 w-12 text-glow-violet drop-shadow-[0_0_12px_rgb(var(--c-purple)/0.7)]" />
       </motion.div>
 
       <div className="space-y-2.5">

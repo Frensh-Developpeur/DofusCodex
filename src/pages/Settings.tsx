@@ -11,6 +11,7 @@ import { useStore, actions } from "../store/store";
 import { getSyncState, type SyncState } from "../lib/guideStore";
 import { SectionHeader, fadeUp } from "../components/ui";
 import ClearCacheButton from "../components/ClearCacheButton";
+import { ThemePicker } from "../components/ThemePicker";
 
 // Sources de données live (sans clé API) — affichées à titre informatif.
 const SOURCES = [
@@ -115,6 +116,19 @@ export default function Settings() {
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
+        {/* Apparence / thème */}
+        <section className="glass rounded-2xl p-5 lg:col-span-2">
+          <div className="flex items-center gap-2.5">
+            <DofusIcon name="glyph" size={20} />
+            <h2 className="font-display text-lg font-bold text-white">Apparence</h2>
+          </div>
+          <p className="mt-2 mb-4 text-sm leading-relaxed text-slate-400">
+            Choisis le thème de couleur de l'app. Accessible aussi rapidement depuis le bouton{" "}
+            <span className="text-slate-300">Thème</span> en bas de la barre latérale.
+          </p>
+          <ThemePicker />
+        </section>
+
         {/* À propos / mises à jour */}
         <section className="glass rounded-2xl p-5">
           <div className="flex items-center gap-2.5">

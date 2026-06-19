@@ -7,8 +7,8 @@ const VERSION_KEY = "dofuscodex.appVersion";
 const SHOW_MS = 2400;
 
 const BACKDROP =
-  "radial-gradient(120% 90% at 50% 18%, rgba(124, 92, 255, 0.16), transparent 60%)," +
-  "radial-gradient(90% 70% at 50% 100%, rgba(34, 211, 238, 0.1), transparent 55%)," +
+  "radial-gradient(120% 90% at 50% 18%, rgb(var(--c-purple)/0.16), transparent 60%)," +
+  "radial-gradient(90% 70% at 50% 100%, rgb(var(--c-cyan)/0.1), transparent 55%)," +
   "#070912";
 
 // Affiché au relancement APRÈS une mise à jour : l'install Windows est silencieuse (rien à

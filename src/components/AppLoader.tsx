@@ -9,7 +9,7 @@ export default function AppLoader({ label = "Chargement du codex…" }: { label?
         <svg
           className="al-hex"
           viewBox="0 0 24 24"
-          fill="rgba(124,92,255,0.25)"
+          fill="rgb(var(--c-purple)/0.25)"
           stroke="currentColor"
           strokeWidth={2}
           strokeLinecap="round"

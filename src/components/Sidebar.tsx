@@ -10,6 +10,7 @@ import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import AccountButton from "./AccountButton";
 import FavoritesManager from "./FavoritesManager";
+import { ThemeMenu } from "./ThemePicker";
 import { openGlobalSearch } from "./GlobalSearch";
 import { NAV_GROUPS as GROUPS, ALL_NAV_ITEMS as ALL_ITEMS, type NavItem as Item } from "../lib/navItems";
 
@@ -30,9 +31,13 @@ export default function Sidebar() {
     return init;
   });
   const toggleGroup = (title: string) => setOpenGroups((s) => ({ ...s, [title]: !s[title] }));
-  // Quitter le Skinator avec le moteur ouvert → on intercepte pour proposer un choix.
+  // Quitter le Skinator avec le moteur ouvert → on intercepte pour proposer un choix. Mais on
+  // ne propose ça que si on QUITTE la section skin : naviguer entre Skinator / Galerie Barbofus /
+  // Mes Skins garde le moteur en fond sans popup (ces pages sont keep-alive, le moteur survit).
   const engineOpen = useEngineOpen();
   const guardLeave = location.pathname === "/skinator" && engineOpen;
+  const isSkinPage = (to: string) =>
+    to === "/skinator" || to === "/galerie-skins" || to === "/mes-skins";
 
   // Mémoire de section : dernier chemin visité sous chaque onglet (le temps de la session).
   // Recliquer un onglet ramène donc sur la sous-page quittée (ex. la fiche d'un monstre/donjon
@@ -92,7 +97,7 @@ export default function Sidebar() {
         state={{ fromSection: true }}
         title={collapsed ? item.label : undefined}
         onClick={(e) => {
-          if (guardLeave && to !== "/skinator") {
+          if (guardLeave && !isSkinPage(to)) {
             e.preventDefault();
             skinatorEngine.requestLeave(to);
           }
@@ -237,6 +242,7 @@ export default function Sidebar() {
 
       <div className="mt-auto border-t border-white/5 p-3">
         <AccountButton collapsed={collapsed} />
+        <ThemeMenu collapsed={collapsed} />
         <NavLink
           to="/parametres"
           state={{ fromSidebar: true }}

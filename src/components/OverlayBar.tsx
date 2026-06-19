@@ -63,7 +63,7 @@ export default function OverlayBar() {
 
   return (
     <div className="drag relative z-30 flex h-9 shrink-0 items-center gap-2 border-b border-white/10 bg-void-900/70 px-2.5 backdrop-blur-md">
-      <CodexMark className="h-3.5 w-3.5 shrink-0 text-glow-purple" fill="rgba(124,92,255,0.25)" />
+      <CodexMark className="h-3.5 w-3.5 shrink-0 text-glow-purple" fill="rgb(var(--c-purple)/0.25)" />
       <span className="shrink-0 text-[11px] font-semibold tracking-wide text-slate-300">Overlay</span>
 
       {/* Accroche à la fenêtre Dofus — Windows uniquement */}

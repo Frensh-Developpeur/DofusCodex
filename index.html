@@ -156,6 +156,13 @@
         }
       }
     </style>
+    <!-- Applique le thème de couleur AVANT le 1er rendu (évite un flash du thème par défaut). -->
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem("dofuscodex.state.v1") || "{}");
+        if (s && s.theme && s.theme !== "void") document.documentElement.dataset.theme = s.theme;
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

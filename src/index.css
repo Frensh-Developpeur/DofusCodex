@@ -5,6 +5,127 @@
 @layer base {
   :root {
     color-scheme: dark;
+
+    /* Palette en canaux « R G B » consommée par Tailwind (rgb(var(--c-*) / <alpha-value>)).
+       Le fond (void-*) et les couleurs sémantiques (gold/ember/rose/emerald = avertissement/
+       danger/succès) restent constants ; un thème ne change que les accents de marque
+       (purple/violet/cyan) + le glow ambiant. Thème par défaut « Améthyste ». */
+    --c-void-900: 7 9 18;
+    --c-void-800: 11 15 30;
+    --c-void-700: 18 24 41;
+    --c-void-600: 26 34 56;
+    --c-void-500: 35 44 71;
+    --c-purple: 124 92 255;
+    --c-violet: 157 123 255;
+    --c-cyan: 34 211 238;
+    --c-gold: 245 196 81;
+    --c-ember: 255 120 73;
+    --c-rose: 255 93 143;
+    --c-emerald: 52 211 153;
+  }
+
+  /* ── Thèmes : accents de marque (purple/violet/cyan) + fond (void-*) teinté ────
+     Le fond garde la même progression de luminosité que le défaut (900→500), juste
+     décalée vers la teinte du thème → contraste/lisibilité préservés. */
+  [data-theme="emerald"] {
+    --c-purple: 16 185 129;
+    --c-violet: 52 211 153;
+    --c-cyan: 45 212 191;
+    --c-void-900: 4 22 16;
+    --c-void-800: 7 32 24;
+    --c-void-700: 12 47 35;
+    --c-void-600: 18 64 48;
+    --c-void-500: 26 82 62;
+  }
+  [data-theme="ocean"] {
+    --c-purple: 59 130 246;
+    --c-violet: 96 165 250;
+    --c-cyan: 34 211 238;
+    --c-void-900: 4 14 30;
+    --c-void-800: 7 22 46;
+    --c-void-700: 12 34 66;
+    --c-void-600: 18 48 88;
+    --c-void-500: 26 62 110;
+  }
+  [data-theme="ruby"] {
+    --c-purple: 244 63 94;
+    --c-violet: 251 113 133;
+    --c-cyan: 251 146 60;
+    --c-void-900: 28 6 12;
+    --c-void-800: 42 10 19;
+    --c-void-700: 60 16 28;
+    --c-void-600: 80 23 39;
+    --c-void-500: 102 31 50;
+  }
+  [data-theme="amber"] {
+    --c-purple: 245 158 11;
+    --c-violet: 251 191 36;
+    --c-cyan: 251 113 133;
+    --c-void-900: 28 18 4;
+    --c-void-800: 42 28 8;
+    --c-void-700: 60 41 14;
+    --c-void-600: 80 56 22;
+    --c-void-500: 102 72 30;
+  }
+  [data-theme="rose"] {
+    --c-purple: 236 72 153;
+    --c-violet: 244 114 182;
+    --c-cyan: 168 85 247;
+    --c-void-900: 26 6 21;
+    --c-void-800: 40 10 33;
+    --c-void-700: 58 17 48;
+    --c-void-600: 78 24 65;
+    --c-void-500: 100 33 84;
+  }
+  [data-theme="lime"] {
+    --c-purple: 132 204 22;
+    --c-violet: 163 230 53;
+    --c-cyan: 250 204 21;
+    --c-void-900: 16 22 4;
+    --c-void-800: 25 33 7;
+    --c-void-700: 37 48 12;
+    --c-void-600: 51 65 18;
+    --c-void-500: 66 84 26;
+  }
+  [data-theme="teal"] {
+    --c-purple: 20 184 166;
+    --c-violet: 45 212 191;
+    --c-cyan: 34 211 238;
+    --c-void-900: 4 22 20;
+    --c-void-800: 7 33 30;
+    --c-void-700: 12 48 44;
+    --c-void-600: 18 64 59;
+    --c-void-500: 26 82 76;
+  }
+  [data-theme="indigo"] {
+    --c-purple: 79 70 229;
+    --c-violet: 99 102 241;
+    --c-cyan: 56 189 248;
+    --c-void-900: 11 11 30;
+    --c-void-800: 17 17 46;
+    --c-void-700: 26 26 66;
+    --c-void-600: 37 38 88;
+    --c-void-500: 49 50 110;
+  }
+  [data-theme="crimson"] {
+    --c-purple: 220 38 38;
+    --c-violet: 248 113 113;
+    --c-cyan: 249 115 22;
+    --c-void-900: 28 7 7;
+    --c-void-800: 42 11 11;
+    --c-void-700: 60 17 17;
+    --c-void-600: 80 24 24;
+    --c-void-500: 102 32 32;
+  }
+  [data-theme="slate"] {
+    --c-purple: 100 116 139;
+    --c-violet: 148 163 184;
+    --c-cyan: 56 189 248;
+    --c-void-900: 13 16 22;
+    --c-void-800: 20 25 33;
+    --c-void-700: 31 38 49;
+    --c-void-600: 44 53 67;
+    --c-void-500: 58 69 86;
   }
 
   html,
@@ -28,9 +149,9 @@
     z-index: 0;
     pointer-events: none;
     background:
-      radial-gradient(60rem 60rem at 12% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
-      radial-gradient(50rem 50rem at 110% 10%, rgba(34, 211, 238, 0.1), transparent 55%),
-      radial-gradient(40rem 40rem at 50% 120%, rgba(255, 120, 73, 0.08), transparent 60%);
+      radial-gradient(62rem 62rem at 10% -12%, rgb(var(--c-purple) / 0.34), transparent 60%),
+      radial-gradient(54rem 54rem at 112% 8%, rgb(var(--c-cyan) / 0.24), transparent 56%),
+      radial-gradient(48rem 48rem at 50% 122%, rgb(var(--c-violet) / 0.2), transparent 60%);
   }
 
   /* Fenêtre overlay : fonds transparents pour laisser voir le jeu derrière (le texte/les cartes
@@ -55,13 +176,13 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(124, 92, 255, 0.25);
+    background: rgb(var(--c-purple) / 0.25);
     border-radius: 999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(124, 92, 255, 0.45);
+    background: rgb(var(--c-purple) / 0.45);
     background-clip: padding-box;
   }
 }

@@ -930,7 +930,7 @@ function BuildEditor({ build }: { build: Build }) {
                     onClick={resetAll}
                     className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10"
                   >
-                    <DofusIcon name="reset" size={14} tint="#22d3ee" /> Réinitialiser
+                    <DofusIcon name="reset" size={14} tint="rgb(var(--c-cyan))" /> Réinitialiser
                   </button>
                 </div>
               </div>
@@ -1326,7 +1326,7 @@ function BuildEditor({ build }: { build: Build }) {
                                 title={sp.name.fr}
                                 className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
                                   selSpell?.id === sp.id
-                                    ? "shadow-[0_0_18px_-4px_rgba(124,92,255,0.7)] ring-2 ring-glow-violet"
+                                    ? "shadow-[0_0_18px_-4px_rgb(var(--c-purple)/0.7)] ring-2 ring-glow-violet"
                                     : "ring-1 ring-white/10 hover:ring-glow-violet/40"
                                 }`}
                               >
@@ -2114,7 +2114,7 @@ function CharacterPanel({
   const bgY = useSpring(useTransform(py, [-0.5, 0.5], [10, -10]), spring);
   const glowX = useTransform(px, [-0.5, 0.5], ["25%", "75%"]);
   const glowY = useTransform(py, [-0.5, 0.5], ["20%", "80%"]);
-  const glow = useMotionTemplate`radial-gradient(circle at ${glowX} ${glowY}, rgba(124,92,255,0.4), transparent 55%)`;
+  const glow = useMotionTemplate`radial-gradient(circle at ${glowX} ${glowY}, rgb(var(--c-purple)/0.4), transparent 55%)`;
 
   const onMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();

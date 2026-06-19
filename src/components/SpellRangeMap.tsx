@@ -346,7 +346,7 @@ export function SpellRangeMap({
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
         <div style={{ transform: `scaleY(${TILT}) rotate(45deg)` }}>
           <motion.span
-            className="block rounded-[4px] bg-glow-violet/55 ring-2 ring-glow-violet shadow-[0_0_14px_-2px_rgba(157,123,255,0.9)]"
+            className="block rounded-[4px] bg-glow-violet/55 ring-2 ring-glow-violet shadow-[0_0_14px_-2px_rgb(var(--c-violet)/0.9)]"
             style={{ width: cell, height: cell }}
             animate={{ opacity: [1, 0.5, 1], scale: [1, 1.18, 1] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}

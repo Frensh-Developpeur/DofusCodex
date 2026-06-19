@@ -30,14 +30,14 @@ const DEFAULT_COLORS = {
   hair: "#efe0b9",
   primary: "#2b6f8f",
   secondary: "#f5b64c",
-  accent: "#7c5cff",
+  accent: "rgb(var(--c-purple))",
 };
 
 const COLOR_PRESETS = [
-  ["#d49a73", "#efe0b9", "#2b6f8f", "#f5b64c", "#7c5cff"],
+  ["#d49a73", "#efe0b9", "#2b6f8f", "#f5b64c", "rgb(var(--c-purple))"],
   ["#b9855f", "#12151f", "#7d1f2f", "#20242f", "#d8b55b"],
   ["#8f654a", "#f0f4f8", "#315c45", "#d7e9ce", "#ed8936"],
-  ["#c68b68", "#734630", "#463f7f", "#e6c66a", "#22d3ee"],
+  ["#c68b68", "#734630", "#463f7f", "#e6c66a", "rgb(var(--c-cyan))"],
   ["#684936", "#dad7cd", "#1f2937", "#8b5cf6", "#f472b6"],
 ];
 
@@ -800,7 +800,7 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
       style={{
         height: viewHeight,
         background:
-          "radial-gradient(ellipse 70% 55% at 50% 42%, rgba(124,58,237,.14), rgba(34,211,238,.05) 45%, transparent 72%), #070912",
+          "radial-gradient(ellipse 70% 55% at 50% 42%, rgba(124,58,237,.14), rgb(var(--c-cyan)/.05) 45%, transparent 72%), #070912",
       }}
     >
       <span className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-glow-purple/40 to-glow-cyan/25 text-white shadow-glow">
@@ -863,8 +863,8 @@ function BarbofusEngine({ url, active }: { url: string; active: boolean }) {
             className="absolute inset-0 z-10 flex items-center justify-center"
             style={{
               background:
-                "radial-gradient(120% 90% at 50% 18%, rgba(124, 92, 255, 0.16), transparent 60%)," +
-                "radial-gradient(90% 70% at 50% 100%, rgba(34, 211, 238, 0.1), transparent 55%)," +
+                "radial-gradient(120% 90% at 50% 18%, rgb(var(--c-purple)/0.16), transparent 60%)," +
+                "radial-gradient(90% 70% at 50% 100%, rgb(var(--c-cyan)/0.1), transparent 55%)," +
                 "#070912",
             }}
           >
@@ -1151,7 +1151,7 @@ function applyBarbofusFocus(webview: BarbofusWebviewElement): Promise<unknown> {
       background:
         radial-gradient(ellipse 70% 55% at 50% 40%,
           rgba(124, 58, 237, 0.12),
-          rgba(34, 211, 238, 0.05) 45%,
+          rgb(var(--c-cyan)/0.05) 45%,
           transparent 70%),
         #070912 !important;
       background-attachment: fixed !important;

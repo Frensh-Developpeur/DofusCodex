@@ -277,7 +277,7 @@ function Hero() {
       className="glass relative overflow-hidden rounded-3xl border-white/10 bg-void-800/60"
     >
       <div className="absolute inset-0 bg-grid-faint bg-[length:30px_30px] opacity-30" />
-      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_-10%,rgba(124,92,255,0.20),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_-10%,rgb(var(--c-purple)/0.20),transparent_55%)]" />
 
       {/* Orbes lumineux flottants en arrière-plan */}
       <motion.div
@@ -531,8 +531,8 @@ function LogoMark() {
         <div className="absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-glow-cyan/70 to-transparent" />
         <CodexMark
           title="DofusCodex"
-          className="relative h-11 w-11 text-glow-violet drop-shadow-[0_0_10px_rgba(124,92,255,0.55)]"
-          fill="rgba(124,92,255,0.28)"
+          className="relative h-11 w-11 text-glow-violet drop-shadow-[0_0_10px_rgb(var(--c-purple)/0.55)]"
+          fill="rgb(var(--c-purple)/0.28)"
           strokeWidth={1.9}
         />
         <span className="absolute h-2 w-2 rounded-full bg-glow-cyan shadow-glow-cyan" />

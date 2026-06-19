@@ -107,7 +107,7 @@ function SkinCard({ skin, index, onLoad }: { skin: BarbofusSkin; index: number; 
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 78% 72% at 50% 40%, rgba(124,92,255,.20), rgba(34,211,238,.06) 52%, transparent 76%), #0a0d18",
+            "radial-gradient(ellipse 78% 72% at 50% 40%, rgb(var(--c-purple)/.20), rgb(var(--c-cyan)/.06) 52%, transparent 76%), #0a0d18",
         }}
       >
         {skin.thumb ? (

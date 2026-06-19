@@ -4,22 +4,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Deep, "next-gen" dark palette
+        // Palette dark pilotée par variables CSS (format canaux « R G B » → l'opacité Tailwind
+        // `/30` reste fonctionnelle via <alpha-value>). Valeurs par défaut + overrides par thème
+        // dans src/index.css (:root et [data-theme="…"]). Registre des thèmes : src/data/themes.ts.
         void: {
-          900: "#070912",
-          800: "#0b0f1e",
-          700: "#121829",
-          600: "#1a2238",
-          500: "#232c47",
+          900: "rgb(var(--c-void-900) / <alpha-value>)",
+          800: "rgb(var(--c-void-800) / <alpha-value>)",
+          700: "rgb(var(--c-void-700) / <alpha-value>)",
+          600: "rgb(var(--c-void-600) / <alpha-value>)",
+          500: "rgb(var(--c-void-500) / <alpha-value>)",
         },
         glow: {
-          purple: "#7c5cff",
-          violet: "#9d7bff",
-          cyan: "#22d3ee",
-          gold: "#f5c451",
-          ember: "#ff7849",
-          rose: "#ff5d8f",
-          emerald: "#34d399",
+          purple: "rgb(var(--c-purple) / <alpha-value>)",
+          violet: "rgb(var(--c-violet) / <alpha-value>)",
+          cyan: "rgb(var(--c-cyan) / <alpha-value>)",
+          gold: "rgb(var(--c-gold) / <alpha-value>)",
+          ember: "rgb(var(--c-ember) / <alpha-value>)",
+          rose: "rgb(var(--c-rose) / <alpha-value>)",
+          emerald: "rgb(var(--c-emerald) / <alpha-value>)",
         },
       },
       fontFamily: {
@@ -27,13 +29,13 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 40px -10px rgba(124, 92, 255, 0.5)",
-        "glow-cyan": "0 0 40px -10px rgba(34, 211, 238, 0.45)",
+        glow: "0 0 40px -10px rgb(var(--c-purple) / 0.5)",
+        "glow-cyan": "0 0 40px -10px rgb(var(--c-cyan) / 0.45)",
         card: "0 10px 40px -15px rgba(0,0,0,0.7)",
       },
       backgroundImage: {
         "grid-faint":
-          "linear-gradient(rgba(124,92,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(124,92,255,0.06) 1px, transparent 1px)",
+          "linear-gradient(rgb(var(--c-purple) / 0.06) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--c-purple) / 0.06) 1px, transparent 1px)",
       },
       keyframes: {
         "pulse-glow": {

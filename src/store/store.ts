@@ -92,6 +92,7 @@ export interface AppState {
   metamob: MetamobAuth | null; // connexion au compte Metamob (null = non connecté)
   shoppingList: ShoppingItem[]; // liste de courses (items à fabriquer)
   resourceOwned: Record<number, number>; // resourceId -> quantité possédée (suivi de récolte)
+  theme: string; // thème de couleur (id, cf. src/data/themes.ts) — appliqué sur <html data-theme>
 }
 
 const STORAGE_KEY = "dofuscodex.state.v1";
@@ -115,6 +116,7 @@ const DEFAULT_STATE: AppState = {
   metamob: null,
   shoppingList: [],
   resourceOwned: {},
+  theme: "void",
 };
 
 // ---- Tiny external store (useSyncExternalStore) ----
@@ -357,6 +359,10 @@ export const actions = {
   },
   toggleSidebar() {
     setState((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed }));
+  },
+  // ---- Thème de couleur ----
+  setTheme(theme: string) {
+    setState((s) => ({ ...s, theme }));
   },
   // ---- Pages favorites (épinglées en haut du menu) ----
   toggleFavoritePage(to: string) {

@@ -307,7 +307,7 @@ function GuideCard({
             staleTime: 1000 * 60 * 30,
           })
         }
-        className={`glass no-drag group relative flex h-full flex-col overflow-hidden rounded-2xl p-4 transition-shadow duration-300 hover:shadow-[0_8px_40px_-12px_rgba(124,92,255,0.45)] ${
+        className={`glass no-drag group relative flex h-full flex-col overflow-hidden rounded-2xl p-4 transition-shadow duration-300 hover:shadow-[0_8px_40px_-12px_rgb(var(--c-purple)/0.45)] ${
           done ? "ring-1 ring-glow-emerald/40" : "hover:ring-1 hover:ring-white/15"
         }`}
       >

@@ -214,7 +214,7 @@ export default function GuideTree() {
                 status === "done"
                   ? "ring-2 ring-glow-emerald shadow-[0_0_12px_-2px_rgba(52,211,153,0.6)]"
                   : status === "progress"
-                    ? "ring-2 ring-glow-cyan shadow-[0_0_12px_-2px_rgba(34,211,238,0.5)]"
+                    ? "ring-2 ring-glow-cyan shadow-[0_0_12px_-2px_rgb(var(--c-cyan)/0.5)]"
                     : "ring-1 ring-white/15";
               return (
                 <button

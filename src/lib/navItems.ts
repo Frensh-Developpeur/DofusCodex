@@ -46,6 +46,7 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { to: "/skinator", label: "Skinator", dofus: "character" },
+      { to: "/galerie-skins", label: "Galerie Barbofus", dofus: "search" },
       { to: "/mes-skins", label: "Mes Skins", dofus: "glyph" },
     ],
   },

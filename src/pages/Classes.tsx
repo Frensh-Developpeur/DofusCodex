@@ -85,7 +85,7 @@ function ClassCard({ breed, index, onOpen }: { breed: Breed; index: number; onOp
     >
       {/* Fond : grille discrète + halo qui s'allume au survol. */}
       <div className="absolute inset-0 bg-grid-faint bg-[length:26px_26px] opacity-25" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(124,92,255,0.16),transparent_62%)] opacity-70 transition group-hover:opacity-100" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgb(var(--c-purple)/0.16),transparent_62%)] opacity-70 transition group-hover:opacity-100" />
 
       {/* Personnage : rendu live transparent, sinon artwork de classe recadré, sinon symbole. */}
       <div className="absolute inset-x-0 top-0 bottom-12 flex items-center justify-center">
@@ -188,7 +188,7 @@ export function ClassDetail() {
 
       <div className="glass flex flex-col overflow-hidden rounded-2xl ring-1 ring-white/10">
         <div className="relative flex items-center gap-4 overflow-hidden border-b border-white/10 p-4">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_50%,rgba(124,92,255,0.18),transparent_45%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_50%,rgb(var(--c-purple)/0.18),transparent_45%)]" />
           <div className="relative grid h-20 w-20 shrink-0 place-items-center">
             {heroImg ? (
               <img
@@ -237,7 +237,7 @@ export function ClassDetail() {
                           title={sp.name.fr}
                           className={`no-drag h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-void-700/60 transition ${
                             sel?.id === sp.id
-                              ? "shadow-[0_0_18px_-4px_rgba(124,92,255,0.7)] ring-2 ring-glow-violet"
+                              ? "shadow-[0_0_18px_-4px_rgb(var(--c-purple)/0.7)] ring-2 ring-glow-violet"
                               : "ring-1 ring-white/10 hover:ring-glow-violet/40"
                           }`}
                         >

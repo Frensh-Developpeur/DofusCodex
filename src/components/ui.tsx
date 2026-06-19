@@ -17,12 +17,12 @@ export function DofusLoader({ label, className }: { label?: string; className?: 
           className="absolute inset-0 animate-spin rounded-full"
           style={{
             background:
-              "conic-gradient(from 0deg, transparent 0deg, #7c5cff 150deg, #22d3ee 280deg, transparent 340deg)",
+              "conic-gradient(from 0deg, transparent 0deg, rgb(var(--c-purple)) 150deg, rgb(var(--c-cyan)) 280deg, transparent 340deg)",
             WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
             mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
           }}
         />
-        <CodexMark className="h-3.5 w-3.5 text-glow-violet" fill="rgba(124,92,255,0.35)" />
+        <CodexMark className="h-3.5 w-3.5 text-glow-violet" fill="rgb(var(--c-purple)/0.35)" />
       </span>
       {label && <span className="text-sm">{label}</span>}
     </div>

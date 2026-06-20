@@ -1,6 +1,6 @@
 {
   "name": "dofus-codex",
-  "version": "0.1.53",
+  "version": "0.1.54",
   "description": "DofusCodex — Le guide nouvelle génération pour Dofus 3 : donjons animés, stuffinator, quêtes et almanax.",
   "author": "DofusCodex",
   "private": true,
@@ -62,6 +62,7 @@
   "build": {
     "appId": "com.dofuscodex.app",
     "productName": "DofusCodex",
+    "beforePack": "build/beforePack.cjs",
     "afterPack": "build/afterPack.cjs",
     "protocols": [
       {
@@ -86,6 +87,15 @@
     "files": [
       "dist/**/*",
       "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/macro-helper/win",
+        "to": "macro-helper",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "mac": {
       "category": "public.app-category.games",

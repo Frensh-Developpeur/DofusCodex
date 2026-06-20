@@ -16,6 +16,42 @@ interface UpdateEvent {
   isMac: boolean;
 }
 
+type NativeMacroStep = {
+  key?: string;
+  text?: string;
+  mouse?: string;
+  sleepMs?: number;
+  delayMs?: number;
+  repeat?: number;
+};
+
+type NativeMacroConfig = {
+  version?: number;
+  enabled: boolean;
+  suppressHotkeys: boolean;
+  debounceMs: number;
+  focusDelayMs?: number;
+  macros: Array<{
+    id: string;
+    enabled: boolean;
+    label: string;
+    hotkey: string;
+    target?: "active" | "dofus";
+    steps: NativeMacroStep[];
+  }>;
+};
+
+type NativeMacroStatus = {
+  platform: string;
+  available: boolean;
+  helperPath?: string | null;
+  configPath?: string | null;
+  running: boolean;
+  pid?: number | null;
+  lastEvent?: { type?: string; message?: string; at?: string } | null;
+  lastError?: string | null;
+};
+
 interface Window {
   dofusCodex?: {
     getPlatform: () => Promise<NodeJS.Platform>;
@@ -31,6 +67,9 @@ interface Window {
     fetchDofusNews?: (
       category: "news" | "changelog" | "devblog",
     ) => Promise<{ ok: boolean; status: number; text?: string; error?: string }>;
+    fetchDplnGuide?: (
+      slug: string,
+    ) => Promise<{ ok: boolean; status: number; text?: string; error?: string }>;
     onUpdate?: (cb: (p: UpdateEvent) => void) => () => void;
     peekUpdate?: () => Promise<UpdateEvent | null>;
     onDeepLink?: (cb: (url: string) => void) => () => void;
@@ -40,6 +79,11 @@ interface Window {
     overlayResize?: (size: { width: number; height: number }) => Promise<void>;
     overlaySnapMode?: (on: boolean) => Promise<void>;
     detectDofus?: () => Promise<{ running: boolean }>;
+    macrosStatus?: () => Promise<NativeMacroStatus>;
+    macrosLoadConfig?: () => Promise<NativeMacroConfig | null>;
+    macrosSaveConfig?: (config: NativeMacroConfig) => Promise<NativeMacroConfig>;
+    macrosStart?: (config: NativeMacroConfig) => Promise<{ ok: boolean; running?: boolean; pid?: number; reason?: string; candidates?: string[] }>;
+    macrosStop?: () => Promise<{ ok: boolean; running: boolean }>;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
     checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;

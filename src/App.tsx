@@ -30,6 +30,9 @@ import GuideTree from "./pages/GuideTree";
 import Almanax from "./pages/Almanax";
 import Forgemagie from "./pages/Forgemagie";
 import News from "./pages/News";
+import Titans from "./pages/Titans";
+import GuildRaids from "./pages/GuildRaids";
+import WindowsMacros from "./pages/WindowsMacros";
 import Hunt from "./pages/Hunt";
 import Monsters from "./pages/Monsters";
 import MonsterDetail from "./pages/MonsterDetail";
@@ -64,6 +67,8 @@ const OVERLAY_SHELL = "app-page-shell w-full px-3 py-3";
 const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/", <Dashboard />],
   ["/actualites", <News />],
+  ["/titans", <Titans />],
+  ["/raids-de-guilde", <GuildRaids />],
   ["/donjons", <Dungeons />],
   ["/stuffinator", <Stuffinator />],
   ["/builder", <BuildGallery />],
@@ -74,6 +79,7 @@ const KEEP_ALIVE: Array<[string, ReactNode]> = [
   ["/rentabilite-metiers", <CraftProfit />],
   ["/xp-familier", <XpFamilier />],
   ["/forgemagie", <Forgemagie />],
+  ["/macros-windows", <WindowsMacros />],
   ["/quetes", <Quests />],
   ["/liste-courses", <ShoppingList />],
   ["/metamob", <Metamob />],

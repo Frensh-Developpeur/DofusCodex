@@ -3,7 +3,7 @@ const path = require("node:path");
 const https = require("node:https");
 const fs = require("node:fs");
 const os = require("node:os");
-const { exec } = require("node:child_process");
+const { exec, spawn } = require("node:child_process");
 
 const isDev = process.env.NODE_ENV === "development";
 const DEV_URL = "http://localhost:5173";
@@ -347,6 +347,138 @@ try {
   /* package.json indisponible */
 }
 
+// ── Moteur macros Windows natif ───────────────────────────────────────────────────────
+// Le helper est un petit exe Win32/.NET autonome (hooks globaux + SendInput). Electron ne fait
+// que sauvegarder la config JSON et gérer le cycle de vie du process.
+let macroProc = null;
+let macroLastEvent = null;
+let macroLastError = null;
+
+function macroConfigPath() {
+  return path.join(app.getPath("userData"), "macro-helper-config.json");
+}
+
+function macroHelperCandidates() {
+  const exe = "DofusCodex.MacroHelper.exe";
+  const devRoot = path.join(__dirname, "..", "native", "win-macro-helper");
+  return [
+    process.env.DOFUS_CODEX_MACRO_HELPER,
+    app.isPackaged ? path.join(process.resourcesPath, "macro-helper", exe) : null,
+    path.join(devRoot, "bin", "Release", "net8.0-windows", "win-x64", "publish", exe),
+    path.join(__dirname, "..", "build", "macro-helper", "win", exe),
+  ].filter(Boolean);
+}
+
+function findMacroHelper() {
+  if (process.platform !== "win32") return null;
+  return macroHelperCandidates().find((p) => fs.existsSync(p)) || null;
+}
+
+function normalizeMacroConfig(config) {
+  const macros = Array.isArray(config?.macros) ? config.macros : [];
+  return {
+    version: 1,
+    enabled: config?.enabled !== false,
+    suppressHotkeys: config?.suppressHotkeys !== false,
+    debounceMs: Math.max(0, Math.min(5000, Number(config?.debounceMs ?? 180) || 0)),
+    focusDelayMs: Math.max(0, Math.min(1000, Number(config?.focusDelayMs ?? 120) || 0)),
+    macros: macros
+      .filter((m) => m && typeof m === "object")
+      .slice(0, 24)
+      .map((m, i) => ({
+        id: String(m.id || `macro-${i + 1}`),
+        enabled: m.enabled !== false,
+        label: String(m.label || `Macro ${i + 1}`).slice(0, 80),
+        hotkey: String(m.hotkey || "").slice(0, 40),
+        target: m.target === "dofus" ? "dofus" : "active",
+        steps: (Array.isArray(m.steps) ? m.steps : [])
+          .filter((s) => s && typeof s === "object")
+          .slice(0, 60)
+          .map((s) => ({
+            ...(s.key ? { key: String(s.key).slice(0, 40) } : {}),
+            ...(s.text ? { text: String(s.text).slice(0, 500) } : {}),
+            ...(s.mouse ? { mouse: String(s.mouse).slice(0, 40) } : {}),
+            ...(s.sleepMs != null ? { sleepMs: Math.max(0, Math.min(10000, Number(s.sleepMs) || 0)) } : {}),
+            ...(s.delayMs != null ? { delayMs: Math.max(0, Math.min(10000, Number(s.delayMs) || 0)) } : {}),
+            ...(s.repeat != null ? { repeat: Math.max(1, Math.min(50, Number(s.repeat) || 1)) } : {}),
+          })),
+      })),
+  };
+}
+
+async function loadMacroConfig() {
+  try {
+    return JSON.parse(await fs.promises.readFile(macroConfigPath(), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function saveMacroConfig(config) {
+  const clean = normalizeMacroConfig(config);
+  await fs.promises.mkdir(path.dirname(macroConfigPath()), { recursive: true });
+  await fs.promises.writeFile(macroConfigPath(), JSON.stringify(clean, null, 2), "utf8");
+  return clean;
+}
+
+function stopMacroHelper() {
+  if (!macroProc) return { ok: true, running: false };
+  const proc = macroProc;
+  macroProc = null;
+  try {
+    proc.kill();
+  } catch {
+    /* already gone */
+  }
+  return { ok: true, running: false };
+}
+
+async function startMacroHelper(config) {
+  if (process.platform !== "win32") return { ok: false, reason: "windows-only" };
+  const helper = findMacroHelper();
+  if (!helper) return { ok: false, reason: "helper-missing", candidates: macroHelperCandidates() };
+  const clean = await saveMacroConfig(config || (await loadMacroConfig()) || {});
+  stopMacroHelper();
+  macroLastError = null;
+  macroLastEvent = null;
+  macroProc = spawn(helper, [macroConfigPath()], {
+    cwd: path.dirname(helper),
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  macroProc.stdout?.on("data", (buf) => {
+    for (const line of String(buf).split(/\r?\n/).filter(Boolean)) {
+      try {
+        macroLastEvent = JSON.parse(line);
+      } catch {
+        macroLastEvent = { type: "log", message: line };
+      }
+    }
+  });
+  macroProc.stderr?.on("data", (buf) => {
+    macroLastError = String(buf).trim();
+  });
+  macroProc.on("exit", (code, signal) => {
+    macroLastEvent = { type: "exit", message: signal || `code ${code}` };
+    macroProc = null;
+  });
+  return { ok: true, running: true, pid: macroProc.pid, config: clean };
+}
+
+function macroStatus() {
+  const helper = findMacroHelper();
+  return {
+    platform: process.platform,
+    available: !!helper,
+    helperPath: helper,
+    configPath: app.isReady() ? macroConfigPath() : null,
+    running: !!macroProc,
+    pid: macroProc?.pid ?? null,
+    lastEvent: macroLastEvent,
+    lastError: macroLastError,
+  };
+}
+
 // Hosts the renderer is allowed to talk to.
 const API_HOSTS =
   "https://api.dofusdu.de https://api.dofusdb.fr https://*.dofusdb.fr https://ganymede-app.com https://barbofus.com https://skinator.barbofus.com https://www.metamob.fr https://*.supabase.co wss://*.supabase.co";
@@ -506,6 +638,11 @@ app.whenReady().then(() => {
     if (snapMode) dockOverlay();
   });
   ipcMain.handle("dofus:detect", () => detectDofus());
+  ipcMain.handle("macros:status", () => macroStatus());
+  ipcMain.handle("macros:load-config", () => loadMacroConfig());
+  ipcMain.handle("macros:save-config", (_e, config) => saveMacroConfig(config));
+  ipcMain.handle("macros:start", (_e, config) => startMacroHelper(config));
+  ipcMain.handle("macros:stop", () => stopMacroHelper());
 
   // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
   // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.
@@ -722,6 +859,45 @@ app.whenReady().then(() => {
     }),
   );
 
+  // Page guide DofusPourLesNoobs (Weebly) : pas d'en-tête CORS → on relaie depuis le main.
+  // Hôte figé, slug validé (un seul segment alphanum/tiret, pas de saut de chemin/d'hôte).
+  ipcMain.handle("dpln:guide", (_e, slug) =>
+    new Promise((resolve) => {
+      const s = String(slug || "");
+      if (!/^[a-z0-9-]+$/.test(s)) {
+        return resolve({ ok: false, status: 0, error: "Slug invalide." });
+      }
+      const req = https.request(
+        {
+          hostname: "www.dofuspourlesnoobs.com",
+          path: `/${s}.html`,
+          method: "GET",
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "Accept-Language": "fr-FR,fr;q=0.9",
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          timeout: 15000,
+        },
+        (res) => {
+          const chunks = [];
+          res.on("data", (c) => chunks.push(c));
+          res.on("end", () => {
+            const status = res.statusCode || 0;
+            resolve({ ok: status >= 200 && status < 300, status, text: Buffer.concat(chunks).toString("utf8") });
+          });
+        },
+      );
+      req.on("error", (err) => resolve({ ok: false, status: 0, error: String(err?.message || err) }));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve({ ok: false, status: 0, error: "timeout" });
+      });
+      req.end();
+    }),
+  );
+
   createWindow();
   initAutoUpdater();
 
@@ -796,5 +972,10 @@ function initAutoUpdater() {
 }
 
 app.on("window-all-closed", () => {
+  stopMacroHelper();
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", () => {
+  stopMacroHelper();
 });

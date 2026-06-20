@@ -17,6 +17,9 @@ export interface Build {
   caracs?: Record<string, number>;
   parch?: Record<string, number>;
   exos?: Record<string, string>;
+  // Forgemagie par slot : { slotKey: { nomDeStat: valeurFinale } }. Surcharge la valeur d'une
+  // ligne de l'item (FM jusqu'au max / overmage au-delà) ou ajoute une ligne absente (exo).
+  fm?: Record<string, Record<string, number>>;
   target?: { resPct: number[]; resFlat: number[] };
 }
 
@@ -93,6 +96,9 @@ export interface AppState {
   shoppingList: ShoppingItem[]; // liste de courses (items à fabriquer)
   resourceOwned: Record<number, number>; // resourceId -> quantité possédée (suivi de récolte)
   theme: string; // thème de couleur (id, cf. src/data/themes.ts) — appliqué sur <html data-theme>
+  // Config des macros Windows, synchronisée dans le cloud (le helper natif lit en plus une copie
+  // disque). `updatedAt` = horodatage du dernier changement → fusion « dernier qui écrit gagne ».
+  macroConfig: (NativeMacroConfig & { updatedAt?: number }) | null;
 }
 
 const STORAGE_KEY = "dofuscodex.state.v1";
@@ -117,6 +123,7 @@ const DEFAULT_STATE: AppState = {
   shoppingList: [],
   resourceOwned: {},
   theme: "void",
+  macroConfig: null,
 };
 
 // ---- Tiny external store (useSyncExternalStore) ----
@@ -363,6 +370,10 @@ export const actions = {
   // ---- Thème de couleur ----
   setTheme(theme: string) {
     setState((s) => ({ ...s, theme }));
+  },
+  // ---- Config macros Windows (synchronisée cloud) ----
+  setMacroConfig(config: NativeMacroConfig | null) {
+    setState((s) => ({ ...s, macroConfig: config ? { ...config, updatedAt: Date.now() } : null }));
   },
   // ---- Pages favorites (épinglées en haut du menu) ----
   toggleFavoritePage(to: string) {

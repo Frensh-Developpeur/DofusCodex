@@ -94,7 +94,7 @@ export default function GlobalSearch() {
     }
     for (const w of WANTED_POSTERS) {
       if (w.name.toLowerCase().includes(t))
-        out.push({ key: `wanted:${w.slug}`, to: `/avis-de-recherche/${w.slug}`, label: w.name, sub: `Niv. ${w.level}`, group: "Avis de recherche", icon: "teteDeMort" });
+        out.push({ key: `wanted:${w.slug}`, to: `/avis-de-recherche/${w.slug}`, label: w.name, sub: `Niv. ${w.level}`, group: "Avis de recherche", icon: "skull" });
       if (out.filter((h) => h.group === "Avis de recherche").length >= 6) break;
     }
     return out;

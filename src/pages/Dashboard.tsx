@@ -70,7 +70,7 @@ const CATEGORIES: Category[] = [
       {
         to: "/avis-de-recherche",
         title: "Avis de recherche",
-        dofus: "teteDeMort",
+        dofus: "skull",
         desc: "81 criminels de la chasse aux primes : fiches de stratégie, montants de jetons et conseils, le tout filtrable par alignement et niveau.",
       },
       {

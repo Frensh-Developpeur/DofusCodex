@@ -107,7 +107,16 @@ function mergeStates(local: AppState, remote: Partial<AppState>): AppState {
     guideTotalSteps: mergeNumMap(local.guideTotalSteps, remote.guideTotalSteps),
     guideChecks: mergeChecks(local.guideChecks, remote.guideChecks),
     metamob: local.metamob ?? remote.metamob ?? null,
+    macroConfig: newerConfig(local.macroConfig, remote.macroConfig),
   };
+}
+
+// Config macros : on garde la version la plus récente (horodatage updatedAt) entre l'appareil
+// et le cloud — « dernier qui écrit gagne ».
+function newerConfig(local: AppState["macroConfig"], remote: AppState["macroConfig"] | undefined) {
+  if (!local) return remote ?? null;
+  if (!remote) return local;
+  return (remote.updatedAt ?? 0) > (local.updatedAt ?? 0) ? remote : local;
 }
 
 // Sous-ensemble réellement stocké côté serveur : on retire la pref d'UI locale et les

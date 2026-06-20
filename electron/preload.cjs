@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   // Actualités Dofus : récupère un flux RSS officiel (category: "news" | "changelog" | "devblog")
   // via le process principal (UA navigateur, pas de CORS). → { ok, status, text?, error? }.
   fetchDofusNews: (category) => ipcRenderer.invoke("dofus:news", category),
+  // Page guide DofusPourLesNoobs (slug sans .html) via le main (pas de CORS). → { ok, status, text? }.
+  fetchDplnGuide: (slug) => ipcRenderer.invoke("dpln:guide", slug),
   // ---- Mises à jour ----
   // cb reçoit { state: "available" | "downloading" | "downloaded", version?, percent?, isMac }
   onUpdate: (cb) => {
@@ -36,6 +38,12 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   overlayResize: (size) => ipcRenderer.invoke("overlay:resize", size), // redimensionnement custom {width,height}
   overlaySnapMode: (on) => ipcRenderer.invoke("overlay:snap-mode", on), // accroche+suit la fenêtre Dofus
   detectDofus: () => ipcRenderer.invoke("dofus:detect"), // { running } — process Dofus présent ?
+  // ---- Moteur macros Windows natif ----
+  macrosStatus: () => ipcRenderer.invoke("macros:status"),
+  macrosLoadConfig: () => ipcRenderer.invoke("macros:load-config"),
+  macrosSaveConfig: (config) => ipcRenderer.invoke("macros:save-config", config),
+  macrosStart: (config) => ipcRenderer.invoke("macros:start", config),
+  macrosStop: () => ipcRenderer.invoke("macros:stop"),
   // Lit la progression du profil actif dans l'app Ganymède locale (conf.json).
   // Renvoie { profileName, progresses } ou null (Ganymède non installé / erreur).
   readGanymedeProgress: () => ipcRenderer.invoke("ganymede:read-progress"),

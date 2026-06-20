@@ -205,12 +205,12 @@ function findRoomSpell(spells: RoomSpell[], name: string): RoomSpell | undefined
 // Caractéristiques réparties + couleur d'accent + tier API correspondant.
 type CaracKey = "strength" | "intelligence" | "chance" | "agility" | "vitality" | "wisdom";
 const CARACS: { key: CaracKey; label: string; sub: string; tone: string; icon: DofusUiIcon; tier: keyof Breed }[] = [
+  { key: "vitality", label: "Vitalité", sub: "Points de vie", tone: "text-glow-rose", icon: ICON_VITALITE, tier: "statsPointsForVitality" },
+  { key: "wisdom", label: "Sagesse", sub: "Résistances / PM", tone: "text-glow-violet", icon: ICON_SAGESSE, tier: "statsPointsForWisdom" },
   { key: "strength", label: "Force", sub: "Terre / Neutre", tone: "text-amber-400", icon: ICON_FORCE, tier: "statsPointsForStrength" },
   { key: "intelligence", label: "Intelligence", sub: "Feu", tone: "text-glow-ember", icon: ICON_INTELLIGENCE, tier: "statsPointsForIntelligence" },
   { key: "chance", label: "Chance", sub: "Eau", tone: "text-glow-cyan", icon: ICON_CHANCE, tier: "statsPointsForChance" },
   { key: "agility", label: "Agilité", sub: "Air", tone: "text-glow-emerald", icon: ICON_AGILITE, tier: "statsPointsForAgility" },
-  { key: "vitality", label: "Vitalité", sub: "Points de vie", tone: "text-glow-rose", icon: ICON_VITALITE, tier: "statsPointsForVitality" },
-  { key: "wisdom", label: "Sagesse", sub: "Résistances / PM", tone: "text-glow-violet", icon: ICON_SAGESSE, tier: "statsPointsForWisdom" },
 ];
 
 // Icône + couleur d'une ligne de bonus (panoplie / effet) selon son intitulé, pour
@@ -254,8 +254,6 @@ function effectVisual(label: string): { icon: DofusUiIcon; tone: string } {
 type Caracs = Record<CaracKey, number>;
 const ZERO_CARACS: Caracs = { strength: 0, intelligence: 0, chance: 0, agility: 0, vitality: 0, wisdom: 0 };
 
-// Exotage (forgemagie exotique) : une stat bonus posée sur un item.
-type ExoType = "" | "pa" | "pm" | "po" | "invo";
 const PARCH_MAX = 100;
 const DOFUS_SLOT_KEYS = SLOTS.filter((s) => s.key.startsWith("dofus")).map((s) => s.key);
 const DOFUS_SLOTS = SLOTS.filter((s) => s.key.startsWith("dofus"));
@@ -266,9 +264,33 @@ const byKey = (k: string) => SLOTS.find((s) => s.key === k)!;
 const LEFT_SLOTS = LEFT_KEYS.map(byKey);
 const RIGHT_SLOTS = RIGHT_KEYS.map(byKey);
 
-// Cycle d'exo au clic (— → PA → PM → PO → Invoc. → —).
-const EXO_CYCLE: ExoType[] = ["", "pa", "pm", "po", "invo"];
-const EXO_LABEL: Record<ExoType, string> = { "": "", pa: "PA", pm: "PM", po: "PO", invo: "Inv" };
+// Stats ajoutables via l'éditeur de forgemagie (nom = nom d'effet exact reconnu par le calcul).
+const FM_ADDABLE: { name: string; label: string }[] = [
+  { name: "PA", label: "PA" },
+  { name: "PM", label: "PM" },
+  { name: "Portée", label: "Portée (PO)" },
+  { name: "Invocations", label: "Invocation" },
+  { name: "Puissance", label: "Puissance" },
+  { name: "Dommages", label: "Dommages" },
+  { name: "Dommage Critiques", label: "Dom. Critiques" },
+  { name: "Vitalité", label: "Vitalité" },
+  { name: "Sagesse", label: "Sagesse" },
+  { name: "Force", label: "Force" },
+  { name: "Intelligence", label: "Intelligence" },
+  { name: "Chance", label: "Chance" },
+  { name: "Agilité", label: "Agilité" },
+  { name: "Initiative", label: "Initiative" },
+  { name: "Tacle", label: "Tacle" },
+  { name: "Fuite", label: "Fuite" },
+  { name: "Prospection", label: "Prospection" },
+  { name: "Soins", label: "Soins" },
+  { name: "Pods", label: "Pods" },
+  { name: "Résistance Neutre %", label: "Rés. Neutre %" },
+  { name: "Résistance Terre %", label: "Rés. Terre %" },
+  { name: "Résistance Feu %", label: "Rés. Feu %" },
+  { name: "Résistance Eau %", label: "Rés. Eau %" },
+  { name: "Résistance Air %", label: "Rés. Air %" },
+];
 
 function multiSlotGroup(key: string): string[] | null {
   if (key === "ring1" || key === "ring2") return ["ring1", "ring2"];
@@ -321,6 +343,20 @@ function targetSlotForPiece(detail: { is_weapon?: boolean; type: { name: string 
 }
 
 // Wrapper routeur : résout le build depuis l'URL et redirige vers la galerie si introuvable.
+// Brouillons d'édition en mémoire de SESSION (perdus à la fermeture de l'app) : conservent les
+// modifs NON enregistrées quand on quitte puis revient sur l'éditeur sans cliquer « Enregistrer ».
+type BuilderDraft = {
+  name: string;
+  slots: BuildSlots;
+  breedId: number | null;
+  level: number;
+  caracs: Caracs;
+  parch: Caracs;
+  fm: Record<string, Record<string, number>>;
+  target: TargetStats;
+};
+const builderDrafts = new Map<string, BuilderDraft>();
+
 export default function Builder() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -337,13 +373,18 @@ export default function Builder() {
 
 function BuildEditor({ build }: { build: Build }) {
   const navigate = useNavigate();
-  const [breedId, setBreedId] = useState<number | null>(build.breedId ?? null);
-  const [level, setLevel] = useState(Math.min(200, Math.max(1, build.level ?? 200)));
-  const [caracs, setCaracs] = useState<Caracs>({ ...ZERO_CARACS, ...(build.caracs as Partial<Caracs> | undefined) });
-  const [parch, setParch] = useState<Caracs>({ ...ZERO_CARACS, ...(build.parch as Partial<Caracs> | undefined) }); // parchemins (+100 max)
-  const [slots, setSlots] = useState<BuildSlots>(build.slots ?? {});
-  const [exos, setExos] = useState<Record<string, ExoType>>((build.exos as Record<string, ExoType> | undefined) ?? {});
-  const [target, setTarget] = useState<TargetStats>(build.target ?? emptyTarget());
+  // Source d'initialisation : brouillon de session (modifs non enregistrées) si présent, sinon
+  // le build sauvegardé → quitter/revenir dans l'app ne perd plus le travail en cours.
+  const src = builderDrafts.get(build.id) ?? build;
+  const [breedId, setBreedId] = useState<number | null>(src.breedId ?? null);
+  const [level, setLevel] = useState(Math.min(200, Math.max(1, src.level ?? 200)));
+  const [caracs, setCaracs] = useState<Caracs>({ ...ZERO_CARACS, ...(src.caracs as Partial<Caracs> | undefined) });
+  const [parch, setParch] = useState<Caracs>({ ...ZERO_CARACS, ...(src.parch as Partial<Caracs> | undefined) }); // parchemins (+100 max)
+  const [slots, setSlots] = useState<BuildSlots>(src.slots ?? {});
+  // Forgemagie par slot : { slotKey: { nomDeStat: valeurFinale } }.
+  const [fm, setFm] = useState<Record<string, Record<string, number>>>(src.fm ?? {});
+  const [fmSlot, setFmSlot] = useState<SlotDef | null>(null); // slot dont l'éditeur FM est ouvert
+  const [target, setTarget] = useState<TargetStats>(src.target ?? emptyTarget());
   const [pickerSlot, setPickerSlot] = useState<SlotDef | null>(null);
   const [showSpells, setShowSpells] = useState(false);
   // Proposition « compléter la panoplie » après l'équipement d'une pièce de set :
@@ -357,8 +398,14 @@ function BuildEditor({ build }: { build: Build }) {
   useEffect(() => {
     slotsRef.current = slots;
   }, [slots]);
-  const [buildName, setBuildName] = useState(build.name);
+  const [buildName, setBuildName] = useState(src.name);
   const [saved, setSaved] = useState(false);
+
+  // Brouillon de session : on mémorise l'état d'édition à chaque modif (persiste en quittant la
+  // page, perdu seulement à la fermeture de l'app). « Enregistrer » écrit, lui, dans le store.
+  useEffect(() => {
+    builderDrafts.set(build.id, { name: buildName, slots, breedId, level, caracs, parch, fm, target });
+  }, [build.id, buildName, slots, breedId, level, caracs, parch, fm, target]);
   const [classOpen, setClassOpen] = useState(false);
   const [levelOpen, setLevelOpen] = useState(false);
   const [selectedSpellId, setSelectedSpellId] = useState<number | null>(null);
@@ -372,7 +419,7 @@ function BuildEditor({ build }: { build: Build }) {
       level,
       caracs,
       parch,
-      exos,
+      fm,
       target,
     });
     setSaved(true);
@@ -465,25 +512,44 @@ function BuildEditor({ build }: { build: Build }) {
   const { equipStats, rawEquip } = useMemo(() => {
     const s = emptyStats();
     const raw = new Map<string, number>();
-    const applyEffects = (effects: NonNullable<typeof items[number]["effects"]>) => {
+    const byId = new Map(items.map((it) => [it.ankama_id, it]));
+    // Applique les lignes d'un item en tenant compte de la FM du slot : chaque ligne prend la
+    // valeur FM si définie (sinon le jet max), et les lignes FM absentes de l'item sont ajoutées.
+    const applyWithFm = (
+      effects: NonNullable<typeof items[number]["effects"]>,
+      fmSlot?: Record<string, number>,
+    ) => {
+      const used = new Set<string>();
       for (const e of effects) {
         const name = e.type?.name ?? "";
-        const v = e.int_maximum || e.int_minimum || 0;
-        if (!name || !v) continue;
+        if (!name) continue;
         if (e.type?.is_active) continue; // dégâts/vols propres à l'arme, pas des stats de personnage.
         const low = name.toLowerCase();
         if (low.includes("spell") || low.includes("échangeable") || low.includes("attitude") || low.includes("apparence")) continue;
+        const override = fmSlot && name in fmSlot;
+        const v = override ? fmSlot![name] : e.int_maximum || e.int_minimum || 0;
+        if (override) used.add(name);
+        if (!v) continue;
         applyItemEffect(s, name, v, e.type);
         raw.set(name, (raw.get(name) ?? 0) + v);
       }
+      if (fmSlot) {
+        for (const [name, v] of Object.entries(fmSlot)) {
+          if (used.has(name) || !v) continue; // ligne FM ajoutée (pas sur l'item)
+          applyItemEffect(s, name, v);
+          raw.set(name, (raw.get(name) ?? 0) + v);
+        }
+      }
     };
-    for (const it of items) {
-      applyEffects(it.effects ?? []);
+    for (const [slotKey, id] of Object.entries(slots)) {
+      if (id == null) continue;
+      const it = byId.get(id);
+      if (it) applyWithFm(it.effects ?? [], fm[slotKey]);
     }
-    applyEffects(activeSetEffects);
+    applyWithFm(activeSetEffects); // effets de panoplie : globaux, sans FM
     return { equipStats: s, rawEquip: raw };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.map((i) => i.ankama_id).join(","), activeSetEffects]);
+  }, [items.map((i) => i.ankama_id).join(","), activeSetEffects, fm, slots]);
 
   // Stats totales = caractéristiques réparties + parchemins + équipement.
   const total: CharacterStats = useMemo(() => {
@@ -636,11 +702,6 @@ function BuildEditor({ build }: { build: Build }) {
       delete next[key];
       return next;
     });
-    setExos((e) => {
-      const next = { ...e };
-      delete next[key];
-      return next;
-    });
   }
   function setParchVal(key: CaracKey, value: number) {
     const v = Math.max(0, Math.min(PARCH_MAX, Math.floor(value || 0)));
@@ -657,7 +718,6 @@ function BuildEditor({ build }: { build: Build }) {
   }
   function resetAll() {
     setSlots({});
-    setExos({});
     setCaracs(ZERO_CARACS);
     setParch(ZERO_CARACS);
     setTarget(emptyTarget());
@@ -703,14 +763,11 @@ function BuildEditor({ build }: { build: Build }) {
     return t;
   };
   const RES_EL = ["neutre", "terre", "feu", "eau", "air"];
-  // Exos posés sur les items équipés (uniquement les slots encore équipés).
-  const exoCount = (t: ExoType) =>
-    Object.entries(exos).filter(([k, v]) => v === t && slots[k] != null).length;
   const kpi = {
     hp: baseHpForLevel(level) + total.vitality,
-    pa: baseApForLevel(level) + eqSum((k) => k === "pa") + exoCount("pa"),
-    pm: baseMpForLevel() + eqSum((k) => k === "pm") + exoCount("pm"),
-    po: eqSum((k) => k.includes("portée") || k.includes("portee")) + exoCount("po"),
+    pa: baseApForLevel(level) + eqSum((k) => k === "pa"),
+    pm: baseMpForLevel() + eqSum((k) => k === "pm"),
+    po: eqSum((k) => k.includes("portée") || k.includes("portee")),
     vitality: total.vitality,
   };
   const misc = {
@@ -718,11 +775,26 @@ function BuildEditor({ build }: { build: Build }) {
     prospection: eqSum((k) => k.includes("prospection")),
     tacle: eqSum((k) => k.includes("tacle")),
     fuite: eqSum((k) => k.includes("fuite")),
-    invocation: eqSum((k) => k.includes("invocation")) + exoCount("invo"),
+    invocation: eqSum((k) => k.includes("invocation")),
     pods: eqSum((k) => k.includes("pods")),
     soin: eqSum((k) => k.includes("soin")),
+    domPoussee: eqSum((k) => k.includes("dommage") && k.includes("poussée")),
+    // PvP (noms d'effets DofusDude exacts).
+    esquivePa: eqSum((k) => k === "esquive pa"),
+    esquivePm: eqSum((k) => k === "esquive pm"),
+    retraitPa: eqSum((k) => k === "retrait pa"),
+    retraitPm: eqSum((k) => k === "retrait pm"),
+    resCritique: eqSum((k) => k.includes("résistance") && k.includes("critique")),
+    resPoussee: eqSum((k) => k.includes("résistance") && k.includes("poussée")),
+    resMelee: eqSum((k) => k.includes("résistance") && (k.includes("mêlée") || k.includes("melee"))),
+    resDist: eqSum((k) => k.includes("résistance") && k.includes("distance")),
+    resArmes: eqSum((k) => k.includes("résistance") && k.includes("arme")),
+    domArmes: eqSum((k) => k.includes("%") && k.includes("dommage") && k.includes("arme")),
+    nivStuff: items.reduce((a, it) => a + (it.level || 0), 0),
   };
+  // Résistances par élément : % (jet max) et fixe.
   const resPct = RES_EL.map((el) => eqSum((k) => k.includes("résistance") && k.includes("%") && k.includes(el)));
+  const resFlat = RES_EL.map((el) => eqSum((k) => k.includes("résistance") && !k.includes("%") && k.includes(el)));
 
   // Bonus spéciaux / passifs (Dofus, items à effet : marqués `is_meta`) — ignorés par le calcul de stats.
   const specialBonuses = items
@@ -736,29 +808,61 @@ function BuildEditor({ build }: { build: Build }) {
     }))
     .filter((b) => b.lines.length > 0);
 
-  // Chips du résumé détaillé (icône + valeur), façon DofusRoom.
-  const dmgChips = [
-    { icon: ICON_PUISSANCE, label: "Puissance", value: total.power },
-    { icon: ICON_WEAPON, label: "Dommages", value: total.damageFlat },
-    { icon: ICON_MULTI_ELEMENT, label: "Dom. meilleur élt", value: total.damageBestElement },
-    { icon: ICON_DMG_ENVOYES, label: "% Dom. finaux", value: total.damageFinal, suffix: "%" },
-    { icon: ICON_DMG_SORT, label: "% Dom. sorts", value: total.damageSpell, suffix: "%" },
-    { icon: ICON_DMG_MELEE, label: "% Dom. mêlée", value: total.damageMelee, suffix: "%" },
-    { icon: ICON_DMG_DISTANCE, label: "% Dom. distance", value: total.damageRanged, suffix: "%" },
-    { icon: ICON_CRITIQUE, label: "% Critique", value: total.critChance, suffix: "%", tone: "text-glow-gold" },
-    { icon: ICON_CRITIQUE, label: "Dom. Critiques", value: total.critDamage, tone: "text-glow-gold" },
-  ].filter((c) => c.value !== 0);
-  const supportChips = [
-    { icon: ICON_VITALITE, label: "PV de base", value: baseHpForLevel(level), tone: "text-glow-rose" },
-    { icon: ICON_VITALITE, label: "Vitalité", value: total.vitality, tone: "text-glow-rose" },
-    { icon: ICON_SAGESSE, label: "Sagesse", value: total.wisdom, tone: "text-glow-violet" },
-    { icon: ICON_SOIN, label: "Soins", value: misc.soin, tone: "text-glow-emerald" },
-    { icon: ICON_INVOCATION, label: "Invocations", value: misc.invocation },
+  // Panneau de stats détaillé (agencement façon DofusRoom : cartes 2 colonnes, lignes compactes).
+  type Row = { icon: DofusUiIcon; label: string; value: number; suffix?: string; tone?: string };
+  const ELEM_ICONS = [ICON_NEUTRE, ICON_FORCE, ICON_INTELLIGENCE, ICON_CHANCE, ICON_AGILITE];
+  const ELEM_NAMES = ["Neutre", "Terre", "Feu", "Eau", "Air"];
+  // Indicateurs (KPI)
+  const kpiLeft: Row[] = [
+    { icon: ICON_VITALITE, label: "PdV", value: kpi.hp, tone: "text-glow-rose" },
+    { icon: ICON_PROSPECTION, label: "PP", value: misc.prospection },
+    { icon: ICON_PA, label: "PA", value: kpi.pa, tone: "text-glow-cyan" },
+    { icon: ICON_PM, label: "PM", value: kpi.pm, tone: "text-glow-emerald" },
+    { icon: ICON_PO, label: "PO", value: kpi.po, tone: "text-glow-violet" },
+  ];
+  const kpiRight: Row[] = [
     { icon: ICON_INITIATIVE, label: "Initiative", value: misc.initiative },
-    { icon: ICON_PROSPECTION, label: "Prospection", value: misc.prospection },
-    { icon: ICON_TACLE, label: "Tacle", value: misc.tacle },
+    { icon: ICON_CRITIQUE, label: "Critique", value: total.critChance, suffix: "%", tone: "text-glow-gold" },
+    { icon: ICON_INVOCATION, label: "Invocations", value: misc.invocation },
+    { icon: ICON_SOIN, label: "Soin", value: misc.soin, tone: "text-glow-emerald" },
+  ];
+  // Tactique
+  const tacLeft: Row[] = [
     { icon: ICON_AGILITE, label: "Fuite", value: misc.fuite },
+    { icon: ICON_PA, label: "Esq. PA", value: misc.esquivePa, tone: "text-glow-cyan" },
+    { icon: ICON_PM, label: "Esq. PM", value: misc.esquivePm, tone: "text-glow-emerald" },
     { icon: ICON_PODS, label: "Pods", value: misc.pods },
+  ];
+  const tacRight: Row[] = [
+    { icon: ICON_TACLE, label: "Tacle", value: misc.tacle },
+    { icon: ICON_PA, label: "Ret. PA", value: misc.retraitPa, tone: "text-glow-ember" },
+    { icon: ICON_PM, label: "Ret. PM", value: misc.retraitPm, tone: "text-glow-ember" },
+    { icon: ICON_SPECIAL, label: "Niv. Stuff", value: misc.nivStuff },
+  ];
+  // Dommages
+  const domLeft: Row[] = [
+    ...ELEM_NAMES.map((n, i) => ({ icon: ELEM_ICONS[i], label: `Do ${n}`, value: total.damageByElement[i] })),
+    { icon: ICON_PUISSANCE, label: "Dommages", value: total.damageFlat },
+  ];
+  const domRight: Row[] = [
+    { icon: ICON_CRITIQUE, label: "Do Critique", value: total.critDamage, tone: "text-glow-gold" },
+    { icon: ICON_DMG_DISTANCE, label: "Do Poussée", value: misc.domPoussee, tone: "text-glow-ember" },
+    { icon: ICON_WEAPON, label: "% Do Armes", value: misc.domArmes, suffix: "%" },
+    { icon: ICON_DMG_SORT, label: "% Do Sorts", value: total.damageSpell, suffix: "%" },
+    { icon: ICON_DMG_MELEE, label: "% Do Mélée", value: total.damageMelee, suffix: "%" },
+    { icon: ICON_DMG_DISTANCE, label: "% Do Dist", value: total.damageRanged, suffix: "%" },
+  ];
+  // Résistances
+  const resLeft: Row[] = [
+    ...ELEM_NAMES.map((n, i) => ({ icon: ICON_RESISTANCE, label: `Ré ${n}`, value: resFlat[i] })),
+    { icon: ICON_RESISTANCE, label: "Ré Critique", value: misc.resCritique },
+    { icon: ICON_RESISTANCE, label: "% Ré Mélée", value: misc.resMelee, suffix: "%" },
+    { icon: ICON_RESISTANCE, label: "% Ré Armes", value: misc.resArmes, suffix: "%" },
+  ];
+  const resRight: Row[] = [
+    ...ELEM_NAMES.map((n, i) => ({ icon: ICON_RESISTANCE, label: `% Ré ${n}`, value: resPct[i], suffix: "%" })),
+    { icon: ICON_RESISTANCE, label: "Ré Poussée", value: misc.resPoussee },
+    { icon: ICON_RESISTANCE, label: "% Ré Dist", value: misc.resDist, suffix: "%" },
   ];
 
   const renderSlot = (slot: SlotDef) => (
@@ -766,8 +870,9 @@ function BuildEditor({ build }: { build: Build }) {
       key={slot.key}
       slot={slot}
       itemId={slots[slot.key]}
-      exo={exos[slot.key] ?? ""}
-      onExo={(v) => setExos((e) => ({ ...e, [slot.key]: v }))}
+      fm={fm[slot.key] ?? {}}
+      fmActive={Object.keys(fm[slot.key] ?? {}).length > 0}
+      onOpenFm={() => setFmSlot(slot)}
       onOpen={() => setPickerSlot(slot)}
       onClear={() => unequip(slot.key)}
     />
@@ -1092,23 +1197,22 @@ function BuildEditor({ build }: { build: Build }) {
               <ChevronRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-glow-ember" />
             </button>
 
+            {/* Indicateurs */}
+            <StatBoard title="Indicateurs" icon="characteristic" left={kpiLeft} right={kpiRight} />
+
             {/* Caractéristiques */}
-            <div className="glass rounded-2xl p-5">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="font-display font-bold text-white">Caractéristiques</h3>
-                <div className="flex items-center gap-2">
+            <div className="glass rounded-2xl p-3.5">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="font-display text-sm font-bold text-white">Caractéristiques</h3>
+                <div className="flex items-center gap-1.5">
                   {(() => {
                     const allParchMaxed = CARACS.every((c) => parch[c.key] >= PARCH_MAX);
                     return (
                       <button
                         type="button"
                         onClick={() => setAllParch(allParchMaxed ? 0 : PARCH_MAX)}
-                        title={
-                          allParchMaxed
-                            ? "Remettre tous les parchemins à 0"
-                            : "Mettre 100 parchemins à toutes les caractéristiques"
-                        }
-                        className="no-drag rounded-lg border border-glow-violet/30 bg-glow-violet/10 px-2 py-1 text-[11px] font-bold text-glow-violet transition hover:bg-glow-violet/20"
+                        title={allParchMaxed ? "Remettre tous les parchemins à 0" : "Mettre 100 parchemins partout"}
+                        className="no-drag rounded-lg border border-glow-violet/30 bg-glow-violet/10 px-2 py-0.5 text-[10px] font-bold text-glow-violet transition hover:bg-glow-violet/20"
                       >
                         {allParchMaxed ? "Parch. 0" : "Parch. 100"}
                       </button>
@@ -1117,93 +1221,57 @@ function BuildEditor({ build }: { build: Build }) {
                   <Pill tone={pointsLeft < 0 ? "rose" : "purple"}>{pointsLeft} pts</Pill>
                 </div>
               </div>
-              <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-white/5">
+              <div className="mb-2 h-1 overflow-hidden rounded-full bg-white/5">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-glow-purple to-glow-cyan transition-all"
                   style={{ width: `${Math.min(100, (pointsUsed / Math.max(1, pointsBudget)) * 100)}%` }}
                 />
               </div>
-              <div className="mb-1 flex items-center gap-1.5 px-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-600">
+              {/* En-têtes de colonnes compacts */}
+              <div className="mb-1 flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-wide text-slate-600">
                 <span className="flex-1" />
-                <span className="w-12 text-center">Réparti</span>
+                <span className="w-9 text-right">Tot.</span>
+                <span className="w-12 text-center">Base</span>
                 <span className="w-12 text-center">Parch.</span>
-                <span className="w-10 text-right">Total</span>
+                <span className="w-9 text-center">Stuff</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {CARACS.map((c) => {
                   const equipBonus = equipStats[c.key];
                   const totalC = caracs[c.key] + parch[c.key] + equipBonus;
                   return (
-                    <div key={c.key} className="flex items-center gap-1.5">
-                      <c.icon className="h-4 w-4" />
-                      <div className="min-w-0 flex-1 truncate">
-                        <span className={`text-sm font-semibold ${c.tone}`}>{c.label}</span>
-                        {equipBonus !== 0 && (
-                          <span className="ml-1 text-[10px] text-slate-500" title="Apport de l'équipement">
-                            +{equipBonus}
-                          </span>
-                        )}
-                      </div>
+                    <div key={c.key} className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.025] px-2 py-1">
+                      <c.icon className="h-4 w-4 shrink-0" />
+                      <p className={`min-w-0 flex-1 truncate text-xs font-bold ${c.tone}`}>{c.label}</p>
+                      <span className="w-9 shrink-0 text-right font-display text-sm font-extrabold tabular-nums text-white">
+                        {totalC}
+                      </span>
                       <input
                         type="number"
                         min={0}
-                        value={caracs[c.key]}
+                        value={caracs[c.key] || ""}
+                        placeholder="0"
                         onChange={(e) => setCarac(c.key, Number(e.target.value))}
                         title="Points répartis"
-                        className="no-drag w-12 rounded-md border border-white/10 bg-void-800/60 px-1 py-1 text-center text-sm font-bold text-white outline-none focus:border-glow-purple/50"
+                        className="no-drag w-12 shrink-0 rounded-md border border-white/10 bg-void-800/70 px-1 py-0.5 text-center text-xs font-bold text-white outline-none placeholder:text-slate-600 focus:border-glow-purple/50"
                       />
                       <input
                         type="number"
                         min={0}
                         max={PARCH_MAX}
-                        value={parch[c.key]}
+                        value={parch[c.key] || ""}
+                        placeholder="0"
                         onChange={(e) => setParchVal(c.key, Number(e.target.value))}
                         title="Parchemins (100 max)"
-                        className="no-drag w-12 rounded-md border border-glow-violet/30 bg-glow-violet/5 px-1 py-1 text-center text-sm font-bold text-glow-violet outline-none focus:border-glow-violet/60"
+                        className="no-drag w-12 shrink-0 rounded-md border border-glow-violet/30 bg-glow-violet/5 px-1 py-0.5 text-center text-xs font-bold text-glow-violet outline-none placeholder:text-slate-600 focus:border-glow-violet/60"
                       />
-                      <span className="w-10 text-right text-sm font-bold text-white">{totalC}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Dommages & Résistances */}
-            <div className="glass rounded-2xl p-5">
-              <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-                <DofusIcon name="weapon" size={20} /> Dommages &amp; Résistances
-              </h3>
-              {dmgChips.length > 0 && (
-                <div className="mb-3 grid grid-cols-2 gap-2">
-                  {dmgChips.map((c) => (
-                    <StatChip key={c.label} icon={c.icon} label={c.label} value={c.value} suffix={c.suffix} tone={c.tone} />
-                  ))}
-                </div>
-              )}
-              {/* Table par élément : dommages fixes + résistance % */}
-              <div className="overflow-hidden rounded-xl border border-white/10">
-                <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.03] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
-                  <span className="flex-1">Élément</span>
-                  <span className="w-16 text-right">Dommages</span>
-                  <span className="w-12 text-right">Rés. %</span>
-                </div>
-                {ELEMENTS.map((el, i) => {
-                  const dmg = total.damageByElement[i];
-                  return (
-                    <div key={el} className="flex items-center gap-2 px-3 py-1.5 odd:bg-white/[0.02]">
-                      <span className={`flex flex-1 items-center gap-1.5 text-sm font-medium ${ELEMENT_TONE[i]}`}>
-                        <DofusIcon name={elementIcon(i)} size={14} /> {el}
-                      </span>
-                      <span className="w-16 text-right text-sm font-bold tabular-nums text-white">
-                        {dmg > 0 ? "+" : ""}
-                        {dmg}
-                      </span>
                       <span
-                        className={`w-12 text-right text-sm font-bold tabular-nums ${
-                          resPct[i] < 0 ? "text-glow-rose" : resPct[i] > 0 ? "text-glow-emerald" : "text-slate-400"
+                        title="Apport de l'équipement"
+                        className={`w-9 shrink-0 text-right text-xs font-bold tabular-nums ${
+                          equipBonus > 0 ? "text-glow-emerald" : equipBonus < 0 ? "text-glow-rose" : "text-slate-600"
                         }`}
                       >
-                        {resPct[i]}%
+                        {equipBonus > 0 ? `+${equipBonus}` : equipBonus}
                       </span>
                     </div>
                   );
@@ -1211,17 +1279,13 @@ function BuildEditor({ build }: { build: Build }) {
               </div>
             </div>
 
-            {/* Soutien & divers */}
-            <div className="glass rounded-2xl p-5">
-              <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
-                <DofusIcon name="pv" size={20} /> Soutien &amp; divers
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {supportChips.map((c) => (
-                  <StatChip key={c.label} icon={c.icon} label={c.label} value={c.value} tone={c.tone} />
-                ))}
-              </div>
-            </div>
+            {/* Tactique */}
+            <StatBoard title="Tactique" icon="pa" left={tacLeft} right={tacRight} />
+            {/* Dommages */}
+            <StatBoard title="Dommages" icon="weapon" left={domLeft} right={domRight} />
+            {/* Résistances */}
+            <StatBoard title="Résistances" icon="bouclier" left={resLeft} right={resRight} />
+
           </div>
         </div>
         </>
@@ -1241,6 +1305,30 @@ function BuildEditor({ build }: { build: Build }) {
           />
         )}
       </AnimatePresence>
+
+      {/* Éditeur de forgemagie par item (en portal). */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {fmSlot && (
+              <FmEditorModal
+                slot={fmSlot}
+                itemId={slots[fmSlot.key]}
+                fm={fm[fmSlot.key] ?? {}}
+                onChange={(next) =>
+                  setFm((cur) => {
+                    const copy = { ...cur };
+                    if (Object.keys(next).length === 0) delete copy[fmSlot.key];
+                    else copy[fmSlot.key] = next;
+                    return copy;
+                  })
+                }
+                onClose={() => setFmSlot(null)}
+              />
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
       {/* Proposition « compléter la panoplie » — modale de sélection (en portal). */}
       {typeof document !== "undefined" &&
@@ -2248,15 +2336,17 @@ function CharacterPanel({
 function SlotCard({
   slot,
   itemId,
-  exo,
-  onExo,
+  fm,
+  fmActive,
+  onOpenFm,
   onOpen,
   onClear,
 }: {
   slot: SlotDef;
   itemId?: number;
-  exo: ExoType;
-  onExo: (v: ExoType) => void;
+  fm: Record<string, number>;
+  fmActive: boolean;
+  onOpenFm: () => void;
   onOpen: () => void;
   onClear: () => void;
 }) {
@@ -2269,7 +2359,7 @@ function SlotCard({
 
   // Tooltip rendu dans un portal (fixed) pour échapper au `overflow-y-auto` du <main>.
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [tip, setTip] = useState<{ left: number; below: boolean; offset: number; maxH: number } | null>(null);
+  const [tip, setTip] = useState<{ left: number; top: number; maxH: number } | null>(null);
   const closeTimer = useRef<number | null>(null);
   const TIP_W = 288;
 
@@ -2284,13 +2374,12 @@ function SlotCard({
     if (!itemId) return;
     const r = wrapRef.current?.getBoundingClientRect();
     if (!r) return;
-    const center = r.left + r.width / 2;
-    const left = Math.max(8, Math.min(window.innerWidth - TIP_W - 8, center - TIP_W / 2));
-    // Toujours vers le bas ; la hauteur est bornée à l'espace disponible (liste scrollable).
-    const below = true;
-    const offset = r.bottom + 8;
-    const maxH = Math.max(140, Math.floor(window.innerHeight - r.bottom - 16));
-    setTip({ left, below, offset, maxH });
+    // Sur le CÔTÉ (à droite si ça tient, sinon à gauche), comme la recherche d'item.
+    const GAP = 10;
+    const left = r.right + GAP + TIP_W <= window.innerWidth ? r.right + GAP : Math.max(8, r.left - GAP - TIP_W);
+    const top = Math.max(8, Math.min(r.top, window.innerHeight - 340));
+    const maxH = Math.max(160, Math.floor(window.innerHeight - top - 16));
+    setTip({ left, top, maxH });
   };
   const scheduleClose = () => {
     cancelClose();
@@ -2299,10 +2388,27 @@ function SlotCard({
   useEffect(() => () => cancelClose(), []);
 
   // Lignes de jets affichées dans le tooltip (on garde les effets utiles, comme le résumé).
-  const jetLines = (item?.effects ?? []).filter((e) => {
-    const n = (e.type?.name ?? "").toLowerCase();
-    return e.formatted && !n.includes("échangeable") && !n.includes("apparence") && !n.includes("attitude");
+  // Lignes du tooltip : valeur MAX de chaque jet, remplacée par la valeur FM/exo si l'item en a.
+  const statEffects = (item?.effects ?? []).filter((e) => {
+    const name = e.type?.name ?? "";
+    if (!name || e.type?.is_active) return false;
+    const n = name.toLowerCase();
+    if (n.includes("spell") || n.includes("échangeable") || n.includes("attitude") || n.includes("apparence")) return false;
+    return (e.int_maximum ?? 0) !== 0 || (e.int_minimum ?? 0) !== 0;
   });
+  const statNames = new Set(statEffects.map((e) => e.type!.name));
+  const jetLines = [
+    ...statEffects.map((e) => {
+      const name = e.type!.name;
+      const max = e.int_maximum ?? e.int_minimum ?? 0;
+      const value = name in fm ? fm[name] : max;
+      return { name, label: name, value, edited: name in fm, over: value > max };
+    }),
+    // Lignes ajoutées en exo (absentes de l'item).
+    ...Object.keys(fm)
+      .filter((n) => !statNames.has(n))
+      .map((name) => ({ name, label: FM_ADDABLE.find((a) => a.name === name)?.label ?? name, value: fm[name], edited: true, over: true })),
+  ].filter((l) => l.value !== 0);
 
   return (
     <motion.div
@@ -2314,7 +2420,7 @@ function SlotCard({
     >
       <div
         className={`relative aspect-square w-full overflow-hidden rounded-2xl border bg-gradient-to-br from-white/[0.05] to-white/[0.01] transition hover:-translate-y-0.5 ${
-          exo
+          fmActive
             ? "border-glow-gold/45 shadow-[0_0_22px_-10px_rgba(245,196,81,0.6)]"
             : itemId
               ? "border-glow-purple/35 hover:border-glow-purple/55"
@@ -2325,8 +2431,7 @@ function SlotCard({
           <>
             <button
               onClick={onOpen}
-              title={`${item.name} — changer`}
-              className="no-drag flex h-full w-full items-center justify-center p-2"
+              className="no-drag flex h-full w-full items-center justify-center p-2 pb-7"
             >
               <img
                 src={item.image_urls.icon}
@@ -2342,16 +2447,21 @@ function SlotCard({
             >
               <DofusIcon name="closeRed" size={14} />
             </button>
-            {exo && (
-              <span className="pointer-events-none absolute bottom-1 left-1 z-10 rounded-md bg-glow-gold/20 px-1.5 py-0.5 text-[9px] font-bold leading-none text-glow-gold ring-1 ring-glow-gold/50">
-                +1 {EXO_LABEL[exo]}
-              </span>
-            )}
+            <button
+              onClick={onOpenFm}
+              title="Modifier l'exo et les jets de l'item"
+              className={`no-drag absolute inset-x-1 bottom-1 z-10 h-6 rounded-lg border text-center font-display text-[11px] font-black tracking-wide shadow-[0_8px_16px_-12px_rgba(0,0,0,0.9)] backdrop-blur-sm transition ${
+                fmActive
+                  ? "border-glow-gold/55 bg-glow-gold/25 text-glow-gold ring-1 ring-glow-gold/25"
+                  : "border-white/12 bg-void-900/78 text-slate-100 opacity-90 hover:border-glow-gold/40 hover:bg-glow-gold/18 hover:text-glow-gold hover:opacity-100"
+              }`}
+            >
+              EXO
+            </button>
           </>
         ) : (
           <button
             onClick={onOpen}
-            title={slot.label}
             className="no-drag flex h-full w-full flex-col items-center justify-center gap-1.5 text-slate-600 transition group-hover:text-glow-violet"
           >
             <slot.icon className="h-7 w-7" />
@@ -2362,32 +2472,31 @@ function SlotCard({
         className={`line-clamp-1 w-full text-center text-[10px] font-medium leading-tight ${
           itemId && item ? "text-slate-300" : "text-slate-500"
         }`}
-        title={itemId && item ? item.name : slot.label}
       >
         {itemId && item ? item.name : slot.label}
       </p>
 
-      {/* Tooltip (portal fixed) : jets de l'item + sélecteur d'exo */}
+      {/* Tooltip (portal fixed) : jets de l'item */}
       {typeof document !== "undefined" &&
         createPortal(
           <AnimatePresence>
             {tip && itemId && item && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: tip.below ? -6 : 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: tip.below ? -6 : 6 }}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
                 onMouseEnter={cancelClose}
                 onMouseLeave={scheduleClose}
                 style={{
                   position: "fixed",
                   left: tip.left,
+                  top: tip.top,
                   width: TIP_W,
                   maxHeight: tip.maxH,
-                  ...(tip.below ? { top: tip.offset } : { bottom: tip.offset }),
-                  transformOrigin: tip.below ? "top center" : "bottom center",
+                  transformOrigin: "left center",
                 }}
-                className="z-[60] flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-void-800 p-3.5 shadow-card ring-1 ring-black/40"
+                className="z-[60] flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-void-900/95 p-3.5 shadow-glow backdrop-blur-md"
               >
                 <div className="mb-2.5 flex shrink-0 items-start gap-2.5 border-b border-white/10 pb-2.5">
                   <img src={item.image_urls.icon} alt="" className="h-10 w-10 shrink-0 object-contain" />
@@ -2399,36 +2508,25 @@ function SlotCard({
                   </div>
                 </div>
                 {jetLines.length > 0 ? (
-                  <ul className="mb-3 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-                    {jetLines.map((e, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm leading-snug text-slate-200">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-glow-violet" />
-                        {e.formatted}
-                      </li>
-                    ))}
+                  <ul className="mb-3 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1">
+                    {jetLines.map((l, idx) => {
+                      const ic = effectIconFromName(l.name);
+                      return (
+                        <li
+                          key={idx}
+                          className={`flex items-center gap-1.5 text-[12px] font-medium ${l.edited ? "text-glow-gold" : effectTone(l.name)}`}
+                        >
+                          {ic && <DofusIcon name={ic} size={13} />}
+                          <span className="tabular-nums">{l.value}</span>
+                          <span className="truncate">{l.label}</span>
+                          {l.over && <span className="ml-auto shrink-0 text-[9px] font-bold uppercase text-glow-gold">exo</span>}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="mb-3 text-sm italic text-slate-500">Aucun jet.</p>
                 )}
-                {/* Sélecteur d'exo (forgemagie exotique) */}
-                <p className="mb-1.5 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-glow-gold/80">
-                  Exo (forgemagie exotique)
-                </p>
-                <div className="flex shrink-0 flex-wrap gap-1.5">
-                  {EXO_CYCLE.map((v) => (
-                    <button
-                      key={v || "none"}
-                      onClick={() => onExo(v)}
-                      className={`no-drag rounded-lg px-2 py-1 text-xs font-bold leading-none ring-1 transition ${
-                        exo === v
-                          ? "bg-glow-gold/25 text-glow-gold ring-glow-gold/50"
-                          : "bg-white/5 text-slate-400 ring-white/10 hover:bg-white/10 hover:text-slate-200"
-                      }`}
-                    >
-                      {v ? `+1 ${EXO_LABEL[v]}` : "Aucun"}
-                    </button>
-                  ))}
-                </div>
               </motion.div>
             )}
           </AnimatePresence>,
@@ -2438,35 +2536,311 @@ function SlotCard({
   );
 }
 
-// Petite carte stat (icône + valeur + libellé), façon DofusRoom mais à notre thème.
-function StatChip({
-  icon: Icon,
+// Éditeur de forgemagie d'un item : ajuste la valeur de chaque ligne (FM jusqu'au max ou
+// overmage au-delà) et ajoute des lignes de stats absentes (exo). Stocké par slot dans `fm`.
+function FmEditorModal({
+  slot,
+  itemId,
+  fm,
+  onChange,
+  onClose,
+}: {
+  slot: SlotDef;
+  itemId?: number;
+  fm: Record<string, number>;
+  onChange: (next: Record<string, number>) => void;
+  onClose: () => void;
+}) {
+  const { data: item } = useQuery({
+    queryKey: ["equipment", itemId ?? 0],
+    queryFn: ({ signal }) => getEquipment(itemId!, signal),
+    enabled: !!itemId,
+    staleTime: 1000 * 60 * 30,
+  });
+  const [addName, setAddName] = useState("");
+  const [addVal, setAddVal] = useState(1);
+
+  // Lignes de stat de l'item (numériques, hors actives/cosmétiques).
+  const lines = (item?.effects ?? []).filter((e) => {
+    const name = e.type?.name ?? "";
+    if (!name || e.type?.is_active) return false;
+    const n = name.toLowerCase();
+    if (n.includes("spell") || n.includes("échangeable") || n.includes("attitude") || n.includes("apparence")) return false;
+    return (e.int_maximum ?? 0) !== 0 || (e.int_minimum ?? 0) !== 0;
+  });
+  const lineNames = new Set(lines.map((l) => l.type!.name));
+  const extraNames = Object.keys(fm).filter((n) => !lineNames.has(n));
+  const addable = FM_ADDABLE.filter((a) => !lineNames.has(a.name) && !(a.name in fm));
+
+  const setLine = (name: string, value: number) => onChange({ ...fm, [name]: value });
+  const clearLine = (name: string) => {
+    const next = { ...fm };
+    delete next[name];
+    onChange(next);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-8"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97, y: 16 }}
+        transition={{ type: "spring", stiffness: 260, damping: 26 }}
+        onClick={(e) => e.stopPropagation()}
+        className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-void-900 shadow-card"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.035] p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            {item && <img src={item.image_urls.icon} alt="" className="h-10 w-10 shrink-0 object-contain" />}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="truncate font-display text-lg font-bold text-white">{item?.name ?? slot.label}</h2>
+                <span className="shrink-0 rounded-md bg-glow-gold/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-glow-gold ring-1 ring-glow-gold/30">
+                  Forgemagie
+                </span>
+              </div>
+              {item && (
+                <p className="truncate text-[11px] uppercase tracking-wide text-slate-400">
+                  {item.type?.name} · Niv. {item.level}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Fermer"
+            className="no-drag shrink-0 rounded-lg border border-white/10 bg-white/[0.04] p-2 text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+          >
+            <DofusIcon name="closeRed" size={18} />
+          </button>
+        </div>
+
+        <div className="max-h-[62vh] space-y-4 overflow-y-auto p-5">
+          {!item ? (
+            <p className="text-sm text-slate-500">Chargement…</p>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Lignes de l'item</p>
+                {lines.length === 0 && <p className="text-sm text-slate-500">Aucune ligne de stat.</p>}
+                {lines.map((e) => {
+                  const name = e.type!.name;
+                  const max = e.int_maximum ?? e.int_minimum ?? 0;
+                  const cur = name in fm ? fm[name] : max;
+                  const edited = name in fm;
+                  return (
+                    <FmLineRow
+                      key={name}
+                      icon={effectIconFromName(name)}
+                      label={name}
+                      value={cur}
+                      max={max}
+                      over={cur > max}
+                      edited={edited}
+                      onChange={(v) => setLine(name, v)}
+                      onMax={() => setLine(name, max)}
+                      onReset={edited ? () => clearLine(name) : undefined}
+                    />
+                  );
+                })}
+              </div>
+
+              {extraNames.length > 0 && (
+                <div className="space-y-1">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-glow-gold">
+                    <DofusIcon name="fm" size={13} /> Lignes ajoutées (exo)
+                  </p>
+                  {extraNames.map((name) => (
+                    <FmLineRow
+                      key={name}
+                      icon={effectIconFromName(name)}
+                      label={FM_ADDABLE.find((a) => a.name === name)?.label ?? name}
+                      value={fm[name]}
+                      over
+                      edited
+                      onChange={(v) => setLine(name, v)}
+                      onReset={() => clearLine(name)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {addable.length > 0 && (
+                <div className="rounded-xl border border-glow-gold/20 bg-glow-gold/[0.05] p-3">
+                  <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-glow-gold">
+                    <DofusIcon name="fm" size={13} /> Ajouter une stat (exo)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-void-900/60">
+                      {addName ? <DofusIcon name={effectIconFromName(addName) ?? "etoile"} size={16} /> : <span className="text-slate-600">—</span>}
+                    </span>
+                    <select
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      className="no-drag min-w-0 flex-1 rounded-lg border border-white/10 bg-void-900/80 px-2 py-1.5 text-sm text-white outline-none focus:border-glow-gold/50"
+                    >
+                      <option value="">Choisir une stat…</option>
+                      {addable.map((a) => (
+                        <option key={a.name} value={a.name}>{a.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      value={addVal || ""}
+                      placeholder="0"
+                      onChange={(e) => setAddVal(Math.round(Number(e.target.value) || 0))}
+                      className="no-drag w-14 shrink-0 rounded-lg border border-white/10 bg-void-900/80 px-1.5 py-1.5 text-center text-sm text-white outline-none placeholder:text-slate-600 focus:border-glow-gold/50"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!addName || !addVal) return;
+                        setLine(addName, addVal);
+                        setAddName("");
+                        setAddVal(1);
+                      }}
+                      disabled={!addName || !addVal}
+                      className="no-drag shrink-0 rounded-lg border border-glow-gold/40 bg-glow-gold/15 px-3 py-1.5 text-sm font-bold text-glow-gold transition hover:bg-glow-gold/25 disabled:opacity-40"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-between gap-2 border-t border-white/10 p-3">
+          <button
+            onClick={() => onChange({})}
+            disabled={Object.keys(fm).length === 0}
+            className="no-drag rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 disabled:opacity-40"
+          >
+            Réinitialiser
+          </button>
+          <button
+            onClick={onClose}
+            className="no-drag rounded-xl border border-glow-purple/40 bg-glow-purple/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-glow-purple/30"
+          >
+            Terminé
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Une ligne de l'éditeur FM : icône + libellé + valeur éditable (overmage en doré) + max + reset.
+function FmLineRow({
+  icon,
   label,
   value,
-  tone,
-  suffix,
+  max,
+  over,
+  edited,
+  onChange,
+  onMax,
+  onReset,
 }: {
-  icon: DofusUiIcon;
+  icon?: DofusIconName | null;
   label: string;
   value: number;
-  tone?: string;
-  suffix?: string;
+  max?: number;
+  over?: boolean;
+  edited?: boolean;
+  onChange: (v: number) => void;
+  onMax?: () => void;
+  onReset?: () => void;
 }) {
-  const dofus = effectIconFromName(label); // icône Dofus dérivée du libellé (sinon repli Dofus)
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
-      {dofus ? (
-        <DofusIcon name={dofus} size={16} />
-      ) : (
-        <Icon className={`h-4 w-4 shrink-0 ${tone ?? "text-slate-400"}`} />
+    <div
+      className={`flex items-center gap-2 rounded-lg border px-2 py-1 transition ${
+        edited ? "border-glow-gold/30 bg-glow-gold/[0.06]" : "border-white/10 bg-white/[0.02]"
+      }`}
+    >
+      {icon && <DofusIcon name={icon} size={15} />}
+      <span className={`min-w-0 flex-1 truncate text-[13px] ${edited ? "font-semibold text-white" : "text-slate-300"}`}>
+        {label}
+      </span>
+      {onMax && max != null && (
+        <button
+          onClick={onMax}
+          title="Mettre au maximum"
+          className="no-drag shrink-0 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-slate-400 transition hover:border-glow-gold/40 hover:text-glow-gold"
+        >
+          ↥ {max}
+        </button>
       )}
-      <div className="min-w-0">
-        <div className={`font-display text-sm font-bold leading-none ${value < 0 ? "text-glow-rose" : "text-white"}`}>
-          {value > 0 ? "+" : ""}
-          {value}
-          {suffix ?? ""}
+      <input
+        type="number"
+        value={value || ""}
+        placeholder="0"
+        onChange={(e) => onChange(Math.round(Number(e.target.value) || 0))}
+        className={`no-drag w-14 shrink-0 rounded-md border bg-void-900/80 px-1.5 py-1 text-center text-sm font-bold outline-none placeholder:text-slate-600 ${
+          over ? "border-glow-gold/50 text-glow-gold" : "border-white/10 text-white focus:border-glow-purple/50"
+        }`}
+      />
+      <button
+        onClick={onReset}
+        disabled={!onReset}
+        title="Réinitialiser la ligne"
+        className="no-drag shrink-0 rounded-md p-1 text-slate-500 transition hover:text-glow-rose disabled:opacity-25"
+      >
+        <DofusIcon name="closeRed" size={13} />
+      </button>
+    </div>
+  );
+}
+
+// Ligne de stat compacte : valeur · icône · libellé (agencement façon DofusRoom).
+type StatRowData = { icon: DofusUiIcon; label: string; value: number; suffix?: string; tone?: string };
+function StatRow({ icon: Icon, label, value, suffix, tone }: StatRowData) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="w-12 shrink-0 text-right font-display text-[13px] font-bold tabular-nums text-white">
+        {value}
+        {suffix ?? ""}
+      </span>
+      <Icon className={`h-[15px] w-[15px] shrink-0 ${tone ?? "text-slate-400"}`} />
+      <span className="truncate text-[11px] text-slate-400">{label}</span>
+    </div>
+  );
+}
+
+// Carte de stats à deux colonnes (compacte), reproduisant l'agencement des panneaux DofusRoom.
+function StatBoard({
+  title,
+  icon,
+  left,
+  right,
+}: {
+  title: string;
+  icon: DofusIconName;
+  left: StatRowData[];
+  right: StatRowData[];
+}) {
+  return (
+    <div className="glass rounded-2xl p-3.5">
+      <h3 className="mb-2 flex items-center gap-1.5 font-display text-sm font-bold text-white">
+        <DofusIcon name={icon} size={15} /> {title}
+      </h3>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        <div className="space-y-1">
+          {left.map((r) => (
+            <StatRow key={r.label} {...r} />
+          ))}
         </div>
-        <div className="truncate text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+        <div className="space-y-1">
+          {right.map((r) => (
+            <StatRow key={r.label} {...r} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -2646,11 +3020,10 @@ function SetCompleteModal({
             Annuler
           </button>
           <button
-            onClick={() => onConfirm(chosen)}
-            disabled={chosen.length === 0}
-            className="no-drag flex-1 rounded-xl bg-glow-purple/25 py-2.5 text-sm font-bold text-white ring-1 ring-glow-purple/40 transition hover:bg-glow-purple/35 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => (chosen.length === 0 ? onClose() : onConfirm(chosen))}
+            className="no-drag flex-1 rounded-xl bg-glow-purple/25 py-2.5 text-sm font-bold text-white ring-1 ring-glow-purple/40 transition hover:bg-glow-purple/35"
           >
-            Équiper{chosen.length > 0 ? ` (${chosen.length})` : ""}
+            {chosen.length === 0 ? "Continuer" : `Équiper (${chosen.length})`}
           </button>
         </div>
       </motion.div>

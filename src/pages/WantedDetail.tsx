@@ -40,7 +40,7 @@ export default function WantedDetail() {
       <div className="glass relative overflow-hidden rounded-3xl p-5">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_20%,rgba(245,158,11,0.14),transparent_50%)]" />
         <DofusIcon
-          name="teteDeMort"
+          name="skull"
           size={150}
           className="pointer-events-none absolute -right-4 -top-6 opacity-[0.06]"
         />
@@ -56,7 +56,7 @@ export default function WantedDetail() {
                   onError={(e) => (e.currentTarget.style.opacity = "0.3")}
                 />
               ) : (
-                <DofusIcon name="teteDeMort" size={56} className="opacity-40" />
+                <DofusIcon name="skull" size={56} className="opacity-40" />
               )}
             </div>
           </div>

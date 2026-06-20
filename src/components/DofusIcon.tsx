@@ -95,6 +95,10 @@ const PATHS = {
   weaponColored: "weapon",
   crown: "icon_cup",
   questionMark: "info",
+  titan: "monster_grey", // fallback distant ; icône réelle = asset officiel (iconBossSkull)
+  guild: "group", // fallback distant ; icône réelle = asset officiel (guild.png)
+  key: "info", // fallback distant ; icône réelle = asset officiel (key.png)
+  eye: "info", // fallback distant ; icône réelle = asset client (eye.png)
   // slots d'équipement (résolus en officiel ci-dessous ; fallback distant générique)
   slotHat: "armor",
   slotCloak: "armor",
@@ -212,7 +216,7 @@ const PATHS = {
   kama: "effects/kama",
   xp: "effects/xp",
   sablier: "effects/sablier",
-  teteDeMort: "effects/teteDeMort",
+  teteDeMort: "effects/soin",
   quete: "effects/quete",
   queteValid: "effects/queteValid",
   zaap: "effects/zaap",
@@ -338,6 +342,7 @@ const CLIENT_PATHS: Partial<Record<DofusIconName, string>> = {
   lightning: "lightning.png",
   etoile: "star.png",
   familier: "pet.png",
+  eye: "eye.png",
   fm: "magic.png",
   glyph: "glyph.png",
   group: "group.png",
@@ -505,6 +510,9 @@ const OFFICIAL_PATHS: Partial<Record<DofusIconName, string>> = {
   target: "btnIcon_focus.png",
   zoom: "icon_magnifier.png",
   companions: "companions.png",
+  titan: "iconBossSkull.png",
+  guild: "guild.png",
+  key: "key.png",
   mount: "mount.png",
   dragodinde: "dragoturkey.png",
   horseshoe: "horseshoe.png",
@@ -515,7 +523,7 @@ const OFFICIAL_PATHS: Partial<Record<DofusIconName, string>> = {
   monster: "icon_monster_grey.png",
   monsterGrey: "icon_monster_grey.png",
   skull: "icon_skull_grey.png",
-  teteDeMort: "icon_skull_grey.png",
+  teteDeMort: "red-cross.png",
   kama: "icon_kama.png",
   recipe: "icon_recipe_grey.png",
   iconRecipeGrey: "icon_recipe_grey.png",

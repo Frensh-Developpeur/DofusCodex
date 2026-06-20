@@ -168,13 +168,17 @@
     background: transparent !important;
   }
 
-  /* Rendu de l'HTML d'article (page Actualités) : contenu brut des flux RSS dofus.com. */
+  /* Rendu de l'HTML d'article (Actualités RSS dofus.com + guides DPLN restylés, classe partagée). */
   .news-article img {
     max-width: 100%;
     height: auto;
     border-radius: 0.75rem;
     margin: 0.75rem auto;
     display: block;
+  }
+  /* Images du guide DPLN : cliquables pour agrandir (lightbox). */
+  .dpln-guide img {
+    cursor: zoom-in;
   }
   .news-article p {
     margin: 0.75rem 0;

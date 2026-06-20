@@ -264,7 +264,7 @@ function WantedCard({
             onError={(e) => (e.currentTarget.style.opacity = "0.2")}
           />
         ) : (
-          <DofusIcon name="teteDeMort" size={30} className="opacity-30" />
+          <DofusIcon name="skull" size={30} className="opacity-30" />
         )}
       </div>
 

@@ -16,8 +16,10 @@ export const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     items: [
       { to: "/donjons", label: "Donjons", dofus: "dungeon" },
+      { to: "/titans", label: "Titans", dofus: "titan" },
+      { to: "/raids-de-guilde", label: "Raids de guilde", dofus: "guild" },
       { to: "/quetes", label: "Quêtes", dofus: "quete" },
-      { to: "/avis-de-recherche", label: "Avis de recherche", dofus: "teteDeMort" },
+      { to: "/avis-de-recherche", label: "Avis de recherche", dofus: "skull" },
       { to: "/guides", label: "Guides", dofus: "book" },
       { to: "/arbre", label: "Arbre des guides", dofus: "genealogy" },
     ],
@@ -59,6 +61,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/builder", label: "Builder", dofus: "characteristic" },
       { to: "/forgemagie", label: "Forgemagie", dofus: "fm" },
+      { to: "/macros-windows", label: "Macros Windows", dofus: "settingsGear" },
       { to: "/rentabilite-metiers", label: "XP métier", dofus: "recipe" },
       { to: "/xp-familier", label: "XP familier", dofus: "bestiary" },
       { to: "/chasse", label: "Chasse au trésor", dofus: "map" },

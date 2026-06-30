@@ -12,6 +12,37 @@ export const isOverlayWindow =
 
 export const overlaySupported = typeof window !== "undefined" && !!window.dofusCodex?.overlayOpen;
 
+let overlayMode = isOverlayWindow;
+const modeSubs = new Set<() => void>();
+
+function applyOverlayMode(active: boolean) {
+  overlayMode = active;
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.toggle("overlay-win", active);
+  }
+  for (const s of modeSubs) s();
+}
+
+if (typeof window !== "undefined") {
+  if (overlayMode) document.documentElement.classList.add("overlay-win");
+  window.dofusCodex?.onOverlayState?.((payload) => {
+    const active = !!payload?.active;
+    if (payload?.route && active) window.location.hash = payload.route;
+    applyOverlayMode(active);
+  });
+}
+
+export function useOverlayMode(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      modeSubs.add(cb);
+      return () => modeSubs.delete(cb);
+    },
+    () => overlayMode,
+    () => overlayMode,
+  );
+}
+
 // ---- Opacité du fond (0.1 → 1), partagée par fenêtre via localStorage ----
 const ALPHA_KEY = "dofuscodex.overlayAlpha";
 function loadAlpha(): number {
@@ -44,9 +75,11 @@ export function setOverlayAlpha(v: number) {
 }
 
 // ---- Pilotage de la fenêtre overlay ----
-// (fenêtre principale) ouvre l'overlay sur un guide donné
-export function openOverlay(guideId: number) {
-  window.dofusCodex?.overlayOpen?.(guideId);
+// (fenêtre principale) ouvre l'overlay sur un chemin interne (ou un guideId historique).
+export function openOverlay(target: number | string) {
+  const path = typeof target === "number" ? `/guides/${target}` : target;
+  if (path) window.location.hash = path;
+  window.dofusCodex?.overlayOpen?.(path);
 }
 // (fenêtre overlay) la ferme et réaffiche la fenêtre principale
 export function closeOverlay() {

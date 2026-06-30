@@ -5,7 +5,7 @@ import { ArrowLeft, ExternalLink, ImageOff } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
 import AppLoader from "../components/AppLoader";
 import { SectionHeader } from "../components/ui";
-import { skinatorEngine } from "../store/skinatorEngine";
+import { skinatorEngine, useGalleryOpen } from "../store/skinatorEngine";
 
 // Galerie publique des skins Barbofus embarquée dans une webview Electron.
 // La recherche/les filtres/le scroll infini sont 100% Livewire (AJAX + CSRF) côté Barbofus :
@@ -67,7 +67,7 @@ function GalleryEngine({ active }: { active: boolean }) {
   const navigate = useNavigate();
   const webviewRef = useRef<GalleryWebview | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
-  const [opened, setOpened] = useState(false);
+  const opened = useGalleryOpen();
   const [ready, setReady] = useState(false);
   const [viewHeight, setViewHeight] = useState(VIEW_HEIGHT);
   const [expanded, setExpanded] = useState(false);
@@ -78,6 +78,7 @@ function GalleryEngine({ active }: { active: boolean }) {
   const [skinId, setSkinId] = useState<string | null>(null);
   useEffect(() => {
     if (!opened) {
+      setReady(false);
       setCanBack(false);
       setSkinId(null);
       return;
@@ -205,7 +206,10 @@ function GalleryEngine({ active }: { active: boolean }) {
     syncShadowFrame(webview);
     applyGalleryFocus(webview);
     if (typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => syncShadowFrame(webview));
+    const ro = new ResizeObserver(() => {
+      syncShadowFrame(webview);
+      applyGalleryFocus(webview);
+    });
     ro.observe(webview);
     return () => ro.disconnect();
   }, [ready, expanded]);
@@ -274,7 +278,7 @@ function GalleryEngine({ active }: { active: boolean }) {
           La galerie se charge depuis barbofus.com — elle ne s'ouvre qu'à la demande.
         </p>
       </div>
-      <button onClick={() => setOpened(true)} className={toolButton("purple")}>
+      <button onClick={() => skinatorEngine.setGalleryOpen(true)} className={toolButton("purple")}>
         Ouvrir la galerie
       </button>
     </div>
@@ -397,8 +401,21 @@ function applyGalleryFocus(webview: GalleryWebview): Promise<unknown> {
         #070912 !important;
       background-attachment: fixed !important;
     }
-    body { background: transparent !important; }
-    #navbar, #footer { display: none !important; }
+    body {
+      background: transparent !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    body > .sticky,
+    #navbar,
+    #header,
+    nav,
+    body > h1,
+    #footer,
+    footer {
+      display: none !important;
+    }
   `;
   const cssDone = webview.insertCSS(css).catch(() => {});
   const jsDone = webview
@@ -407,8 +424,11 @@ function applyGalleryFocus(webview: GalleryWebview): Promise<unknown> {
         // Le contenu réserve de l'espace pour la navbar fixe : on le récupère une fois masquée.
         document.documentElement.style.background = '#070912';
         document.body.style.background = '#070912';
-        document.body.style.paddingTop = '0px';
+        document.body.style.margin = '0px';
+        document.body.style.padding = '0px';
         window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
 
         // Masque les boutons natifs « Copier » (x-on:mousedown="CopyLink") et « 🚀 Skinator »
         // (lien skinator?skin=) de la fiche skin → on passe par notre propre bouton d'en-tête.

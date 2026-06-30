@@ -118,7 +118,7 @@ function hotkeyLabel(value: string) {
   return HOTKEYS.find((h) => h.value === value)?.label ?? prettyHotkey(value);
 }
 
-// Nom de touche normalisé (style AutoHotkey, attendu par le helper natif). null = modificateur seul.
+// Nom de touche normalisé au style AutoHotkey. null = modificateur seul.
 function normalizeKey(e: KeyboardEvent): string | null {
   const k = e.key;
   if (["Control", "Alt", "Shift", "Meta", "OS", "Dead", "AltGraph"].includes(k)) return null;
@@ -146,7 +146,7 @@ function comboFromEvent(e: KeyboardEvent): string | null {
 }
 
 // Capteur de déclencheur : l'utilisateur clique puis presse une touche / un combo / un bouton
-// souris (molette, Souris 4/5) → enregistré au format attendu par le moteur. Clic gauche = annuler.
+// souris (molette, Souris 4/5) → enregistré au format attendu par AutoHotkey. Clic gauche = annuler.
 function HotkeyCapture({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [listening, setListening] = useState(false);
 
@@ -260,6 +260,90 @@ function downloadConfig(config: NativeMacroConfig) {
   URL.revokeObjectURL(url);
 }
 
+function escapeAhkString(value: string) {
+  return value
+    .replace(/`/g, "``")
+    .replace(/"/g, '""')
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, "`n");
+}
+
+function ahkHotkey(hotkey: string) {
+  const parts = hotkey.split("+").map((p) => p.trim()).filter(Boolean);
+  const key = parts.pop();
+  if (!key) return "";
+  const mods = parts.map((p) => {
+    if (/^Ctrl$/i.test(p)) return "^";
+    if (/^Alt$/i.test(p)) return "!";
+    if (/^Shift$/i.test(p)) return "+";
+    if (/^Win$/i.test(p)) return "#";
+    return "";
+  }).join("");
+  return `${mods}${key}`;
+}
+
+function ahkKey(key: string) {
+  const hotkey = ahkHotkey(key);
+  if (!hotkey) return "";
+  return /[!^+#]/.test(hotkey) ? hotkey.toLowerCase() : `{${hotkey}}`;
+}
+
+function ahkMouse(mouse: string) {
+  if (mouse === "RightClick") return `Click "Right"`;
+  if (mouse === "MiddleClick") return `Click "Middle"`;
+  return `Click`;
+}
+
+function ahkStep(step: NativeMacroStep) {
+  const lines: string[] = [];
+  if (step.delayMs) lines.push(`  Sleep ${step.delayMs}`);
+  if (step.text != null) {
+    lines.push(`  A_Clipboard := "${escapeAhkString(step.text)}"`);
+    lines.push(`  ClipWait 0.5`);
+    lines.push(`  Send "^v"`);
+  }
+  if (step.key) {
+    const key = ahkKey(step.key);
+    if (key) lines.push(`  Send "${key}"`);
+  }
+  if (step.mouse) lines.push(`  ${ahkMouse(step.mouse)}`);
+  if (step.sleepMs) lines.push(`  Sleep ${step.sleepMs}`);
+  const repeat = Math.max(1, Math.min(50, Number(step.repeat) || 1));
+  if (repeat <= 1) return lines;
+  return [`  Loop ${repeat} {`, ...lines.map((line) => `  ${line}`), `  }`];
+}
+
+function ahkMacro(macro: Macro) {
+  if (!macro.enabled || !macro.hotkey || macro.steps.length === 0) return "";
+  const hotkey = ahkHotkey(macro.hotkey);
+  if (!hotkey) return "";
+  const lines = macro.steps.flatMap(ahkStep);
+  if (!lines.length) return "";
+  return [
+    `; ${macro.label}`,
+    `$${hotkey}:: {`,
+    macro.target === "dofus" ? `  ; Cible Dofus indiquee dans DofusCodex : active manuellement la bonne fenetre avant usage.` : "",
+    ...lines,
+    `}`,
+  ].filter(Boolean).join("\n");
+}
+
+function buildAhkScript(config: NativeMacroConfig) {
+  const blocks = config.macros.map(ahkMacro).filter(Boolean);
+  return [
+    "#Requires AutoHotkey v2.0",
+    "#SingleInstance Force",
+    "",
+    "; Script genere par DofusCodex.",
+    "; L'app ecrit ce fichier puis demande a Windows de l'ouvrir avec AutoHotkey.",
+    "; Les macros envoient leurs actions dans la fenetre active.",
+    "",
+    ...blocks,
+    "",
+  ].join("\n\n");
+}
+
 export default function WindowsMacros() {
   const [config, setConfig] = useState<NativeMacroConfig>(() => cloneConfig(DEFAULT_CONFIG));
   const [status, setStatus] = useState<NativeMacroStatus | null>(null);
@@ -268,10 +352,12 @@ export default function WindowsMacros() {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [ahkMsg, setAhkMsg] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
 
   const selectedIndex = Math.max(0, config.macros.findIndex((m) => m.id === selectedId));
   const selected = config.macros[selectedIndex] ?? config.macros[0];
   const json = useMemo(() => JSON.stringify(config, null, 2), [config]);
+  const ahkScript = useMemo(() => buildAhkScript(config), [config]);
   const activeMacros = config.macros.filter((m) => m.enabled).length;
   const dofusMacros = config.macros.filter((m) => m.enabled && m.target === "dofus").length;
 
@@ -312,8 +398,7 @@ export default function WindowsMacros() {
   }, []);
 
   // Sauvegarde AUTOMATIQUE (debouncée) : toute modif (ajout, suppression, édition) est persistée
-  // sur DISQUE (pour le helper natif) ET dans le STORE (→ synchro cloud). Survit au rechargement
-  // et se retrouve sur les autres appareils.
+  // dans le STORE (→ synchro cloud). Le fichier .ahk est régénéré quand l'utilisateur le lance.
   useEffect(() => {
     if (!loaded.current) return;
     const t = window.setTimeout(() => {
@@ -430,21 +515,25 @@ export default function WindowsMacros() {
   async function start() {
     setBusy(true);
     try {
-      await window.dofusCodex?.macrosStart?.(config);
+      const clean = await window.dofusCodex?.macrosSaveConfig?.(config);
+      if (clean) setConfig(clean);
+      const result = await window.dofusCodex?.macrosOpenAhk?.(buildAhkScript(clean ?? config));
+      if (result?.ok) {
+        setAhkMsg({ tone: "ok", text: `Script ouvert : ${result.path}` });
+      } else {
+        setAhkMsg({
+          tone: "warn",
+          text: "AutoHotkey ne semble pas associé aux fichiers .ahk. La page officielle vient d'être ouverte.",
+        });
+      }
       await refreshStatus();
     } finally {
       setBusy(false);
     }
   }
 
-  async function stop() {
-    setBusy(true);
-    try {
-      await window.dofusCodex?.macrosStop?.();
-      await refreshStatus();
-    } finally {
-      setBusy(false);
-    }
+  async function downloadAhk() {
+    await window.dofusCodex?.macrosDownloadAhk?.();
   }
 
   async function copyJson() {
@@ -454,15 +543,15 @@ export default function WindowsMacros() {
     }
   }
 
-  const statusTone = status?.running ? "emerald" : status?.available ? "gold" : "rose";
-  const statusLabel = status?.running ? "Actif" : status?.available ? "Prêt" : "Indisponible";
+  const statusTone = status?.platform === "win32" ? "gold" : "rose";
+  const statusLabel = status?.platform === "win32" ? "AHK externe" : "Windows requis";
 
   return (
     <motion.div variants={fadeUp} initial="hidden" animate="show" className="pb-12">
       <SectionHeader
         eyebrow="Outils Windows"
         title="Macros Windows"
-        subtitle="Raccourcis globaux natifs, configurables en mode assisté ou avancé."
+        subtitle="Configure tes raccourcis ici, DofusCodex génère un script AutoHotkey puis demande à Windows de l'ouvrir."
         right={
           <div className="flex flex-wrap gap-2">
             <button
@@ -473,25 +562,21 @@ export default function WindowsMacros() {
               {saved ? <Check className="h-4 w-4 text-glow-emerald" /> : <Save className="h-4 w-4" />}
               {saved ? "Sauvé" : "Sauvegarder"}
             </button>
-            {status?.running ? (
-              <button
-                onClick={stop}
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-xl border border-glow-rose/35 bg-glow-rose/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-rose/25 disabled:opacity-60"
-              >
-                <Power className="h-4 w-4" />
-                Arrêter
-              </button>
-            ) : (
-              <button
-                onClick={start}
-                disabled={busy || status?.platform !== "win32" || status?.available === false}
-                className="inline-flex items-center gap-2 rounded-xl border border-glow-emerald/35 bg-glow-emerald/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-emerald/25 disabled:opacity-50"
-              >
-                <Power className="h-4 w-4" />
-                Démarrer
-              </button>
-            )}
+            <button
+              onClick={downloadAhk}
+              className="inline-flex items-center gap-2 rounded-xl border border-glow-gold/35 bg-glow-gold/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-gold/25"
+            >
+              <Download className="h-4 w-4" />
+              Installer AutoHotkey
+            </button>
+            <button
+              onClick={start}
+              disabled={busy || status?.platform !== "win32" || activeMacros === 0}
+              className="inline-flex items-center gap-2 rounded-xl border border-glow-emerald/35 bg-glow-emerald/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-emerald/25 disabled:opacity-50"
+            >
+              <Power className="h-4 w-4" />
+              Ouvrir le script
+            </button>
           </div>
         }
       />
@@ -506,14 +591,27 @@ export default function WindowsMacros() {
       {dofusMacros > 0 && (
         <div className="mb-5 rounded-2xl border border-glow-rose/30 bg-glow-rose/10 p-4 text-sm leading-relaxed text-slate-300">
           <span className="font-semibold text-glow-rose">Ciblage Dofus activé.</span>{" "}
-          Les macros concernées ramènent Dofus au premier plan avant d'envoyer les actions. L'utilisateur reste seul responsable
-          des raccourcis configurés et du respect des règles des logiciels ciblés.
+          Le script AutoHotkey n'active pas Dofus automatiquement : active la bonne fenêtre avant d'utiliser le raccourci.
+          L'utilisateur reste seul responsable des raccourcis configurés et du respect des règles des logiciels ciblés.
+        </div>
+      )}
+
+      {ahkMsg && (
+        <div
+          className={clsx(
+            "mb-5 rounded-2xl border p-4 text-sm leading-relaxed",
+            ahkMsg.tone === "ok"
+              ? "border-glow-emerald/25 bg-glow-emerald/10 text-glow-emerald"
+              : "border-glow-gold/25 bg-glow-gold/10 text-glow-gold",
+          )}
+        >
+          {ahkMsg.text}
         </div>
       )}
 
       {status?.platform && status.platform !== "win32" && (
         <div className="mb-5 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4 text-sm text-glow-gold">
-          Le moteur natif tourne uniquement dans l'application Windows. La configuration reste modifiable ici.
+          AutoHotkey tourne uniquement sur Windows. La configuration reste modifiable ici.
         </div>
       )}
 
@@ -714,16 +812,19 @@ export default function WindowsMacros() {
           )}
 
           <section className="glass rounded-2xl p-5">
-            <h2 className="font-display text-lg font-bold text-white">Moteur</h2>
+            <h2 className="font-display text-lg font-bold text-white">AutoHotkey</h2>
             <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-400">
-              <p>Par défaut, les actions partent vers la fenêtre Windows déjà active. Le ciblage Dofus est optionnel, explicite et isolé par raccourci.</p>
-              <p>DofusCodex fournit un moteur local de raccourcis. Chaque utilisateur reste responsable de sa configuration et de son usage.</p>
+              <p>DofusCodex sauvegarde ta configuration, génère un fichier <span className="font-mono text-slate-300">dofuscodex-macros.ahk</span>, puis demande à Windows de l'ouvrir avec AutoHotkey v2.</p>
+              <p>Si AutoHotkey n'est pas installé ou pas associé aux fichiers .ahk, le bouton ouvre la page officielle de téléchargement.</p>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Pill tone="cyan">Global hooks</Pill>
-              <Pill tone="emerald">SendInput</Pill>
-              <Pill tone="slate">Sans AHK</Pill>
+              <Pill tone="cyan">AutoHotkey v2</Pill>
+              <Pill tone="emerald">Fichier .ahk</Pill>
+              <Pill tone="slate">Sans helper natif</Pill>
             </div>
+            <pre className="mt-4 max-h-64 overflow-auto rounded-xl border border-white/10 bg-void-950/80 p-3 text-xs leading-5 text-slate-300">
+              {ahkScript}
+            </pre>
           </section>
         </section>
       </div>
@@ -851,7 +952,7 @@ function AdvancedPanel({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 p-4">
           <div>
             <h3 className="font-display text-base font-bold text-white">JSON</h3>
-            <p className="text-xs text-slate-500">Configuration brute lue par le helper.</p>
+            <p className="text-xs text-slate-500">Configuration brute sauvegardée par DofusCodex.</p>
           </div>
           <div className="flex gap-2">
             <button

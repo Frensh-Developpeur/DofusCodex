@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueries, keepPreviousData } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, X, ChevronRight, MapPin } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
@@ -72,6 +72,38 @@ export default function ShoppingList() {
     return m;
   }, [aggItemsQ.data]);
 
+  const perItemResourceQs = useQueries({
+    queries: shoppingList.map((it) => ({
+      queryKey: ["shopping-item-resources", it.itemId],
+      queryFn: ({ signal }: { signal: AbortSignal }) => aggregateResources([{ itemId: it.itemId, quantity: 1 }], signal),
+      staleTime: Infinity,
+    })),
+  });
+  const resourceIdsByShoppingId = useMemo(() => {
+    const byId = new Map<string, number[]>();
+    shoppingList.forEach((it, idx) => {
+      byId.set(it.id, Object.keys(perItemResourceQs[idx]?.data ?? {}).map(Number));
+    });
+    return byId;
+  }, [perItemResourceQs, shoppingList]);
+
+  useEffect(() => {
+    if (!shoppingList.length) return;
+    if (!aggQ.data) return;
+    actions.pruneResourceOwned(Object.keys(aggQ.data).map(Number));
+  }, [aggQ.data, shoppingList.length]);
+
+  const getResourceIdsToClear = (item: ShoppingItem) => {
+    const removedIds = resourceIdsByShoppingId.get(item.id) ?? [];
+    if (removedIds.length === 0) return [];
+    const stillNeeded = new Set<number>();
+    for (const it of shoppingList) {
+      if (it.id === item.id) continue;
+      for (const resourceId of resourceIdsByShoppingId.get(it.id) ?? []) stillNeeded.add(resourceId);
+    }
+    return removedIds.filter((resourceId) => !stillNeeded.has(resourceId));
+  };
+
   // Type d'item (Bois, Minerai, Plante…) → nom, pour grouper les ressources.
   const itemTypesQ = useQuery({ queryKey: ["item-types"], queryFn: ({ signal }) => listItemTypes(signal), staleTime: Infinity });
   const typeName = useMemo(() => {
@@ -130,7 +162,7 @@ export default function ShoppingList() {
       />
 
       {/* Ajouter un item */}
-      <div className="glass mb-4 rounded-2xl p-3">
+      <div className={`glass relative mb-4 rounded-2xl p-3 ${term.trim().length >= 2 ? "z-50" : "z-10"}`}>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
@@ -140,7 +172,7 @@ export default function ShoppingList() {
             className="no-drag w-full rounded-xl border border-white/10 bg-void-800/60 py-2.5 pl-10 pr-3 text-sm text-slate-200 outline-none transition focus:border-glow-purple/50"
           />
           {term.trim().length >= 2 && (
-            <div className="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-white/10 bg-void-900/95 p-1 shadow-xl backdrop-blur">
+            <div className="absolute z-[100] mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-white/10 bg-void-900/95 p-1 shadow-xl backdrop-blur">
               {(searchQ.data ?? []).map((it) => (
                 <button
                   key={it.id}
@@ -183,7 +215,12 @@ export default function ShoppingList() {
             </div>
             <div className="flex flex-col gap-2">
               {shoppingList.map((it) => (
-                <ShoppingRow key={it.id} item={it} info={addedMap.get(it.itemId)} />
+                <ShoppingRow
+                  key={it.id}
+                  item={it}
+                  info={addedMap.get(it.itemId)}
+                  resourceIdsToClear={getResourceIdsToClear(it)}
+                />
               ))}
             </div>
           </div>
@@ -240,7 +277,15 @@ export default function ShoppingList() {
 }
 
 // Ligne « à fabriquer » : item + quantité éditable + suppression.
-function ShoppingRow({ item, info }: { item: ShoppingItem; info?: ItemLite }) {
+function ShoppingRow({
+  item,
+  info,
+  resourceIdsToClear,
+}: {
+  item: ShoppingItem;
+  info?: ItemLite;
+  resourceIdsToClear: number[];
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -269,7 +314,7 @@ function ShoppingRow({ item, info }: { item: ShoppingItem; info?: ItemLite }) {
         className="no-drag w-16 rounded-lg border border-white/10 bg-void-800/60 px-2 py-1 text-center text-sm text-slate-200 outline-none focus:border-glow-purple/50"
       />
       <button
-        onClick={() => actions.removeShoppingItem(item.id)}
+        onClick={() => actions.removeShoppingItem(item.id, resourceIdsToClear)}
         title="Retirer"
         className="no-drag shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-white/10 hover:text-glow-rose"
       >

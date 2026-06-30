@@ -4,9 +4,10 @@
 import { firstGuideImage, type GuideLight, type GuideDetail } from "../api/ganymede";
 
 const DB_NAME = "dofuscodex";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const GUIDES = "guides"; // détails complets, clé = id
 const META = "meta"; // { key, value } : liste, lastSync…
+const API_JSON = "apiJson"; // cache générique des réponses API JSON, clé = url
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -25,6 +26,7 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(GUIDES)) db.createObjectStore(GUIDES, { keyPath: "id" });
       if (!db.objectStoreNames.contains(META)) db.createObjectStore(META, { keyPath: "key" });
+      if (!db.objectStoreNames.contains(API_JSON)) db.createObjectStore(API_JSON, { keyPath: "url" });
     };
     req.onsuccess = () => {
       clearTimeout(timer);

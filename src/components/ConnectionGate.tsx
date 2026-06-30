@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { WifiOff, RefreshCw } from "./DofusIcons";
+import { WifiOff, RefreshCw, Check } from "./DofusIcons";
 import { dismissSplash } from "../lib/splash";
 import AppLoader from "./AppLoader";
 
@@ -36,8 +36,8 @@ async function probeConnection(): Promise<boolean> {
 
 type Status = "checking" | "online" | "offline";
 
-// Bloque le montage de l'app tant qu'on n'a pas confirmé une connexion. L'app étant 100%
-// online (toutes les données viennent d'API), il n'y a rien à afficher sans réseau.
+// Sonde la connexion au démarrage, mais ne bloque plus l'app hors-ligne : le cache API
+// IndexedDB peut maintenant répondre pour les données déjà consultées.
 export default function ConnectionGate({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>("checking");
   const [retrying, setRetrying] = useState(false);
@@ -89,7 +89,14 @@ export default function ConnectionGate({ children }: { children: ReactNode }) {
 
   if (status === "online") return <>{children}</>;
 
-  if (status === "offline") return <OfflineScreen onRetry={runProbe} retrying={retrying} />;
+  if (status === "offline") {
+    return (
+      <>
+        {children}
+        <OfflineBanner onRetry={runProbe} retrying={retrying} />
+      </>
+    );
+  }
 
   // checking : notre loader, identique au splash de démarrage (transition invisible).
   return (
@@ -102,40 +109,32 @@ export default function ConnectionGate({ children }: { children: ReactNode }) {
   );
 }
 
-function OfflineScreen({ onRetry, retrying }: { onRetry: () => void; retrying: boolean }) {
+function OfflineBanner({ onRetry, retrying }: { onRetry: () => void; retrying: boolean }) {
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-7 px-8 text-center"
-      style={{ background: BACKDROP }}
-    >
+    <div className="pointer-events-none fixed bottom-4 left-1/2 z-[90] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="relative grid h-28 w-28 place-items-center"
+        initial={{ opacity: 0, y: 18, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-glow-gold/30 bg-void-900/95 px-4 py-3 shadow-card backdrop-blur"
       >
-        <span className="absolute inset-2 rounded-full bg-glow-purple/25 blur-2xl" />
-        <WifiOff className="relative h-12 w-12 text-glow-violet drop-shadow-[0_0_12px_rgb(var(--c-purple)/0.7)]" />
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-glow-gold/15 text-glow-gold ring-1 ring-glow-gold/30">
+          <WifiOff className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-white">Mode hors-ligne</p>
+          <p className="text-xs leading-snug text-slate-400">
+            Les données déjà consultées restent disponibles depuis le cache local.
+          </p>
+        </div>
+        <button
+          onClick={onRetry}
+          disabled={retrying}
+          className="no-drag inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.09] disabled:opacity-60"
+        >
+          {retrying ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+          {retrying ? "Test…" : "Retester"}
+        </button>
       </motion.div>
-
-      <div className="space-y-2.5">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-white">
-          Pas de connexion
-        </h1>
-        <p className="mx-auto max-w-sm text-sm leading-6 text-slate-400">
-          DofusCodex n'arrive pas à joindre ses serveurs. Toutes ses données (donjons,
-          équipements, guides…) viennent du net&nbsp;: vérifie ta connexion Internet, puis réessaie.
-        </p>
-      </div>
-
-      <button
-        onClick={onRetry}
-        disabled={retrying}
-        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        <RefreshCw className={`h-4 w-4 ${retrying ? "animate-spin" : ""}`} />
-        {retrying ? "Vérification…" : "Réessayer"}
-      </button>
     </div>
   );
 }

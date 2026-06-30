@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2 } from "./DofusIcons";
 import DofusIcon from "./DofusIcon";
 import { actions } from "../store/store";
 import { idbClearAll } from "../lib/guideDb";
+import { clearApiCache } from "../lib/apiCache";
 import { clearViewState } from "../lib/viewState";
 import { syncNow } from "../lib/cloudSync";
 
@@ -16,6 +17,7 @@ const WIPES = [
   "La progression des donjons et des quêtes",
   "Le suivi des guides (étapes, cases cochées, favoris, récents)",
   "Les guides téléchargés hors-ligne",
+  "Le cache hors-ligne des données déjà consultées",
   "Ta sauvegarde dans le cloud (si tu es connecté·e)",
 ];
 
@@ -34,6 +36,7 @@ export default function ClearCacheButton({ collapsed = false }: { collapsed?: bo
       await syncNow();
       clearViewState(); // filtres/recherche/scroll mémorisés
       await idbClearAll(); // cache guides (IndexedDB)
+      await clearApiCache(); // cache API générique (DofusDB/DofusDude)
       qc.clear(); // cache requêtes en mémoire
     } catch {
       /* on recharge quand même */

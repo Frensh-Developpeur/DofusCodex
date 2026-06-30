@@ -251,6 +251,12 @@ function effectVisual(label: string): { icon: DofusUiIcon; tone: string } {
   return { icon: ICON_NEUTRE, tone: "text-slate-400" };
 }
 
+function itemEffectJetValue(effect: { int_minimum?: number; int_maximum?: number }): number {
+  // DofusDude renvoie les jets fixes des Dofus avec int_minimum = valeur et int_maximum = 0
+  // (ignore_int_max côté API). On prend donc max seulement s'il est non nul.
+  return effect.int_maximum || effect.int_minimum || 0;
+}
+
 type Caracs = Record<CaracKey, number>;
 const ZERO_CARACS: Caracs = { strength: 0, intelligence: 0, chance: 0, agility: 0, vitality: 0, wisdom: 0 };
 
@@ -527,7 +533,7 @@ function BuildEditor({ build }: { build: Build }) {
         const low = name.toLowerCase();
         if (low.includes("spell") || low.includes("échangeable") || low.includes("attitude") || low.includes("apparence")) continue;
         const override = fmSlot && name in fmSlot;
-        const v = override ? fmSlot![name] : e.int_maximum || e.int_minimum || 0;
+        const v = override ? fmSlot![name] : itemEffectJetValue(e);
         if (override) used.add(name);
         if (!v) continue;
         applyItemEffect(s, name, v, e.type);
@@ -2394,13 +2400,13 @@ function SlotCard({
     if (!name || e.type?.is_active) return false;
     const n = name.toLowerCase();
     if (n.includes("spell") || n.includes("échangeable") || n.includes("attitude") || n.includes("apparence")) return false;
-    return (e.int_maximum ?? 0) !== 0 || (e.int_minimum ?? 0) !== 0;
+    return itemEffectJetValue(e) !== 0;
   });
   const statNames = new Set(statEffects.map((e) => e.type!.name));
   const jetLines = [
     ...statEffects.map((e) => {
       const name = e.type!.name;
-      const max = e.int_maximum ?? e.int_minimum ?? 0;
+      const max = itemEffectJetValue(e);
       const value = name in fm ? fm[name] : max;
       return { name, label: name, value, edited: name in fm, over: value > max };
     }),
@@ -2566,7 +2572,7 @@ function FmEditorModal({
     if (!name || e.type?.is_active) return false;
     const n = name.toLowerCase();
     if (n.includes("spell") || n.includes("échangeable") || n.includes("attitude") || n.includes("apparence")) return false;
-    return (e.int_maximum ?? 0) !== 0 || (e.int_minimum ?? 0) !== 0;
+    return itemEffectJetValue(e) !== 0;
   });
   const lineNames = new Set(lines.map((l) => l.type!.name));
   const extraNames = Object.keys(fm).filter((n) => !lineNames.has(n));
@@ -2631,7 +2637,7 @@ function FmEditorModal({
                 {lines.length === 0 && <p className="text-sm text-slate-500">Aucune ligne de stat.</p>}
                 {lines.map((e) => {
                   const name = e.type!.name;
-                  const max = e.int_maximum ?? e.int_minimum ?? 0;
+                  const max = itemEffectJetValue(e);
                   const cur = name in fm ? fm[name] : max;
                   const edited = name in fm;
                   return (

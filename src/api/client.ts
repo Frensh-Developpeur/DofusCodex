@@ -1,4 +1,5 @@
 // Thin fetch helpers shared by both API modules.
+import { getCachedJson, putCachedJson } from "../lib/apiCache";
 
 export class ApiError extends Error {
   constructor(
@@ -11,11 +12,25 @@ export class ApiError extends Error {
 }
 
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
-  if (!res.ok) {
-    throw new ApiError(`Requête échouée (${res.status})`, res.status);
+  try {
+    const res = await fetch(url, { signal, headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      if (res.status >= 500) {
+        const cached = await getCachedJson<T>(url);
+        if (cached !== undefined) return cached;
+      }
+      throw new ApiError(`Requête échouée (${res.status})`, res.status);
+    }
+    const data = (await res.json()) as T;
+    void putCachedJson(url, data);
+    return data;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    if (error instanceof ApiError) throw error;
+    const cached = await getCachedJson<T>(url);
+    if (cached !== undefined) return cached;
+    throw error;
   }
-  return (await res.json()) as T;
 }
 
 export function qs(params: Record<string, string | number | undefined | null>): string {

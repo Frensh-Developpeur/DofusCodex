@@ -21,11 +21,13 @@ protocol.registerSchemesAsPrivileged([
   { scheme: NEWS_IMAGE_PROTOCOL, privileges: { secure: true, standard: true, supportFetchAPI: true } },
 ]);
 
-// Mode overlay = fenêtre DÉDIÉE transparente, flottante au-dessus du jeu (la fenêtre principale
-// reste intacte, juste masquée). Dimensions/position persistées sur disque.
-const OVERLAY_MIN = { width: 180, height: 120 };
+// Mode overlay = la fenêtre principale se transforme en fenêtre compacte flottante au-dessus du jeu.
+// Dimensions/position persistées sur disque ; les dimensions normales sont restaurées à la sortie.
+const OVERLAY_MIN = { width: 240, height: 140 };
 let overlayWin = null;
 let overlayBounds = null; // dernières dimensions/position de l'overlay
+let overlayMode = false;
+let normalBounds = null;
 let saveBoundsTimer = null;
 let overlayTimer = null; // boucle : ré-impose le premier plan (+ accroche Dofus si activée)
 let snapMode = false; // accroche à la fenêtre Dofus activée ?
@@ -114,13 +116,14 @@ function fetchNewsImage(target) {
 // Maintient la fenêtre overlay au premier plan, y compris au-dessus d'un jeu en plein écran
 // fenêtré. Re-appliqué au blur car perdre le focus la ferait sinon repasser derrière.
 function enforceOverlayOnTop() {
-  if (!overlayWin || overlayWin.isDestroyed()) return;
-  overlayWin.setAlwaysOnTop(true, "screen-saver");
+  const win = overlayWindow();
+  if (!win) return;
+  win.setAlwaysOnTop(true, "screen-saver");
   if (process.platform === "darwin") {
     // CanJoinAllSpaces + FullScreenAuxiliary → la fenêtre apparaît AUSSI par-dessus un jeu en
     // plein écran natif (qui vit dans un Espace dédié). skipTransformProcessType : garde l'app
     // « normale » (sinon l'icône du Dock peut sauter).
-    overlayWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
   }
 }
 
@@ -134,67 +137,73 @@ function defaultOverlayBounds() {
   return { x: wa.x + wa.width - width - margin, y: wa.y + margin, width, height };
 }
 
-function openOverlayWindow(guideId) {
-  if (overlayWin && !overlayWin.isDestroyed()) {
-    overlayWin.focus();
+function overlayRoute(target) {
+  if (typeof target === "number" && Number.isFinite(target)) return `/guides/${target}`;
+  const raw = String(target || "").trim();
+  if (/^\/[a-z0-9/_-]+$/i.test(raw)) return raw;
+  const n = Number(raw);
+  if (Number.isFinite(n)) return `/guides/${n}`;
+  return "/guides";
+}
+
+function loadOverlayRoute(route) {
+  const win = overlayWindow();
+  if (!win) return;
+  win.webContents.send("overlay:state", { active: true, route });
+}
+
+function openOverlayWindow(target) {
+  const route = overlayRoute(target);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (overlayMode) {
+    loadOverlayRoute(route);
+    mainWindow.focus();
     return;
   }
+  overlayMode = true;
+  normalBounds = mainWindow.getBounds();
   const b = overlayBounds || defaultOverlayBounds();
-  overlayWin = new BrowserWindow({
-    x: b.x,
-    y: b.y,
-    width: b.width,
-    height: b.height,
-    minWidth: OVERLAY_MIN.width,
-    minHeight: OVERLAY_MIN.height,
-    frame: false,
-    transparent: true,
-    resizable: true,
-    hasShadow: false,
-    backgroundColor: "#00000000",
-    alwaysOnTop: true,
-    fullscreenable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.cjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      spellcheck: false,
-    },
-  });
+  mainWindow.setMinimumSize(OVERLAY_MIN.width, OVERLAY_MIN.height);
+  mainWindow.setBounds(b);
+  mainWindow.setResizable(true);
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
+  mainWindow.setFullScreenable(false);
+  mainWindow.setBackgroundColor("#00000000");
+  if (process.platform === "darwin") mainWindow.setWindowButtonVisibility(false);
   startOverlayLoop();
-  overlayWin.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("https://")) shell.openExternal(url);
-    return { action: "deny" };
-  });
-  if (isDev) {
-    overlayWin.loadURL(`${DEV_URL}/?overlay=1#/guides/${guideId}`);
-  } else {
-    overlayWin.loadFile(path.join(__dirname, "..", "dist", "index.html"), {
-      query: { overlay: "1" },
-      hash: `/guides/${guideId}`,
-    });
-  }
-  overlayWin.on("blur", enforceOverlayOnTop);
+  loadOverlayRoute(route);
+  mainWindow.focus();
   const remember = () => {
-    if (overlayWin && !overlayWin.isDestroyed()) {
-      overlayBounds = overlayWin.getBounds();
+    if (overlayMode && mainWindow && !mainWindow.isDestroyed()) {
+      overlayBounds = mainWindow.getBounds();
       saveOverlayBoundsDebounced();
     }
   };
-  overlayWin.on("resize", remember);
-  overlayWin.on("move", remember);
-  overlayWin.on("closed", () => {
-    stopOverlayLoop();
-    snapMode = false;
-    overlayWin = null;
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
-  });
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+  mainWindow.on("resize", remember);
+  mainWindow.on("move", remember);
 }
 
 function closeOverlayWindow() {
-  if (overlayWin && !overlayWin.isDestroyed()) overlayWin.close(); // 'closed' réaffiche la principale
-  else if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (overlayWin && !overlayWin.isDestroyed()) overlayWin.close();
+  overlayMode = false;
+  stopOverlayLoop();
+  snapMode = false;
+  mainWindow.setAlwaysOnTop(false);
+  mainWindow.setVisibleOnAllWorkspaces(false);
+  mainWindow.setFullScreenable(true);
+  mainWindow.setMinimumSize(1040, 680);
+  mainWindow.setBackgroundColor("#070912");
+  if (process.platform === "darwin") mainWindow.setWindowButtonVisibility(true);
+  if (normalBounds) mainWindow.setBounds(normalBounds);
+  mainWindow.webContents.send("overlay:state", { active: false });
+  mainWindow.show();
+}
+
+function overlayWindow() {
+  if (overlayWin && !overlayWin.isDestroyed()) return overlayWin;
+  if (overlayMode && mainWindow && !mainWindow.isDestroyed()) return mainWindow;
+  return null;
 }
 
 // Détecte si un process Dofus tourne (sans module natif ni permission : simple liste de process).
@@ -251,7 +260,8 @@ function getDofusBounds() {
 // introuvable (process absent / permission refusée), on ne bouge rien (placement totalement libre).
 let lastDofusBounds = null;
 async function dockOverlay() {
-  if (!overlayWin || overlayWin.isDestroyed()) return;
+  const win = overlayWindow();
+  if (!win) return;
   const db = await getDofusBounds();
   if (!db) {
     lastDofusBounds = null;
@@ -261,8 +271,8 @@ async function dockOverlay() {
     const dx = db.x - lastDofusBounds.x;
     const dy = db.y - lastDofusBounds.y;
     if (dx !== 0 || dy !== 0) {
-      const b = overlayWin.getBounds();
-      overlayWin.setPosition(Math.round(b.x + dx), Math.round(b.y + dy));
+      const b = win.getBounds();
+      win.setPosition(Math.round(b.x + dx), Math.round(b.y + dy));
     }
   }
   lastDofusBounds = db;
@@ -358,6 +368,10 @@ function macroConfigPath() {
   return path.join(app.getPath("userData"), "macro-helper-config.json");
 }
 
+function macroAhkPath() {
+  return path.join(app.getPath("userData"), "dofuscodex-macros.ahk");
+}
+
 function macroHelperCandidates() {
   const exe = "DofusCodex.MacroHelper.exe";
   const devRoot = path.join(__dirname, "..", "native", "win-macro-helper");
@@ -421,6 +435,23 @@ async function saveMacroConfig(config) {
   return clean;
 }
 
+async function saveAhkScript(script) {
+  const text = String(script || "").slice(0, 300_000);
+  await fs.promises.mkdir(path.dirname(macroAhkPath()), { recursive: true });
+  await fs.promises.writeFile(macroAhkPath(), text, "utf8");
+  return { ok: true, path: macroAhkPath() };
+}
+
+async function openAhkScript(script) {
+  const saved = await saveAhkScript(script);
+  const error = await shell.openPath(saved.path);
+  if (error) {
+    await shell.openExternal("https://www.autohotkey.com/v2/");
+    return { ok: false, reason: "ahk-not-associated", path: saved.path, error };
+  }
+  return { ok: true, path: saved.path };
+}
+
 function stopMacroHelper() {
   if (!macroProc) return { ok: true, running: false };
   const proc = macroProc;
@@ -471,6 +502,7 @@ function macroStatus() {
     platform: process.platform,
     available: !!helper,
     helperPath: helper,
+    ahkPath: app.isReady() ? macroAhkPath() : null,
     configPath: app.isReady() ? macroConfigPath() : null,
     running: !!macroProc,
     pid: macroProc?.pid ?? null,
@@ -513,7 +545,8 @@ function createWindow() {
     minWidth: 1040,
     minHeight: 680,
     show: false,
-    backgroundColor: "#070912",
+    backgroundColor: "#00000000",
+    transparent: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
     titleBarOverlay:
       process.platform === "darwin"
@@ -624,13 +657,14 @@ app.whenReady().then(() => {
   });
 
   // ── Mode overlay : fenêtre dédiée transparente au-dessus du jeu ───────────────────────
-  ipcMain.handle("overlay:open", (_e, guideId) => openOverlayWindow(Number(guideId)));
+  ipcMain.handle("overlay:open", (_e, target) => openOverlayWindow(target));
   ipcMain.handle("overlay:close", () => closeOverlayWindow());
   ipcMain.handle("overlay:resize", (_e, size) => {
-    if (!overlayWin || overlayWin.isDestroyed() || !size) return;
+    const win = overlayWindow();
+    if (!win || !size) return;
     const w = Math.max(OVERLAY_MIN.width, Math.round(Number(size.width) || OVERLAY_MIN.width));
     const h = Math.max(OVERLAY_MIN.height, Math.round(Number(size.height) || OVERLAY_MIN.height));
-    overlayWin.setSize(w, h);
+    win.setSize(w, h);
   });
   ipcMain.handle("overlay:snap-mode", (_e, on) => {
     snapMode = !!on;
@@ -643,6 +677,9 @@ app.whenReady().then(() => {
   ipcMain.handle("macros:save-config", (_e, config) => saveMacroConfig(config));
   ipcMain.handle("macros:start", (_e, config) => startMacroHelper(config));
   ipcMain.handle("macros:stop", () => stopMacroHelper());
+  ipcMain.handle("macros:save-ahk", (_e, script) => saveAhkScript(script));
+  ipcMain.handle("macros:open-ahk", (_e, script) => openAhkScript(script));
+  ipcMain.handle("macros:download-ahk", () => shell.openExternal("https://www.autohotkey.com/v2/"));
 
   // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
   // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.

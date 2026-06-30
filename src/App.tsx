@@ -5,9 +5,10 @@ import { useStore } from "./store/store";
 import { getGuideListData, getGuideData, startGuideSync } from "./lib/guideStore";
 import { trackItemNav } from "./lib/itemNav";
 import { initCloudSync, handleAuthDeepLink } from "./lib/cloudSync";
-import { isOverlayWindow, useOverlayAlpha } from "./lib/overlay";
+import { isOverlayWindow, useOverlayAlpha, useOverlayMode } from "./lib/overlay";
 import OverlayBar from "./components/OverlayBar";
 import OverlayResizeHandle from "./components/OverlayResizeHandle";
+import OverlayMiniSidebar from "./components/OverlayMiniSidebar";
 import TitleBar from "./components/TitleBar";
 import Sidebar from "./components/Sidebar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -109,6 +110,7 @@ export default function App() {
   const qc = useQueryClient();
   const recentGuides = useStore((s) => s.recentGuides);
   const overlayAlpha = useOverlayAlpha();
+  const overlayMode = useOverlayMode();
   const theme = useStore((s) => s.theme);
 
   // Thème de couleur : appliqué sur <html data-theme>. « void » = défaut (aucun attribut → :root).
@@ -227,10 +229,10 @@ export default function App() {
   }, [scrollKey, detail]);
 
   // Fenêtre overlay : même app routée mais en chrome COMPACT (barre fine au lieu de la TitleBar,
-  // Sidebar masquée, marges réduites) et FOND TRANSPARENT — une couche translucide réglable laisse
+  // mini-sidebar, marges réduites) et FOND TRANSPARENT — une couche translucide réglable laisse
   // voir le jeu derrière, le texte restant opaque. On garde le contenu routé tel quel → toutes les
   // redirections, icônes et onglets fonctionnent.
-  const ov = isOverlayWindow;
+  const ov = overlayMode;
   const shellClass = ov ? OVERLAY_SHELL : SHELL;
 
   return (
@@ -244,7 +246,7 @@ export default function App() {
       )}
       {ov ? <OverlayBar /> : <TitleBar />}
       <div className="relative flex flex-1 overflow-hidden">
-        {!ov && <Sidebar />}
+        {ov ? <OverlayMiniSidebar /> : <Sidebar />}
         <main ref={mainRef} className="relative z-10 min-w-0 flex-1 overflow-y-auto">
           {/* Pages keep-alive : toutes montées une fois visitées, seule l'active est affichée. */}
           {mounted.map((key) => (

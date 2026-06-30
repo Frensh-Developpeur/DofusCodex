@@ -81,11 +81,13 @@ function TitanModal({ titan, onClose }: { titan: Titan; onClose: () => void }) {
         exit={{ opacity: 0, scale: 0.97, y: 16 }}
         transition={{ type: "spring", stiffness: 260, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className={`my-auto w-full overflow-hidden rounded-2xl border border-white/10 bg-void-900 shadow-card transition-[max-width] duration-300 ${
-          expanded ? "max-w-6xl" : "max-w-2xl"
+        className={`w-full overflow-hidden rounded-2xl border border-white/10 bg-void-900 shadow-card transition-[max-width] duration-300 ${
+          expanded
+            ? "mt-4 flex max-h-[calc(100vh-2rem)] max-w-[min(1680px,calc(100vw-2rem))] flex-col sm:mt-8 sm:max-h-[calc(100vh-4rem)] sm:max-w-[min(1680px,calc(100vw-4rem))]"
+            : "my-auto max-w-2xl"
         }`}
       >
-        <div className="relative aspect-[16/8] overflow-hidden">
+        <div className={`relative shrink-0 overflow-hidden ${expanded ? "h-36 sm:h-44 lg:h-48" : "aspect-[16/8]"}`}>
           <img src={titan.image} alt={titan.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-void-900 via-void-900/40 to-transparent" />
           <div className="absolute right-3 top-3 flex items-center gap-2">
@@ -113,7 +115,7 @@ function TitanModal({ titan, onClose }: { titan: Titan; onClose: () => void }) {
           </div>
         </div>
 
-        <div className={`overflow-y-auto p-5 ${expanded ? "max-h-[78vh]" : "max-h-[58vh]"}`}>
+        <div className={`min-h-0 overflow-y-auto p-5 ${expanded ? "flex-1" : "max-h-[58vh]"}`}>
           <p className="text-sm leading-relaxed text-slate-300">{titan.intro}</p>
 
           <dl className="mt-4 grid gap-2 sm:grid-cols-2">

@@ -13,10 +13,9 @@ import {
   Download,
   BadgeCheck,
   CheckCircle2,
-  ArrowUpRight,
 } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
-import { openOverlay, overlaySupported, isOverlayWindow } from "../lib/overlay";
+import { useOverlayMode } from "../lib/overlay";
 import { STATUS_LABEL, firstGuideImage, type GuideStatus } from "../api/ganymede";
 import { getGuideData } from "../lib/guideStore";
 import { categoryOf } from "../lib/guideCategory";
@@ -41,7 +40,7 @@ export default function GuideDetail() {
   // page donjon/objet, ou un lien interne, reprend toujours au bon endroit.
   const savedStep = useStore((s) => s.guideStep[guideId] ?? 0);
   const done = useStore((s) => s.doneGuides.includes(guideId));
-  const ov = isOverlayWindow; // affichage compact dans la fenêtre overlay
+  const ov = useOverlayMode(); // affichage compact dans la fenêtre overlay
 
   const [copied, setCopied] = useState(false);
   const [focus, setFocus] = useState(false);
@@ -186,15 +185,6 @@ export default function GuideDetail() {
             >
               <CheckCircle2 className="h-4 w-4" /> {done ? "Terminé" : "Marquer terminé"}
             </button>
-            {overlaySupported && !ov && (
-              <button
-                onClick={() => openOverlay(guideId)}
-                title="Mode overlay : petite fenêtre flottante au-dessus du jeu"
-                className="no-drag inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
-              >
-                <ArrowUpRight className="h-4 w-4" /> Overlay
-              </button>
-            )}
             <button
               onClick={() => {
                 actions.resetGuide(guideId);

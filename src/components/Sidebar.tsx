@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { getEquipment } from "../api/dofusdude";
 import { useStore, actions } from "../store/store";
-import { skinatorEngine, useEngineOpen } from "../store/skinatorEngine";
+import { skinatorEngine, useEngineOpen, useGalleryOpen } from "../store/skinatorEngine";
 import DofusIcon from "./DofusIcon";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "./DofusIcons";
 import clsx from "clsx";
@@ -12,6 +12,7 @@ import AccountButton from "./AccountButton";
 import FavoritesManager from "./FavoritesManager";
 import { ThemeMenu } from "./ThemePicker";
 import { openGlobalSearch } from "./GlobalSearch";
+import { openOverlay, overlaySupported } from "../lib/overlay";
 import { NAV_GROUPS as GROUPS, ALL_NAV_ITEMS as ALL_ITEMS, type NavItem as Item } from "../lib/navItems";
 
 
@@ -35,9 +36,12 @@ export default function Sidebar() {
   // ne propose ça que si on QUITTE la section skin : naviguer entre Skinator / Galerie Barbofus /
   // Mes Skins garde le moteur en fond sans popup (ces pages sont keep-alive, le moteur survit).
   const engineOpen = useEngineOpen();
-  const guardLeave = location.pathname === "/skinator" && engineOpen;
+  const galleryOpen = useGalleryOpen();
   const isSkinPage = (to: string) =>
     to === "/skinator" || to === "/galerie-skins" || to === "/mes-skins";
+  const leaveSource =
+    engineOpen && galleryOpen ? "both" : galleryOpen ? "gallery" : engineOpen ? "skinator" : null;
+  const guardLeave = isSkinPage(location.pathname) && leaveSource != null;
 
   // Mémoire de section : dernier chemin visité sous chaque onglet (le temps de la session).
   // Recliquer un onglet ramène donc sur la sous-page quittée (ex. la fiche d'un monstre/donjon
@@ -99,7 +103,7 @@ export default function Sidebar() {
         onClick={(e) => {
           if (guardLeave && !isSkinPage(to)) {
             e.preventDefault();
-            skinatorEngine.requestLeave(to);
+            skinatorEngine.requestLeave(to, leaveSource);
           }
         }}
         className={({ isActive }) =>
@@ -171,6 +175,20 @@ export default function Sidebar() {
             </>
           )}
         </button>
+
+        {overlaySupported && (
+          <button
+            onClick={() => openOverlay(location.pathname)}
+            title="Passer l'app en overlay"
+            className={clsx(
+              "no-drag group flex items-center rounded-xl border border-glow-cyan/25 bg-glow-cyan/10 text-sm font-semibold text-glow-cyan transition hover:bg-glow-cyan/20 hover:text-white",
+              collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
+            )}
+          >
+            <DofusIcon name="eye" size={16} className="shrink-0 opacity-90 group-hover:opacity-100" />
+            {!collapsed && <span className="flex-1 text-left">Overlay</span>}
+          </button>
+        )}
 
         {GROUPS.map((group, gi) => {
           // En mode icônes (sidebar réduite) on affiche tout ; sinon on respecte le repli du groupe.
@@ -250,7 +268,7 @@ export default function Sidebar() {
           onClick={(e) => {
             if (guardLeave) {
               e.preventDefault();
-              skinatorEngine.requestLeave("/parametres");
+              skinatorEngine.requestLeave("/parametres", leaveSource);
             }
           }}
           className={({ isActive }) =>

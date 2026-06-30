@@ -275,8 +275,15 @@ export const actions = {
       return { ...s, shoppingList: [{ id, itemId, quantity, createdAt: Date.now() }, ...s.shoppingList] };
     });
   },
-  removeShoppingItem(id: string) {
-    setState((s) => ({ ...s, shoppingList: s.shoppingList.filter((it) => it.id !== id) }));
+  removeShoppingItem(id: string, resourceIdsToClear: number[] = []) {
+    setState((s) => {
+      const shoppingList = s.shoppingList.filter((it) => it.id !== id);
+      if (shoppingList.length === 0) return { ...s, shoppingList, resourceOwned: {} };
+      if (resourceIdsToClear.length === 0) return { ...s, shoppingList };
+      const resourceOwned = { ...s.resourceOwned };
+      for (const resourceId of resourceIdsToClear) delete resourceOwned[resourceId];
+      return { ...s, shoppingList, resourceOwned };
+    });
   },
   updateShoppingQuantity(id: string, quantity: number) {
     const q = Math.max(1, Math.floor(quantity) || 1);
@@ -286,7 +293,16 @@ export const actions = {
     }));
   },
   clearShoppingList() {
-    setState((s) => ({ ...s, shoppingList: [] }));
+    setState((s) => ({ ...s, shoppingList: [], resourceOwned: {} }));
+  },
+  pruneResourceOwned(validResourceIds: number[]) {
+    setState((s) => {
+      const valid = new Set(validResourceIds);
+      const resourceOwned = Object.fromEntries(
+        Object.entries(s.resourceOwned).filter(([id]) => valid.has(Number(id))),
+      ) as Record<number, number>;
+      return { ...s, resourceOwned };
+    });
   },
   setResourceOwned(resourceId: number, quantity: number) {
     const q = Math.max(0, Math.floor(quantity) || 0);

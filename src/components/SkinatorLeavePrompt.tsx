@@ -27,11 +27,14 @@ export default function SkinatorLeavePrompt() {
 
   const cancel = () => skinatorEngine.clearPending();
   const leave = (closeEngine: boolean) => {
-    const path = pending;
-    if (closeEngine) skinatorEngine.setOpen(false);
+    const path = pending?.path;
+    if (closeEngine && (pending?.source === "skinator" || pending?.source === "both")) skinatorEngine.setOpen(false);
+    if (closeEngine && (pending?.source === "gallery" || pending?.source === "both")) skinatorEngine.setGalleryOpen(false);
     skinatorEngine.clearPending();
     if (path) navigate(path);
   };
+  const isGallery = pending?.source === "gallery";
+  const isBoth = pending?.source === "both";
 
   return (
     <AnimatePresence>
@@ -62,10 +65,14 @@ export default function SkinatorLeavePrompt() {
           >
             <div className="space-y-2.5">
               <h2 className="font-display text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-                Quitter le Skinator ?
+                {isBoth ? "Quitter Barbofus ?" : isGallery ? "Quitter la galerie ?" : "Quitter le Skinator ?"}
               </h2>
               <p className="mx-auto max-w-md text-sm leading-6 text-slate-400">
-                Le moteur Barbofus est ouvert. Que veux-tu en faire avant de changer de page ?
+                {isBoth
+                  ? "Le moteur Skinator et la galerie Barbofus sont ouverts. Que veux-tu en faire avant de changer de page ?"
+                  : isGallery
+                  ? "La galerie Barbofus est ouverte. Que veux-tu en faire avant de changer de page ?"
+                  : "Le moteur Barbofus est ouvert. Que veux-tu en faire avant de changer de page ?"}
               </p>
             </div>
 
@@ -78,10 +85,15 @@ export default function SkinatorLeavePrompt() {
                 <span className="grid h-14 w-14 place-items-center rounded-xl bg-glow-ember/15 text-glow-ember ring-1 ring-glow-ember/30 transition group-hover:bg-glow-ember/25">
                   <DofusIcon name="lightning" size={24} />
                 </span>
-                <span className="font-display text-base font-bold text-white">Fermer le moteur</span>
+                <span className="font-display text-base font-bold text-white">
+                  {isBoth ? "Fermer les deux" : isGallery ? "Fermer la galerie" : "Fermer le moteur"}
+                </span>
                 <span className="text-xs leading-5 text-slate-400">
-                  Libère la mémoire et le processeur. Ton skin en cours sera perdu — il faudra
-                  rouvrir le moteur au retour.
+                  {isBoth
+                    ? "Libère la mémoire et le processeur. Le moteur et la galerie seront rechargés au prochain retour."
+                    : isGallery
+                    ? "Libère la mémoire et le processeur. La galerie sera rechargée au prochain retour."
+                    : "Libère la mémoire et le processeur. Ton skin en cours sera perdu — il faudra rouvrir le moteur au retour."}
                 </span>
               </button>
 
@@ -98,8 +110,11 @@ export default function SkinatorLeavePrompt() {
                 </span>
                 <span className="font-display text-base font-bold text-white">Laisser en fond</span>
                 <span className="text-xs leading-5 text-slate-300">
-                  Garde ton skin intact. Le moteur continue de tourner en arrière-plan (un peu
-                  plus de mémoire utilisée).
+                  {isBoth
+                    ? "Garde le Skinator et la galerie prêts en arrière-plan, avec plus de mémoire utilisée."
+                    : isGallery
+                    ? "Garde la galerie prête et son scroll intact. Elle continue de tourner en arrière-plan."
+                    : "Garde ton skin intact. Le moteur continue de tourner en arrière-plan (un peu plus de mémoire utilisée)."}
                 </span>
               </button>
             </div>
@@ -108,7 +123,7 @@ export default function SkinatorLeavePrompt() {
               onClick={cancel}
               className="text-xs font-medium text-slate-500 transition hover:text-slate-300"
             >
-              Annuler — rester sur le Skinator
+              {isBoth ? "Annuler — rester dans la section skin" : isGallery ? "Annuler — rester sur la galerie" : "Annuler — rester sur le Skinator"}
             </button>
           </motion.div>
         </motion.div>

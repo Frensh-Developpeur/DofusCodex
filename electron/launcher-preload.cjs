@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("dofusCodexLauncher", {
     return () => ipcRenderer.removeListener("launcher:state", handler);
   },
   retry: () => ipcRenderer.invoke("launcher:retry"),
+  ready: () => ipcRenderer.invoke("launcher:ready"),
   continueToApp: () => ipcRenderer.invoke("launcher:continue"),
   install: () => ipcRenderer.invoke("launcher:install"),
   openReleases: () => ipcRenderer.invoke("launcher:open-releases"),

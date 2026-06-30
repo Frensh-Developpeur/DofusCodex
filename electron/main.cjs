@@ -743,7 +743,7 @@ function createLauncherWindow() {
     if (url.startsWith("https://")) shell.openExternal(url);
     return { action: "deny" };
   });
-  win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(launcherHtml())}`);
+  win.loadFile(path.join(__dirname, "launcher.html"));
   return win;
 }
 
@@ -912,6 +912,10 @@ app.whenReady().then(() => {
     return result;
   });
   ipcMain.handle("launcher:retry", async () => {
+    await runStartupLauncherUpdateFlow();
+    return { ok: true };
+  });
+  ipcMain.handle("launcher:ready", async () => {
     await runStartupLauncherUpdateFlow();
     return { ok: true };
   });
@@ -1326,7 +1330,7 @@ async function runStartupLauncherUpdateFlow() {
     sendUpdate({ state: "checking", percent: 0 });
     const result = await checkForUpdatesNow(true);
     let state = result?.payload?.state || lastUpdatePayload?.state;
-    if (state === "checking" && result?.latest) {
+    if ((state === "checking" || state === "available") && result?.latest) {
       state = compareVersion(result.latest, app.getVersion()) > 0 ? "available" : "not-available";
       sendUpdate({ state, version: result.latest });
     }

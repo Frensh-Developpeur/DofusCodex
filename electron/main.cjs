@@ -1192,6 +1192,11 @@ let lastUpdatePayload = null;
 let checkingUpdates = false;
 let downloadingUpdate = false;
 
+function currentWindowsInstallDir() {
+  if (process.platform !== "win32" || !app.isPackaged) return null;
+  return path.dirname(process.execPath);
+}
+
 function updateInfoPayload(info) {
   if (!info) return {};
   return {
@@ -1327,7 +1332,11 @@ function installUpdateNow() {
     sendUpdate({ state: "not-available", version: lastUpdatePayload.version });
     return { ok: false, reason: "DofusCodex est déjà à jour." };
   }
-  // L'installeur NSIS est en one-click : il affiche la progression, sans écran de choix du dossier.
+  const installDir = currentWindowsInstallDir();
+  if (installDir) {
+    autoUpdater.installDirectory = installDir;
+  }
+  // Installeur NSIS visible, sans écran de choix du dossier, et ciblé sur le dossier courant.
   autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 }
@@ -1397,7 +1406,12 @@ function initAutoUpdater() {
     autoUpdater = require("electron-updater").autoUpdater;
     autoUpdater.autoInstallOnAppQuit = false;
     autoUpdater.autoDownload = false;
+    autoUpdater.autoRunAppAfterInstall = true;
     autoUpdater.allowPrerelease = false;
+    const installDir = currentWindowsInstallDir();
+    if (installDir) {
+      autoUpdater.installDirectory = installDir;
+    }
     autoUpdater.on("error", (e) => {
       console.log("[updater] error:", e?.message);
       sendUpdate({ state: "error", error: e?.message || String(e) });

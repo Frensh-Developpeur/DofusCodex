@@ -1311,7 +1311,9 @@ function installUpdateNow() {
     shell.openExternal(RELEASES_URL);
     return { ok: false };
   }
-  autoUpdater.quitAndInstall(false, true);
+  // Mise à jour Windows : installation silencieuse pilotée par le launcher, puis relance auto.
+  // Le premier argument à true évite l'assistant NSIS avec choix du dossier.
+  autoUpdater.quitAndInstall(true, true);
   return { ok: true };
 }
 

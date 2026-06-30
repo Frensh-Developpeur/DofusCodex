@@ -1212,6 +1212,10 @@ function compareVersion(a, b) {
   return 0;
 }
 
+function isNewerVersion(version) {
+  return !!version && compareVersion(version, app.getVersion()) > 0;
+}
+
 function baseUpdatePayload(state, extra = {}) {
   return {
     state,
@@ -1275,7 +1279,11 @@ async function checkForUpdatesNow(manual) {
   sendUpdate({ state: "checking", manual });
   try {
     const result = await autoUpdater.checkForUpdates();
-    return { ok: true, current: app.getVersion(), latest: result?.updateInfo?.version || null, payload: lastUpdatePayload };
+    const latest = result?.updateInfo?.version || null;
+    if (latest && !isNewerVersion(latest)) {
+      sendUpdate({ state: "not-available", version: latest });
+    }
+    return { ok: true, current: app.getVersion(), latest, payload: lastUpdatePayload };
   } catch (e) {
     const message = e?.message || String(e);
     sendUpdate({ state: "error", error: message });
@@ -1290,6 +1298,10 @@ async function downloadUpdateNow() {
   if (IS_MAC) {
     shell.openExternal(RELEASES_URL);
     return { ok: false, reason: "macOS nécessite un téléchargement manuel." };
+  }
+  if (lastUpdatePayload?.version && !isNewerVersion(lastUpdatePayload.version)) {
+    sendUpdate({ state: "not-available", version: lastUpdatePayload.version });
+    return { ok: false, reason: "DofusCodex est déjà à jour." };
   }
   if (downloadingUpdate) return { ok: true };
   downloadingUpdate = true;
@@ -1311,9 +1323,12 @@ function installUpdateNow() {
     shell.openExternal(RELEASES_URL);
     return { ok: false };
   }
-  // Mise à jour Windows : installation silencieuse pilotée par le launcher, puis relance auto.
-  // Le premier argument à true évite l'assistant NSIS avec choix du dossier.
-  autoUpdater.quitAndInstall(true, true);
+  if (lastUpdatePayload?.version && !isNewerVersion(lastUpdatePayload.version)) {
+    sendUpdate({ state: "not-available", version: lastUpdatePayload.version });
+    return { ok: false, reason: "DofusCodex est déjà à jour." };
+  }
+  // L'installeur NSIS est en one-click : il affiche la progression, sans écran de choix du dossier.
+  autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 }
 
@@ -1331,10 +1346,15 @@ async function runStartupLauncherUpdateFlow() {
 
     sendUpdate({ state: "checking", percent: 0 });
     const result = await checkForUpdatesNow(true);
+    const latest = result?.latest || lastUpdatePayload?.version || null;
+    if (latest && !isNewerVersion(latest)) {
+      sendUpdate({ state: "not-available", version: latest });
+      return;
+    }
     let state = result?.payload?.state || lastUpdatePayload?.state;
-    if ((state === "checking" || state === "available") && result?.latest) {
-      state = compareVersion(result.latest, app.getVersion()) > 0 ? "available" : "not-available";
-      sendUpdate({ state, version: result.latest });
+    if ((state === "checking" || state === "available") && latest) {
+      state = "available";
+      sendUpdate({ state, version: latest });
     }
 
     if (state === "available" && !IS_MAC) {
@@ -1387,8 +1407,13 @@ function initAutoUpdater() {
       sendUpdate({ state: "not-available", ...updateInfoPayload(i) });
     });
     autoUpdater.on("update-available", (i) => {
+      const info = updateInfoPayload(i);
+      if (info.version && !isNewerVersion(info.version)) {
+        sendUpdate({ state: "not-available", ...info });
+        return;
+      }
       updateFound = true; // stoppe les vérifications périodiques/focus
-      sendUpdate({ state: "available", ...updateInfoPayload(i) });
+      sendUpdate({ state: "available", ...info });
     });
     autoUpdater.on("download-progress", (p) =>
       sendUpdate({
@@ -1399,7 +1424,14 @@ function initAutoUpdater() {
         total: p?.total ?? null,
       }),
     );
-    autoUpdater.on("update-downloaded", (i) => sendUpdate({ state: "downloaded", ...updateInfoPayload(i), percent: 100 }));
+    autoUpdater.on("update-downloaded", (i) => {
+      const info = updateInfoPayload(i);
+      if (info.version && !isNewerVersion(info.version)) {
+        sendUpdate({ state: "not-available", ...info });
+        return;
+      }
+      sendUpdate({ state: "downloaded", ...info, percent: 100 });
+    });
 
     // Le check de démarrage est piloté par le launcher externe. Une fois l'app ouverte,
     // startUpdaterBackgroundChecks() reprend les vérifications périodiques/focus.

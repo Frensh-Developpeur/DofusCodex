@@ -10,10 +10,23 @@ interface ImportMeta {
 }
 
 interface UpdateEvent {
-  state: "available" | "downloading" | "downloaded";
-  version?: string;
+  state: "idle" | "dev" | "checking" | "not-available" | "available" | "downloading" | "downloaded" | "error" | "unavailable";
+  current?: string;
+  version?: string | null;
   percent?: number;
+  bytesPerSecond?: number | null;
+  transferred?: number | null;
+  total?: number | null;
+  releaseName?: string | null;
+  releaseDate?: string | null;
+  releaseNotes?: string | null;
+  error?: string | null;
+  releasesUrl?: string;
+  checkedAt?: number;
   isMac: boolean;
+  isPackaged?: boolean;
+  canDownloadInApp?: boolean;
+  canInstallInApp?: boolean;
 }
 
 type NativeMacroStep = {
@@ -91,7 +104,9 @@ interface Window {
     macrosDownloadAhk?: () => Promise<void>;
     installUpdate?: () => Promise<void>;
     openReleases?: () => Promise<void>;
-    checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string }>;
+    checkUpdate?: () => Promise<{ ok: boolean; current?: string; latest?: string | null; reason?: string; payload?: UpdateEvent | null }>;
+    downloadUpdate?: () => Promise<{ ok: boolean; reason?: string }>;
+    updateStatus?: () => Promise<UpdateEvent | null>;
     readGanymedeProgress?: () => Promise<{
       profileName: string;
       progresses: Array<{

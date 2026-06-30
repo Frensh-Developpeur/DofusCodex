@@ -9,6 +9,10 @@ const isDev = process.env.NODE_ENV === "development";
 const DEV_URL = "http://localhost:5173";
 
 let mainWindow = null;
+let launcherWindow = null;
+let launcherFlowRunning = false;
+let startupLauncherDone = false;
+let closingLauncherForMain = false;
 
 // ── Liens profonds dofuscodex:// (réinitialisation de mot de passe, etc.) ──────────────
 // L'e-mail de reset Supabase redirige vers `dofuscodex://reset#access_token=…` ; l'OS ouvre
@@ -538,6 +542,227 @@ function buildCsp() {
   ].join("; ");
 }
 
+function launcherHtml() {
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DofusCodex Launcher</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #070912; color: #f8fafc; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body {
+      -webkit-app-region: drag;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(120% 80% at 22% 0%, rgba(124, 92, 255, 0.28), transparent 50%),
+        radial-gradient(100% 70% at 100% 100%, rgba(43, 211, 255, 0.14), transparent 55%),
+        #070912;
+    }
+    .card { width: 100%; height: 100%; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.018)); }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo { width: 42px; height: 42px; border-radius: 15px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(124,92,255,0.38), rgba(43,211,255,0.2)); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 14px 36px rgba(0,0,0,0.3); }
+    .logo svg { width: 23px; height: 23px; color: #d8ccff; }
+    .eyebrow { margin: 0; color: #a993ff; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .appname { margin: 2px 0 0; font-size: 18px; font-weight: 900; letter-spacing: 0; white-space: nowrap; }
+    .close { -webkit-app-region: no-drag; width: 32px; height: 32px; border: 0; border-radius: 11px; background: rgba(255,255,255,0.06); color: #94a3b8; cursor: pointer; font-size: 18px; }
+    .close:hover { background: rgba(255,255,255,0.12); color: white; }
+    .center { text-align: center; display: grid; justify-items: center; gap: 14px; padding: 8px 0; }
+    .orb { width: 84px; height: 84px; border-radius: 28px; display: grid; place-items: center; background: rgba(124,92,255,0.13); border: 1px solid rgba(169,147,255,0.26); position: relative; overflow: hidden; }
+    .orb::before { content: ""; position: absolute; inset: 11px; border-radius: 22px; border: 2px solid rgba(255,255,255,0.08); border-top-color: #a993ff; animation: spin 1s linear infinite; }
+    .orb.done::before, .orb.error::before, .orb.wait::before { animation: none; border-color: rgba(255,255,255,0.12); }
+    .orb span { position: relative; z-index: 1; font-size: 26px; font-weight: 900; color: #d8ccff; }
+    h1 { margin: 0; max-width: 330px; font-size: 25px; line-height: 1.12; letter-spacing: 0; }
+    .detail { margin: 0; max-width: 330px; min-height: 44px; color: #aeb8ca; font-size: 13px; line-height: 1.6; }
+    .progress-wrap { width: 100%; display: grid; gap: 8px; }
+    .progress-meta { display: flex; justify-content: space-between; gap: 12px; color: #718096; font-size: 11px; }
+    .bar { height: 9px; width: 100%; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.09); }
+    .fill { height: 100%; width: 8%; border-radius: inherit; background: linear-gradient(90deg, #8b6dff, #2bd3ff); transition: width 220ms ease; }
+    .footer { display: grid; gap: 12px; }
+    .versions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .box { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.035); border-radius: 14px; padding: 11px 12px; min-width: 0; }
+    .box span { display: block; color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .box strong { display: block; margin-top: 3px; color: white; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .actions { -webkit-app-region: no-drag; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; min-height: 38px; }
+    button.action { border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 13px; background: rgba(255,255,255,0.055); color: #dbe4f0; font-size: 12px; font-weight: 800; cursor: pointer; }
+    button.action:hover { background: rgba(255,255,255,0.1); color: white; }
+    button.primary { border-color: rgba(169,147,255,0.45); background: rgba(124,92,255,0.22); color: white; }
+    button.primary:hover { background: rgba(124,92,255,0.32); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 4v6c0 4.4-2.9 7.2-7 8-4.1-.8-7-3.6-7-8V7l7-4z" stroke="currentColor" stroke-width="2"/><path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="eyebrow">Launcher</p>
+          <p class="appname">DofusCodex</p>
+        </div>
+      </div>
+      <button class="close" id="quit" title="Quitter">×</button>
+    </div>
+    <section class="center">
+      <div class="orb" id="orb"><span id="symbol">↻</span></div>
+      <h1 id="title">Préparation du lancement</h1>
+      <p class="detail" id="detail">Vérification de la dernière version avant d'ouvrir l'app.</p>
+      <div class="progress-wrap">
+        <div class="progress-meta"><span id="phase">Initialisation</span><span id="percent">0%</span></div>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+      </div>
+    </section>
+    <footer class="footer">
+      <div class="versions">
+        <div class="box"><span>Installée</span><strong id="current">—</strong></div>
+        <div class="box"><span>Dernière</span><strong id="latest">—</strong></div>
+      </div>
+      <div class="actions" id="actions"></div>
+    </footer>
+  </main>
+  <script>
+    const api = window.dofusCodexLauncher;
+    const el = (id) => document.getElementById(id);
+    const fmtBytes = (value) => {
+      if (!value || value <= 0) return "—";
+      const units = ["o", "Ko", "Mo", "Go"];
+      let n = value;
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return n.toFixed(i === 0 ? 0 : 1) + " " + units[i];
+    };
+    const button = (label, action, primary) => {
+      const b = document.createElement("button");
+      b.className = "action" + (primary ? " primary" : "");
+      b.textContent = label;
+      b.onclick = action;
+      return b;
+    };
+    function setActions(actions) {
+      const root = el("actions");
+      root.innerHTML = "";
+      actions.forEach((a) => root.appendChild(a));
+    }
+    function render(s) {
+      const state = s && s.state ? s.state : "checking";
+      const version = s && s.version ? "v" + s.version : "—";
+      const current = s && s.current ? "v" + s.current : "—";
+      const percent = Math.max(0, Math.min(100, Math.round(s && s.percent ? s.percent : 0)));
+      el("current").textContent = current;
+      el("latest").textContent = version;
+      const ready = state === "not-available" || state === "dev" || state === "unavailable";
+      el("percent").textContent = (ready || state === "installing") ? "100%" : percent + "%";
+      el("fill").style.width = (ready || state === "installing" ? 100 : Math.max(8, percent)) + "%";
+      el("orb").className = "orb";
+      el("symbol").textContent = "↻";
+      setActions([]);
+      if (state === "checking") {
+        el("title").textContent = "Recherche de mise à jour";
+        el("detail").textContent = "Le launcher vérifie GitHub Releases avant d'ouvrir DofusCodex.";
+        el("phase").textContent = "Connexion";
+      } else if (state === "available") {
+        el("orb").className = "orb wait";
+        el("symbol").textContent = "↓";
+        el("title").textContent = "Mise à jour obligatoire";
+        el("detail").textContent = s.isMac ? "Télécharge et installe la dernière version pour lancer DofusCodex." : "Nouvelle version trouvée. Le téléchargement va commencer automatiquement.";
+        el("phase").textContent = s.isMac ? "Téléchargement manuel requis" : "En attente du téléchargement";
+        if (s.isMac) setActions([button("Télécharger", () => api.openReleases(), true), button("Quitter", () => api.quit(), false)]);
+      } else if (state === "downloading") {
+        el("title").textContent = "Téléchargement de la mise à jour";
+        el("detail").textContent = fmtBytes(s.transferred) + " / " + fmtBytes(s.total) + (s.bytesPerSecond ? " · " + fmtBytes(s.bytesPerSecond) + "/s" : "");
+        el("phase").textContent = "Téléchargement";
+      } else if (state === "downloaded") {
+        el("orb").className = "orb done";
+        el("symbol").textContent = "✓";
+        el("title").textContent = "Mise à jour prête";
+        el("detail").textContent = "Installation et redémarrage de DofusCodex.";
+        el("phase").textContent = "Installation";
+      } else if (state === "installing") {
+        el("title").textContent = "Installation en cours";
+        el("detail").textContent = "DofusCodex va redémarrer automatiquement.";
+        el("phase").textContent = "Installation";
+      } else if (state === "not-available" || state === "dev" || state === "unavailable") {
+        el("orb").className = "orb done";
+        el("symbol").textContent = "✓";
+        el("title").textContent = "DofusCodex est prêt";
+        el("detail").textContent = state === "dev" ? "Mode développement : le launcher est prêt à ouvrir l'app." : "Aucune mise à jour obligatoire. Tu peux ouvrir l'app.";
+        el("phase").textContent = "Prêt";
+        setActions([button("Démarrer", () => api.continueToApp(), true), button("Quitter", () => api.quit(), false)]);
+      } else {
+        el("orb").className = "orb error";
+        el("symbol").textContent = "!";
+        el("title").textContent = "Vérification impossible";
+        el("detail").textContent = s.error || "Le launcher n'a pas pu vérifier les mises à jour.";
+        el("phase").textContent = "Erreur";
+        setActions([button("Réessayer", () => api.retry(), true), button("Lancer quand même", () => api.continueToApp(), false)]);
+      }
+    }
+    api.onState(render);
+    api.retry();
+    el("quit").onclick = () => api.quit();
+  </script>
+</body>
+</html>`;
+}
+
+function createLauncherWindow() {
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    launcherWindow.focus();
+    return launcherWindow;
+  }
+  const win = new BrowserWindow({
+    width: 430,
+    height: 540,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    show: false,
+    frame: false,
+    backgroundColor: "#070912",
+    title: "DofusCodex Launcher",
+    webPreferences: {
+      preload: path.join(__dirname, "launcher-preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      spellcheck: false,
+    },
+  });
+  launcherWindow = win;
+  win.once("ready-to-show", () => win.show());
+  win.on("closed", () => {
+    launcherWindow = null;
+    if (!startupLauncherDone && !closingLauncherForMain) app.quit();
+    closingLauncherForMain = false;
+  });
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://")) shell.openExternal(url);
+    return { action: "deny" };
+  });
+  win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(launcherHtml())}`);
+  return win;
+}
+
+function sendLauncherState(payload) {
+  if (launcherWindow && !launcherWindow.isDestroyed()) {
+    launcherWindow.webContents.send("launcher:state", payload);
+  }
+}
+
+function openMainFromLauncher() {
+  startupLauncherDone = true;
+  closingLauncherForMain = true;
+  if (!mainWindow || mainWindow.isDestroyed()) createWindow();
+  else focusMainWindow();
+  if (launcherWindow && !launcherWindow.isDestroyed()) launcherWindow.close();
+  else closingLauncherForMain = false;
+  startUpdaterBackgroundChecks();
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1360,
@@ -643,12 +868,13 @@ app.whenReady().then(() => {
   });
   ipcMain.handle("app:version", () => app.getVersion());
 
-  // Maj : on lance l'installeur AVEC son UI (isSilent=false) → l'utilisateur voit la barre de
-  // progression NSIS pendant la mise à jour, puis l'app se relance (isForceRunAfter=true).
-  ipcMain.handle("update:install", () => autoUpdater?.quitAndInstall(false, true));
+  // Maj : le renderer affiche un launcher complet ; le main ne fait que piloter electron-updater.
+  ipcMain.handle("update:install", () => installUpdateNow());
   ipcMain.handle("update:open", () => shell.openExternal(RELEASES_URL));
   // État de maj déjà détecté (rejoue l'event manqué si le renderer s'est monté après le check).
   ipcMain.handle("update:peek", () => lastUpdatePayload);
+  ipcMain.handle("update:status", () => lastUpdatePayload ?? baseUpdatePayload("idle"));
+  ipcMain.handle("update:download", () => downloadUpdateNow());
   // Lien profond arrivé avant que le renderer soit prêt (cold start) → récupéré au montage.
   ipcMain.handle("deeplink:peek", () => {
     const u = pendingDeepLink;
@@ -681,18 +907,21 @@ app.whenReady().then(() => {
   ipcMain.handle("macros:open-ahk", (_e, script) => openAhkScript(script));
   ipcMain.handle("macros:download-ahk", () => shell.openExternal("https://www.autohotkey.com/v2/"));
 
-  // Vérification manuelle (bouton page Paramètres). Renvoie la version locale + la dernière
-  // version publiée ; si une maj existe, l'événement `update-available` déclenchera le bandeau.
   ipcMain.handle("update:check", async () => {
-    if (!autoUpdater) return { ok: false, reason: app.isPackaged ? "unavailable" : "dev", current: app.getVersion() };
-    try {
-      lastCheckAt = Date.now(); // compte comme une vérification (évite un double check au focus)
-      const r = await autoUpdater.checkForUpdates();
-      return { ok: true, current: app.getVersion(), latest: r?.updateInfo?.version || null };
-    } catch (e) {
-      return { ok: false, reason: e?.message || "error", current: app.getVersion() };
-    }
+    const result = await checkForUpdatesNow(true);
+    return result;
   });
+  ipcMain.handle("launcher:retry", async () => {
+    await runStartupLauncherUpdateFlow();
+    return { ok: true };
+  });
+  ipcMain.handle("launcher:continue", () => {
+    openMainFromLauncher();
+    return { ok: true };
+  });
+  ipcMain.handle("launcher:install", () => installUpdateNow());
+  ipcMain.handle("launcher:open-releases", () => shell.openExternal(RELEASES_URL));
+  ipcMain.handle("launcher:quit", () => app.quit());
 
   // Rendu du personnage équipé via le renderer de DofusRoom (Barbofus/Ankama).
   // Fait depuis le process principal : l'endpoint exige un en-tête `Referer` dofusroom.com
@@ -935,11 +1164,14 @@ app.whenReady().then(() => {
     }),
   );
 
-  createWindow();
   initAutoUpdater();
+  createLauncherWindow();
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      if (!startupLauncherDone) createLauncherWindow();
+      else createWindow();
+    }
   });
 });
 
@@ -953,9 +1185,49 @@ const IS_MAC = process.platform === "darwin";
 // renderer ait enregistré son écouteur (course) → l'event serait perdu. On le mémorise donc, et
 // le renderer le récupère au montage via `update:peek` (cf. preload / UpdateBanner).
 let lastUpdatePayload = null;
+let checkingUpdates = false;
+let downloadingUpdate = false;
+
+function updateInfoPayload(info) {
+  if (!info) return {};
+  return {
+    version: info.version || null,
+    releaseName: info.releaseName || null,
+    releaseDate: info.releaseDate || null,
+    releaseNotes: typeof info.releaseNotes === "string" ? info.releaseNotes : Array.isArray(info.releaseNotes) ? info.releaseNotes.map((n) => n?.note || "").filter(Boolean).join("\n") : null,
+  };
+}
+
+function compareVersion(a, b) {
+  const pa = String(a || "").split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const pb = String(b || "").split(".").map((n) => Number.parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+function baseUpdatePayload(state, extra = {}) {
+  return {
+    state,
+    isMac: IS_MAC,
+    isPackaged: app.isPackaged,
+    current: app.getVersion(),
+    releasesUrl: RELEASES_URL,
+    canDownloadInApp: !!autoUpdater && !IS_MAC,
+    canInstallInApp: !!autoUpdater && !IS_MAC,
+    checkedAt: Date.now(),
+    ...extra,
+  };
+}
 
 function sendUpdate(payload) {
-  lastUpdatePayload = { isMac: IS_MAC, ...payload };
+  lastUpdatePayload = baseUpdatePayload(payload.state || lastUpdatePayload?.state || "idle", {
+    ...(lastUpdatePayload ?? {}),
+    ...payload,
+  });
+  sendLauncherState(lastUpdatePayload);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update:event", lastUpdatePayload);
   }
@@ -965,44 +1237,166 @@ function sendUpdate(payload) {
 let lastCheckAt = 0;
 const MIN_CHECK_GAP = 1000 * 60 * 10; // 10 min mini entre deux vérifications
 let updateFound = false; // une fois la maj détectée, inutile de re-vérifier
+let updaterBackgroundStarted = false;
 
 function checkForUpdatesThrottled() {
   if (!autoUpdater || updateFound) return;
   const now = Date.now();
   if (now - lastCheckAt < MIN_CHECK_GAP) return;
-  lastCheckAt = now;
-  autoUpdater.checkForUpdates().catch((e) => console.log("[updater] check échoué:", e?.message));
+  checkForUpdatesNow(false).catch((e) => console.log("[updater] check échoué:", e?.message));
+}
+
+function startUpdaterBackgroundChecks() {
+  if (!autoUpdater || updaterBackgroundStarted) return;
+  updaterBackgroundStarted = true;
+  setInterval(checkForUpdatesThrottled, 1000 * 60 * 30);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.on("focus", checkForUpdatesThrottled);
+  }
+}
+
+async function checkForUpdatesNow(manual) {
+  if (!autoUpdater) {
+    const payload = baseUpdatePayload(app.isPackaged ? "unavailable" : "dev", {
+      error: app.isPackaged ? "Moteur de mise à jour indisponible." : "Disponible uniquement dans l'application installée.",
+    });
+    if (manual) sendUpdate(payload);
+    return { ok: false, reason: payload.error, current: app.getVersion(), payload };
+  }
+  if (checkingUpdates) {
+    return { ok: true, current: app.getVersion(), latest: lastUpdatePayload?.version ?? null, payload: lastUpdatePayload };
+  }
+  checkingUpdates = true;
+  lastCheckAt = Date.now();
+  sendUpdate({ state: "checking", manual });
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { ok: true, current: app.getVersion(), latest: result?.updateInfo?.version || null, payload: lastUpdatePayload };
+  } catch (e) {
+    const message = e?.message || String(e);
+    sendUpdate({ state: "error", error: message });
+    return { ok: false, reason: message, current: app.getVersion(), payload: lastUpdatePayload };
+  } finally {
+    checkingUpdates = false;
+  }
+}
+
+async function downloadUpdateNow() {
+  if (!autoUpdater) return { ok: false, reason: "Moteur de mise à jour indisponible." };
+  if (IS_MAC) {
+    shell.openExternal(RELEASES_URL);
+    return { ok: false, reason: "macOS nécessite un téléchargement manuel." };
+  }
+  if (downloadingUpdate) return { ok: true };
+  downloadingUpdate = true;
+  sendUpdate({ state: "downloading", percent: lastUpdatePayload?.percent ?? 0 });
+  try {
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (e) {
+    const message = e?.message || String(e);
+    sendUpdate({ state: "error", error: message });
+    return { ok: false, reason: message };
+  } finally {
+    downloadingUpdate = false;
+  }
+}
+
+function installUpdateNow() {
+  if (!autoUpdater || IS_MAC) {
+    shell.openExternal(RELEASES_URL);
+    return { ok: false };
+  }
+  autoUpdater.quitAndInstall(false, true);
+  return { ok: true };
+}
+
+async function runStartupLauncherUpdateFlow() {
+  if (launcherFlowRunning) return;
+  launcherFlowRunning = true;
+  try {
+    if (!autoUpdater) {
+      const payload = baseUpdatePayload(app.isPackaged ? "unavailable" : "dev", {
+        error: app.isPackaged ? "Moteur de mise à jour indisponible." : "Mode développement.",
+      });
+      sendLauncherState(payload);
+      return;
+    }
+
+    sendUpdate({ state: "checking", percent: 0 });
+    const result = await checkForUpdatesNow(true);
+    let state = result?.payload?.state || lastUpdatePayload?.state;
+    if (state === "checking" && result?.latest) {
+      state = compareVersion(result.latest, app.getVersion()) > 0 ? "available" : "not-available";
+      sendUpdate({ state, version: result.latest });
+    }
+
+    if (state === "available" && !IS_MAC) {
+      await downloadUpdateNow();
+      if (lastUpdatePayload?.state === "downloaded") {
+        sendLauncherState(baseUpdatePayload("installing", { ...(lastUpdatePayload ?? {}), percent: 100 }));
+        setTimeout(() => installUpdateNow(), 900);
+      }
+      return;
+    }
+
+    if (state === "available" && IS_MAC) {
+      sendLauncherState(lastUpdatePayload ?? baseUpdatePayload("available"));
+      return;
+    }
+
+    if (state === "not-available") {
+      return;
+    }
+
+    if (state === "dev" || state === "unavailable") {
+      return;
+    }
+
+    if (!result?.ok) {
+      sendLauncherState(lastUpdatePayload ?? baseUpdatePayload("error", { error: result?.reason || "Vérification impossible." }));
+    } else {
+      sendLauncherState(lastUpdatePayload ?? baseUpdatePayload("not-available"));
+    }
+  } catch (e) {
+    sendLauncherState(baseUpdatePayload("error", { error: e?.message || String(e) }));
+  } finally {
+    launcherFlowRunning = false;
+  }
 }
 
 function initAutoUpdater() {
   if (!app.isPackaged) return;
   try {
     autoUpdater = require("electron-updater").autoUpdater;
-    // L'installeur est en mode assistant (oneClick:false). On évite l'install-au-quit
-    // automatique ; la maj passe par quitAndInstall(false) → l'installeur s'affiche AVEC sa
-    // barre de progression (visuel demandé), puis relance l'app (cf. update:install).
     autoUpdater.autoInstallOnAppQuit = false;
-    autoUpdater.autoDownload = !IS_MAC; // mac : juste détecter, pas télécharger
-    autoUpdater.on("error", (e) => console.log("[updater] error:", e?.message));
-    autoUpdater.on("update-not-available", () => console.log("[updater] à jour"));
+    autoUpdater.autoDownload = false;
+    autoUpdater.allowPrerelease = false;
+    autoUpdater.on("error", (e) => {
+      console.log("[updater] error:", e?.message);
+      sendUpdate({ state: "error", error: e?.message || String(e) });
+    });
+    autoUpdater.on("update-not-available", (i) => {
+      console.log("[updater] à jour");
+      sendUpdate({ state: "not-available", ...updateInfoPayload(i) });
+    });
     autoUpdater.on("update-available", (i) => {
       updateFound = true; // stoppe les vérifications périodiques/focus
-      sendUpdate({ state: "available", version: i?.version });
+      sendUpdate({ state: "available", ...updateInfoPayload(i) });
     });
     autoUpdater.on("download-progress", (p) =>
-      sendUpdate({ state: "downloading", percent: Math.round(p?.percent ?? 0) }),
+      sendUpdate({
+        state: "downloading",
+        percent: Math.round(p?.percent ?? 0),
+        bytesPerSecond: p?.bytesPerSecond ?? null,
+        transferred: p?.transferred ?? null,
+        total: p?.total ?? null,
+      }),
     );
-    autoUpdater.on("update-downloaded", (i) => sendUpdate({ state: "downloaded", version: i?.version }));
+    autoUpdater.on("update-downloaded", (i) => sendUpdate({ state: "downloaded", ...updateInfoPayload(i), percent: 100 }));
 
-    // 1) Au démarrage. 2) Toutes les 30 min tant que l'app reste ouverte.
-    // 3) Au retour de focus sur la fenêtre (throttlé) → détection quasi immédiate après
-    //    une release, sans attendre le tick périodique ni un redémarrage de l'app.
-    lastCheckAt = Date.now();
-    autoUpdater.checkForUpdates().catch((e) => console.log("[updater] check échoué:", e?.message));
-    setInterval(checkForUpdatesThrottled, 1000 * 60 * 30);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.on("focus", checkForUpdatesThrottled);
-    }
+    // Le check de démarrage est piloté par le launcher externe. Une fois l'app ouverte,
+    // startUpdaterBackgroundChecks() reprend les vérifications périodiques/focus.
   } catch (e) {
     console.log("[updater] indisponible:", e?.message);
   }

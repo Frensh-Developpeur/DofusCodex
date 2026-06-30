@@ -14,15 +14,17 @@ contextBridge.exposeInMainWorld("dofusCodex", {
   // Page guide DofusPourLesNoobs (slug sans .html) via le main (pas de CORS). → { ok, status, text? }.
   fetchDplnGuide: (slug) => ipcRenderer.invoke("dpln:guide", slug),
   // ---- Mises à jour ----
-  // cb reçoit { state: "available" | "downloading" | "downloaded", version?, percent?, isMac }
+  // cb reçoit l'état complet du launcher de mise à jour.
   onUpdate: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on("update:event", handler);
     return () => ipcRenderer.removeListener("update:event", handler);
   },
-  installUpdate: () => ipcRenderer.invoke("update:install"), // Windows : redémarre + installe
-  openReleases: () => ipcRenderer.invoke("update:open"), // Mac : ouvre la page de téléchargement
-  checkUpdate: () => ipcRenderer.invoke("update:check"), // vérification manuelle (page Paramètres)
+  installUpdate: () => ipcRenderer.invoke("update:install"),
+  openReleases: () => ipcRenderer.invoke("update:open"),
+  checkUpdate: () => ipcRenderer.invoke("update:check"),
+  downloadUpdate: () => ipcRenderer.invoke("update:download"),
+  updateStatus: () => ipcRenderer.invoke("update:status"),
   peekUpdate: () => ipcRenderer.invoke("update:peek"), // état de maj déjà détecté (au montage du renderer)
   // ---- Liens profonds dofuscodex:// (reset de mot de passe) ----
   // cb reçoit l'URL complète (ex. "dofuscodex://reset#access_token=…&type=recovery").

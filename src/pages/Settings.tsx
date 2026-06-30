@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Upload,
-  Check,
-  Loader2,
-  dofusUiIcon,
-} from "../components/DofusIcons";
+import { Upload, Check, dofusUiIcon } from "../components/DofusIcons";
 import DofusIcon from "../components/DofusIcon";
 import { useStore, actions } from "../store/store";
 import { getSyncState, type SyncState } from "../lib/guideStore";
 import { SectionHeader, fadeUp } from "../components/ui";
 import ClearCacheButton from "../components/ClearCacheButton";
 import { ThemePicker } from "../components/ThemePicker";
+import { openUpdateLauncher } from "../components/UpdateBanner";
 
 // Sources de données live (sans clé API) — affichées à titre informatif.
 const SOURCES = [
@@ -35,30 +31,10 @@ function platformLabel(p?: string): string {
   return "—";
 }
 
-// Comparaison semver basique (x.y.z) → 1 si a > b, -1 si a < b, 0 sinon.
-function cmpVersion(a: string, b: string): number {
-  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
-  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d !== 0) return d > 0 ? 1 : -1;
-  }
-  return 0;
-}
-
-type CheckState =
-  | { kind: "idle" }
-  | { kind: "checking" }
-  | { kind: "uptodate" }
-  | { kind: "available"; version: string }
-  | { kind: "unavailable" }
-  | { kind: "error" };
-
 export default function Settings() {
   const [version, setVersion] = useState<string>("");
   const [platform, setPlatform] = useState<string>("");
   const [sync, setSync] = useState<SyncState | null>(null);
-  const [check, setCheck] = useState<CheckState>({ kind: "idle" });
 
   // Stats locales (sélecteurs primitifs → pas de boucle de rendu).
   const favoriteDungeons = useStore((s) => s.favoriteDungeons.length);
@@ -75,28 +51,6 @@ export default function Settings() {
     window.dofusCodex?.getPlatform?.().then(setPlatform).catch(() => {});
     getSyncState().then(setSync).catch(() => {});
   }, []);
-
-  const runCheck = async () => {
-    if (!window.dofusCodex?.checkUpdate) {
-      setCheck({ kind: "unavailable" });
-      return;
-    }
-    setCheck({ kind: "checking" });
-    try {
-      const r = await window.dofusCodex.checkUpdate();
-      if (!r.ok) {
-        setCheck({ kind: r.reason === "dev" ? "unavailable" : "error" });
-        return;
-      }
-      if (r.latest && r.current && cmpVersion(r.latest, r.current) > 0) {
-        setCheck({ kind: "available", version: r.latest });
-      } else {
-        setCheck({ kind: "uptodate" });
-      }
-    } catch {
-      setCheck({ kind: "error" });
-    }
-  };
 
   const stats = [
     { icon: FavoriteStatIcon, label: "Donjons favoris", value: favoriteDungeons, tone: "text-glow-rose" },
@@ -148,40 +102,17 @@ export default function Settings() {
           </dl>
 
           <button
-            onClick={runCheck}
-            disabled={check.kind === "checking"}
+            onClick={openUpdateLauncher}
             className="no-drag mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-glow-purple/40 bg-glow-purple/15 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-glow-purple/25 disabled:opacity-60"
           >
-            {check.kind === "checking" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <DofusIcon name="reset" size={16} />
-            )}
-            Vérifier les mises à jour
+            <DofusIcon name="download" size={16} />
+            Ouvrir le launcher de mise à jour
           </button>
-
-          {check.kind === "uptodate" && (
-            <p className="mt-2.5 flex items-center gap-1.5 text-xs text-glow-emerald">
-              <Check className="h-3.5 w-3.5" /> Tu utilises déjà la dernière version.
-            </p>
-          )}
-          {check.kind === "available" && (
-            <p className="mt-2.5 text-xs text-glow-gold">
-              Version v{check.version} disponible — voir le bandeau en bas à droite.
-            </p>
-          )}
-          {check.kind === "unavailable" && (
-            <p className="mt-2.5 text-xs text-slate-500">
-              Vérification disponible uniquement dans l'application installée.
-            </p>
-          )}
-          {check.kind === "error" && (
-            <p className="mt-2.5 text-xs text-glow-rose">Échec de la vérification. Réseau indisponible ?</p>
-          )}
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
             DofusCodex vérifie automatiquement les mises à jour au lancement, toutes les 30&nbsp;min
-            et au retour sur la fenêtre.
+            et au retour sur la fenêtre. Le launcher gère la vérification, les notes de version, le
+            téléchargement et l'installation.
           </p>
         </section>
 

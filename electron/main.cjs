@@ -1340,7 +1340,10 @@ function installUpdateNow() {
   // sinon son exe bloque l'écrasement du dossier → « DofusCodex ne peut pas être fermé ». L'installeur
   // le retue de son côté (build/installer.nsh) pour couvrir les maj depuis d'anciennes versions.
   stopMacroHelper();
-  // Installeur NSIS oneClick visible (progression, zéro choix), ciblé sur le dossier courant.
+  // Maj NON-silencieuse (isSilent=false) : l'installeur oneClick affiche SA fenêtre de progression
+  // pendant l'install → comble les ~20 s où le launcher (fermé avec l'app) ne montre plus rien.
+  // Le « DofusCodex ne peut pas être fermé » est levé côté installeur : il force la fermeture de
+  // DofusCodex.exe AVANT le check « app en cours » (build/installer.nsh, preInit). oneClick = 0 choix.
   autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 }

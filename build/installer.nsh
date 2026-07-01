@@ -1,29 +1,32 @@
-; Script NSIS custom injecté par electron-builder (nsis.include).
+; Script NSIS custom (electron-builder l'inclut automatiquement via build/installer.nsh).
 ;
-; Problème résolu : DofusCodex lance un process natif séparé, DofusCodex.MacroHelper.exe, depuis
-; resources/macro-helper/ — donc DANS le dossier d'installation. Si ce helper tourne (macros
-; activées) au moment d'une mise à jour, son exe VERROUILLE le dossier d'install → l'installeur
-; ne peut pas écraser les fichiers et affiche « DofusCodex ne peut pas être fermé », faisant
-; échouer la mise à jour automatique.
+; Problème résolu : lors d'une mise à jour lancée en mode NON-silencieux, l'installeur oneClick
+; tente une fermeture « propre » de l'app et, s'il n'y arrive pas, affiche « DofusCodex ne peut
+; pas être fermé » puis échoue. On force donc la fermeture de l'app (et de son helper de macros
+; natif) TRÈS TÔT, avant la vérification « application en cours » et avant la copie de fichiers.
 ;
-; La correction DOIT vivre dans l'installeur (pas seulement dans l'app) : un utilisateur qui met
-; à jour depuis une ancienne version exécute l'ANCIEN code de l'app — seul le NOUVEL installeur,
-; lui, tourne à jour. On tue donc le helper ici, très tôt, avant la vérification « app en cours »
-; d'electron-builder et avant toute copie de fichiers.
+; Pourquoi ici et pas seulement dans l'app : une mise à jour DEPUIS une ancienne version exécute
+; l'ANCIEN code de l'app (qui, sur les builds 0.1.65/0.1.66, lance l'installeur en non-silencieux).
+; Seul le NOUVEL installeur est à jour → c'est lui qui doit forcer la fermeture. Ça débloque donc
+; les machines coincées par les versions cassées.
 ;
-; taskkill est sans effet (silencieux) si le helper n'est pas lancé (cas sans macros) → inoffensif.
+; taskkill est silencieux et sans effet si le process n'existe pas (install neuve, app déjà fermée)
+; → totalement inoffensif. Pas de /T sur l'app : l'installeur est détaché, mais on évite tout
+; risque de le tuer avec l'arbre ; le helper est ciblé séparément par son propre nom d'image.
 
-!macro killMacroHelper
-  nsExec::Exec 'taskkill /F /T /IM "DofusCodex.MacroHelper.exe"'
+!macro killDofusCodex
+  nsExec::Exec 'taskkill /F /IM "DofusCodex.exe"'
+  Pop $0
+  nsExec::Exec 'taskkill /F /IM "DofusCodex.MacroHelper.exe"'
   Pop $0
 !macroend
 
 ; preInit = tout début du .onInit, AVANT le check « application en cours d'exécution ».
 !macro preInit
-  !insertmacro killMacroHelper
+  !insertmacro killDofusCodex
 !macroend
 
-; customInit = fin du .onInit — deuxième filet de sécurité avant la section d'installation.
+; customInit = fin du .onInit — deuxième filet avant la section d'installation.
 !macro customInit
-  !insertmacro killMacroHelper
+  !insertmacro killDofusCodex
 !macroend

@@ -180,8 +180,8 @@ export default function Hunt() {
         subtitle="Entrez votre position de départ, choisissez la direction de la flèche, puis cherchez votre indice : la case exacte et sa map s'affichent."
       />
 
-      {/* Note compacte — données fiables (live) */}
-      <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-glow-emerald/20 bg-glow-emerald/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300">
+      {/* Note compacte — données fiables (live). Masquée en overlay : place précieuse en jeu. */}
+      <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-glow-emerald/20 bg-glow-emerald/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300 overlay:hidden">
         <BadgeCheck className="h-4 w-4 shrink-0 text-glow-emerald" />
         <span>
           <span className="font-semibold text-glow-emerald">Données fiables</span> — cases, maps et indices
@@ -189,10 +189,10 @@ export default function Hunt() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 overlay:gap-3 lg:grid-cols-3">
         {/* Control panel */}
         <div className="space-y-4 lg:col-span-1">
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-2xl p-5 overlay:p-3">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
               <DofusIcon name="world" size={16} /> Position de départ
             </h3>
@@ -202,7 +202,7 @@ export default function Hunt() {
             </div>
           </div>
 
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-2xl p-5 overlay:p-3">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
               <DofusIcon name="map" size={16} /> Direction de la flèche
             </h3>
@@ -232,7 +232,7 @@ export default function Hunt() {
             </div>
           </div>
 
-          <div className="glass rounded-2xl p-5">
+          <div className="glass rounded-2xl p-5 overlay:p-3">
             <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-white">
               <DofusIcon name="pp" size={16} /> Votre indice
             </h3>
@@ -281,7 +281,7 @@ export default function Hunt() {
             <div className={`space-y-4 ${isFetching ? "opacity-70" : ""}`}>
               {/* Indices à trouver — le focus principal de cette étape */}
               {uniqueClues.length > 0 && (
-                <div className="glass rounded-2xl p-5">
+                <div className="glass rounded-2xl p-5 overlay:p-3">
                   <h3 className="flex items-center gap-2 font-display font-bold text-white">
                     <DofusIcon name="zoom" size={16} /> Quel est votre indice ?
                   </h3>

@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, SearchX } from "./DofusIcons";
 import CodexMark from "./CodexMark";
+import { useOverlayMode } from "../lib/overlay";
 import clsx from "clsx";
 
 export function Skeleton({ className }: { className?: string }) {
@@ -72,16 +73,26 @@ export function SectionHeader({
   subtitle?: string;
   right?: ReactNode;
 }) {
+  // En overlay (fenêtre étroite posée sur le jeu), on densifie : pas d'eyebrow ni de sous-titre
+  // descriptif (ils mangent de la hauteur précieuse), titre plus petit, marge réduite.
+  const ov = useOverlayMode();
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        {eyebrow && (
+    <div className={clsx("flex flex-wrap items-end justify-between gap-4", ov ? "mb-3" : "mb-6")}>
+      <div className={clsx(ov && "min-w-0")}>
+        {eyebrow && !ov && (
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-glow-purple/80">
             {eyebrow}
           </span>
         )}
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-white">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-2xl text-sm text-slate-400">{subtitle}</p>}
+        <h1
+          className={clsx(
+            "font-display font-extrabold tracking-tight text-white",
+            ov ? "truncate text-xl" : "text-3xl",
+          )}
+        >
+          {title}
+        </h1>
+        {subtitle && !ov && <p className="mt-1 max-w-2xl text-sm text-slate-400">{subtitle}</p>}
       </div>
       {right && <div className="no-drag">{right}</div>}
     </div>

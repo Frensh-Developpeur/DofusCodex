@@ -1,3 +1,5 @@
+import plugin from "tailwindcss/plugin";
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
@@ -57,5 +59,12 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Variant `overlay:` → ne s'applique que dans la fenêtre overlay (classe `overlay-win` posée
+    // sur <html> par src/lib/overlay.ts). Permet d'adapter n'importe quel élément au mode overlay
+    // en une classe : `overlay:hidden`, `overlay:p-2`, `overlay:text-sm`… (rendu normal inchangé).
+    plugin(({ addVariant }) => {
+      addVariant("overlay", "html.overlay-win &");
+    }),
+  ],
 };

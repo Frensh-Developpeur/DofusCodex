@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "../components/DofusIcons";
+import { ArrowLeft, ArrowRight, Upload } from "../components/DofusIcons";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
 import {
@@ -23,6 +23,7 @@ import {
   type StatTier,
 } from "../api/dofusdb";
 import { SpellRangeMap, mapSubtitle } from "../components/SpellRangeMap";
+import BuildShareModal from "../components/BuildShareModal";
 import {
   emptyStats,
   emptyTarget,
@@ -431,6 +432,13 @@ function BuildEditor({ build }: { build: Build }) {
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1400);
   };
+
+  // Partage : on encode l'état ÉDITÉ en direct (pas la dernière version enregistrée).
+  const [showShare, setShowShare] = useState(false);
+  const shareBuild = useMemo<Build>(
+    () => ({ ...build, name: buildName, breedId, level, slots, caracs, parch, fm, target }),
+    [build, buildName, breedId, level, slots, caracs, parch, fm, target],
+  );
 
   const { data: breeds } = useQuery({ queryKey: ["breeds"], queryFn: ({ signal }) => listBreeds(signal), staleTime: Infinity });
   const breed = breeds?.find((b) => b.id === breedId);
@@ -999,6 +1007,13 @@ function BuildEditor({ build }: { build: Build }) {
           <DofusIcon name="bank" size={16} /> {saved ? "Enregistré" : "Enregistrer"}
         </button>
         <button
+          onClick={() => setShowShare(true)}
+          title="Partager ce build (code / lien)"
+          className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+        >
+          <Upload className="h-4 w-4" /> <span className="hidden sm:inline">Partager</span>
+        </button>
+        <button
           onClick={() => {
             actions.deleteBuild(build.id);
             navigate("/builder");
@@ -1009,6 +1024,8 @@ function BuildEditor({ build }: { build: Build }) {
           <DofusIcon name="closeRed" size={16} />
         </button>
       </div>
+
+      {showShare && <BuildShareModal build={shareBuild} onClose={() => setShowShare(false)} />}
 
       {/* Ferme les popovers au clic extérieur */}
       {(classOpen || levelOpen) && (

@@ -103,8 +103,8 @@ export default function Dungeons() {
         right={<Pill tone="ember">{total ?? "—"} donjons</Pill>}
       />
 
-      {/* Avertissement — guides rédigés, pas forcément parfaits */}
-      <div className="mb-6 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4">
+      {/* Avertissement — guides rédigés, pas forcément parfaits. Masqué en overlay (place). */}
+      <div className="mb-6 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4 overlay:hidden">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-glow-gold/15 ring-1 ring-glow-gold/30">
           <DofusIcon name="info" size={20} />
         </span>

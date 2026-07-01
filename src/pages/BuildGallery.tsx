@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import DofusIcon from "../components/DofusIcon";
+import { Download } from "../components/DofusIcons";
 import { listBreeds } from "../api/dofusdb";
 import { classIllus } from "../data/classIllus";
 import { levelTone } from "../data/meta";
@@ -57,10 +58,18 @@ export default function BuildGallery() {
         eyebrow="Théorycraft"
         title="Builder"
         subtitle="Créez un build en choisissant une classe et un niveau — il est sauvegardé automatiquement. Retrouvez tous vos builds ci-dessous et ouvrez-en un pour l'équiper et estimer ses dégâts."
+        right={
+          <button
+            onClick={() => actions.openBuildImport("")}
+            className="no-drag inline-flex items-center gap-1.5 rounded-xl border border-glow-cyan/40 bg-glow-cyan/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-glow-cyan/25"
+          >
+            <Download className="h-4 w-4" /> Importer un build
+          </button>
+        }
       />
 
-      {/* Avertissement v1 — fiabilité des calculs de dégâts */}
-      <div className="mb-8 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4">
+      {/* Avertissement v1 — fiabilité des calculs de dégâts (masqué en overlay : place précieuse) */}
+      <div className="mb-8 flex items-start gap-3 rounded-2xl border border-glow-gold/25 bg-glow-gold/10 p-4 overlay:hidden">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-glow-gold/15 ring-1 ring-glow-gold/30">
           <DofusIcon name="trophy" size={20} />
         </span>

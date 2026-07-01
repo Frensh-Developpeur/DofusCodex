@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { ExternalLink, Search } from "../components/DofusIcons";
@@ -176,12 +177,14 @@ function NewsCard({ item, index, onOpen }: { item: NewsItem; index: number; onOp
 }
 
 function ArticleModal({ item, onClose }: { item: NewsItem; onClose: () => void }) {
-  return (
+  // Portalisé sur <body> : sinon le `fixed` est piégé par un ancêtre transformé (anim de page,
+  // layout overlay) et l'article se retrouve contraint à la zone de contenu / sous la sidebar.
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-8"
       onClick={onClose}
     >
       <motion.div
@@ -228,6 +231,7 @@ function ArticleModal({ item, onClose }: { item: NewsItem; onClose: () => void }
           </a>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }

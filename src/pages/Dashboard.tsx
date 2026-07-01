@@ -300,11 +300,11 @@ function Hero() {
         transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative flex flex-col items-center gap-5 px-6 py-12 text-center sm:py-16">
+      <div className="relative flex flex-col items-center gap-5 overlay:gap-3 px-6 py-12 text-center sm:py-16 overlay:py-5">
         <LogoMark />
 
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <h1 className="font-display text-4xl font-extrabold leading-none text-white sm:text-5xl">
+          <h1 className="font-display text-4xl font-extrabold leading-none text-white sm:text-5xl overlay:text-2xl">
             Dofus<span className="text-gradient">Codex</span>
           </h1>
           <span className="inline-flex items-center gap-2 rounded-xl border border-glow-purple/40 bg-gradient-to-r from-glow-purple/25 to-glow-cyan/15 px-3 py-1.5 shadow-glow">
@@ -317,7 +317,7 @@ function Hero() {
           </span>
         </div>
 
-        <p className="max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
+        <p className="max-w-2xl text-sm leading-7 text-slate-400 sm:text-base overlay:hidden">
           Le compagnon nouvelle génération pour <span className="text-slate-200">Dofus 3</span>. Donjons,
           builds, skins, métiers, encyclopédie complète et bien plus — réunis dans une seule app desktop, avec
           des <span className="text-slate-200">données live</span> et sans aucune configuration ni clé API.

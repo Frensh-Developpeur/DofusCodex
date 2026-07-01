@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from "react";
+import { decodeBuild } from "../lib/buildCode";
 
 // ---- Types ----
 
@@ -99,6 +100,9 @@ export interface AppState {
   // Config des macros Windows, synchronisée dans le cloud (le helper natif lit en plus une copie
   // disque). `updatedAt` = horodatage du dernier changement → fusion « dernier qui écrit gagne ».
   macroConfig: (NativeMacroConfig & { updatedAt?: number }) | null;
+  // Import de build en attente (drapeau transitoire → ouvre la modale d'import). NON persisté :
+  // remis à null au chargement et exclu du push cloud (cf. load() et toRemote dans cloudSync).
+  buildImport: { code: string } | null;
 }
 
 const STORAGE_KEY = "dofuscodex.state.v1";
@@ -124,6 +128,7 @@ const DEFAULT_STATE: AppState = {
   resourceOwned: {},
   theme: "void",
   macroConfig: null,
+  buildImport: null,
 };
 
 // ---- Tiny external store (useSyncExternalStore) ----
@@ -136,7 +141,8 @@ function load(): AppState {
     // (champs en moins) reste valide, les nouveaux champs prennent leur valeur par défaut.
     // ⚠️ Ne PAS changer STORAGE_KEY entre versions, sinon les données seraient « perdues »
     // (orphelines sous l'ancienne clé). Le dossier userData survit déjà aux mises à jour.
-    return { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<AppState>) };
+    // buildImport est un drapeau transitoire → jamais restauré depuis le disque.
+    return { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<AppState>), buildImport: null };
   } catch {
     return DEFAULT_STATE;
   }
@@ -176,7 +182,9 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key !== STORAGE_KEY || e.newValue == null) return;
     try {
-      state = { ...DEFAULT_STATE, ...(JSON.parse(e.newValue) as Partial<AppState>) };
+      // Ne pas propager le drapeau d'import à une autre fenêtre (ex. overlay) : il reste local
+      // à la fenêtre qui a reçu le lien.
+      state = { ...DEFAULT_STATE, ...(JSON.parse(e.newValue) as Partial<AppState>), buildImport: null };
       emit();
     } catch {
       /* sauvegarde illisible → on ignore */
@@ -257,6 +265,24 @@ export const actions = {
   },
   deleteBuild(id: string) {
     setState((s) => ({ ...s, builds: s.builds.filter((b) => b.id !== id) }));
+  },
+  // ---- Partage / import de builds ----
+  // Ouvre la modale d'import (drapeau transitoire). `code` pré-rempli quand on vient d'un lien
+  // profond `dofuscodex://build/<code>`, vide pour un collage manuel depuis la galerie.
+  openBuildImport(code = "") {
+    setState((s) => ({ ...s, buildImport: { code } }));
+  },
+  closeBuildImport() {
+    setState((s) => (s.buildImport ? { ...s, buildImport: null } : s));
+  },
+  // Décode un code partagé et crée un NOUVEAU build (jamais d'écrasement). Renvoie l'id créé ou
+  // un message d'erreur si le code est invalide.
+  importBuildFromCode(code: string): { id: string } | { error: string } {
+    const res = decodeBuild(code);
+    if (!res.ok) return { error: res.error };
+    const { name, slots, ...extra } = res.draft;
+    const id = actions.saveBuild(name || "Build importé", slots, extra);
+    return { id };
   },
   // ---- Liste de courses (calculateur de ressources) ----
   addShoppingItem(itemId: number, quantity = 1) {

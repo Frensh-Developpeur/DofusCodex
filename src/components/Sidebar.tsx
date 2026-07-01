@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { getEquipment } from "../api/dofusdude";
 import { useStore, actions } from "../store/store";
@@ -10,6 +10,7 @@ import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import AccountButton from "./AccountButton";
 import FavoritesManager from "./FavoritesManager";
+import OnlineCount from "./OnlineCount";
 import { ThemeMenu } from "./ThemePicker";
 import { openGlobalSearch } from "./GlobalSearch";
 import { openOverlay, overlaySupported } from "../lib/overlay";
@@ -210,14 +211,40 @@ export default function Sidebar() {
                       aria-expanded={groupOpen}
                     >
                       <span>{group.title}</span>
-                      <ChevronDown className={clsx("h-3.5 w-3.5 transition-transform", groupOpen ? "rotate-180" : "")} />
+                      {/* ChevronDown = arrowRight déjà tourné à 90° (→ bas) : on pivote un span
+                          parent (les transforms se composent) plutôt que d'empiler un rotate-*
+                          conflictuel sur l'icône. Fermé = ▼, ouvert = ▲, en douceur. */}
+                      <span className={clsx("transition-transform duration-200 ease-out", groupOpen && "rotate-180")}>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </span>
                     </button>
                   ) : (
                     <span className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                       {group.title}
                     </span>
                   ))}
-                {groupOpen && visibleItems.map((item) => <Fragment key={item.to}>{renderLink(item, "group")}</Fragment>)}
+                {/* Seuls les groupes repliables s'animent (hauteur). Les autres rendent en direct,
+                    sans wrapper overflow-hidden → aucun risque de rogner le halo de l'item actif. */}
+                {isCollapsibleHeader ? (
+                  <AnimatePresence initial={false}>
+                    {groupOpen && (
+                      <motion.div
+                        key="items"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex flex-col gap-0.5 overflow-hidden"
+                      >
+                        {visibleItems.map((item) => (
+                          <Fragment key={item.to}>{renderLink(item, "group")}</Fragment>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                ) : (
+                  groupOpen && visibleItems.map((item) => <Fragment key={item.to}>{renderLink(item, "group")}</Fragment>)
+                )}
               </div>
             );
           // La section Favoris (toujours visible) s'insère juste après l'Accueil (1er groupe).
@@ -259,6 +286,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto border-t border-white/5 p-3">
+        <OnlineCount collapsed={collapsed} />
         <AccountButton collapsed={collapsed} />
         <ThemeMenu collapsed={collapsed} />
         <NavLink

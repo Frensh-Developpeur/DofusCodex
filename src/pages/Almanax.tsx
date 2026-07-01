@@ -164,8 +164,8 @@ export default function Almanax() {
         }
       />
 
-      {/* Note compacte — données fiables (live) */}
-      <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-glow-emerald/20 bg-glow-emerald/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300">
+      {/* Note compacte — données fiables (live). Masquée en overlay : place précieuse en jeu. */}
+      <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-glow-emerald/20 bg-glow-emerald/[0.07] px-3.5 py-2 text-xs leading-snug text-slate-300 overlay:hidden">
         <BadgeCheck className="h-4 w-4 shrink-0 text-glow-emerald" />
         <span>
           <span className="font-semibold text-glow-emerald">Données fiables</span> — bonus, offrandes et dates
@@ -190,7 +190,7 @@ export default function Almanax() {
         )}
       </div>
 
-      <h2 className="mb-4 mt-10 flex items-center gap-2 font-display text-xl font-bold text-white">
+      <h2 className="mb-4 mt-10 overlay:mt-5 flex items-center gap-2 font-display text-xl font-bold text-white">
         <CalendarDays className="h-5 w-5 text-glow-violet" /> Les 6 prochains jours
       </h2>
 
@@ -268,7 +268,7 @@ function FeaturedDay({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="glass relative overflow-hidden rounded-3xl p-8"
+      className="glass relative overflow-hidden rounded-3xl p-8 overlay:p-4"
     >
       {/* Auras colorées selon la famille de bonus */}
       <div className={`absolute -right-12 -top-12 h-56 w-56 rounded-full blur-3xl ${TONE_GLOW[bonus.tone]}`} />

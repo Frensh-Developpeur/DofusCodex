@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { useStore } from "./store/store";
+import { actions, useStore } from "./store/store";
 import { getGuideListData, getGuideData, startGuideSync } from "./lib/guideStore";
 import { trackItemNav } from "./lib/itemNav";
 import { initCloudSync, handleAuthDeepLink } from "./lib/cloudSync";
+import { parseBuildDeepLink } from "./lib/buildCode";
 import { isOverlayWindow, useOverlayAlpha, useOverlayMode } from "./lib/overlay";
 import OverlayBar from "./components/OverlayBar";
 import OverlayResizeHandle from "./components/OverlayResizeHandle";
@@ -15,6 +16,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import SkinatorLeavePrompt from "./components/SkinatorLeavePrompt";
 import UpdateBanner from "./components/UpdateBanner";
 import RecoveryModal from "./components/RecoveryModal";
+import BuildImportModal from "./components/BuildImportModal";
 import SecurityQuestionPrompt from "./components/SecurityQuestionPrompt";
 import GlobalSearch from "./components/GlobalSearch";
 import Dashboard from "./pages/Dashboard";
@@ -55,6 +57,14 @@ import CraftProfit from "./pages/CraftProfit";
 import XpFamilier from "./pages/XpFamilier";
 import Quests from "./pages/Quests";
 import QuestDetail from "./pages/QuestDetail";
+
+// Route un lien profond dofuscodex:// : un lien de build (`dofuscodex://build/<code>`) ouvre la
+// modale d'import ; tout le reste part vers le flux d'authentification (reset de mot de passe).
+function dispatchDeepLink(url: string) {
+  const code = parseBuildDeepLink(url);
+  if (code) actions.openBuildImport(code);
+  else handleAuthDeepLink(url);
+}
 
 const SHELL = "app-page-shell mx-auto max-w-6xl px-8 py-8";
 // En mode overlay (fenêtre compacte), on réduit fortement les marges et on prend toute la largeur.
@@ -129,11 +139,11 @@ export default function App() {
     if (isOverlayWindow) return;
     // Synchro cloud (compte) — no-op si Supabase non configuré ou utilisateur déconnecté.
     initCloudSync();
-    // Liens profonds dofuscodex:// (reset de mot de passe) : on écoute les liens reçus à chaud
-    // et on récupère celui éventuellement arrivé avant le montage (cold start via le lien).
-    const offDeepLink = window.dofusCodex?.onDeepLink?.((url) => handleAuthDeepLink(url));
+    // Liens profonds dofuscodex:// (import de build ou reset de mot de passe) : on écoute les liens
+    // reçus à chaud et on récupère celui éventuellement arrivé avant le montage (cold start).
+    const offDeepLink = window.dofusCodex?.onDeepLink?.((url) => dispatchDeepLink(url));
     window.dofusCodex?.peekDeepLink?.().then((url) => {
-      if (url) handleAuthDeepLink(url);
+      if (url) dispatchDeepLink(url);
     });
     qc.prefetchQuery({
       queryKey: ["ganymede-guides"],
@@ -281,6 +291,7 @@ export default function App() {
       <SkinatorLeavePrompt />
       <UpdateBanner />
       <RecoveryModal />
+      <BuildImportModal />
       <SecurityQuestionPrompt />
       <GlobalSearch />
       {ov && <OverlayResizeHandle />}

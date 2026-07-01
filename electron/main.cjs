@@ -1336,7 +1336,11 @@ function installUpdateNow() {
   if (installDir) {
     autoUpdater.installDirectory = installDir;
   }
-  // Installeur NSIS visible, sans écran de choix du dossier, et ciblé sur le dossier courant.
+  // Libère le verrou du helper de macros (process séparé lancé depuis resources/) AVANT l'install :
+  // sinon son exe bloque l'écrasement du dossier → « DofusCodex ne peut pas être fermé ». L'installeur
+  // le retue de son côté (build/installer.nsh) pour couvrir les maj depuis d'anciennes versions.
+  stopMacroHelper();
+  // Installeur NSIS oneClick visible (progression, zéro choix), ciblé sur le dossier courant.
   autoUpdater.quitAndInstall(false, true);
   return { ok: true };
 }
